@@ -1,5 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+const CloseIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
+    <path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5Z" fill="currentColor" />
+  </svg>
+);
+
 const QrCameraModal = ({ title, onClose, onDetected }) => {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -49,7 +55,7 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
       }
 
       if (!('BarcodeDetector' in window)) {
-        setStatus('Bu tarayıcı yerleşik QR algılamayı desteklemiyor. Elle giriş kullanın.');
+        setStatus('Bu tarayıcı QR algılamayı desteklemiyor. Bu alan mock değil; yerleşik kamera desteği için Chrome veya Edge gibi BarcodeDetector destekli bir tarayıcı gerekir.');
         return;
       }
 
@@ -89,18 +95,26 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
   }, [onDetected]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4">
-      <div className="app-panel w-full max-w-2xl p-6">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/78 p-4">
+      <div className="app-panel w-full max-w-2xl p-4 sm:p-6">
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-[color:var(--app-text)]">{title}</h2>
             <p className="mt-2 text-sm text-[color:var(--app-text-muted)]">{status}</p>
           </div>
-          <button type="button" onClick={onClose} className="app-btn-secondary">Kapat</button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="app-nav-icon-button"
+            aria-label="Kamerayi kapat"
+            title="Kamerayi kapat"
+          >
+            <CloseIcon />
+          </button>
         </div>
 
-        <div className="mt-5 overflow-hidden rounded-3xl border border-[color:var(--app-border)] bg-black">
-          <video ref={videoRef} className="h-[22rem] w-full object-cover" muted playsInline />
+        <div className="mt-4 overflow-hidden rounded-3xl border border-[color:var(--app-border)] bg-black">
+          <video ref={videoRef} className="h-[18rem] w-full object-cover sm:h-[22rem]" muted playsInline />
         </div>
       </div>
     </div>
