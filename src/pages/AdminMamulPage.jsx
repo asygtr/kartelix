@@ -354,7 +354,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
         <PageSearchBar
           value={searchTerm}
           onChange={setSearchTerm}
-          placeholder="Article no, article code, mamül adı veya renk ara"
+          placeholder="Kayıtlı mamül ara"
           onSearch={(term) => {
             const match = resolveMamulMatch(term);
             if (match) {

@@ -132,7 +132,9 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
   const user = getSession();
   const canSeePrices = mode === 'admin' || user?.yetki === 'admin';
   const fileInputRef = useRef(null);
+  const searchBlockRef = useRef(null);
   const [companies, setCompanies] = useState([]);
+  const [colorOptions, setColorOptions] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
@@ -176,9 +178,16 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
     setCompanies(result.success ? result.data : []);
   };
 
+  const loadColors = async () => {
+    const response = await fetch('/api/admin/renkler');
+    const result = await response.json();
+    setColorOptions(result.success ? result.data : []);
+  };
+
   useEffect(() => {
     loadOrders();
     loadCompanies();
+    loadColors();
   }, []);
 
   const searchMamuller = async (term) => {
@@ -542,11 +551,11 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
                   <button type="button" onClick={closePanel} className="app-nav-icon-button" aria-label="Kapat" title="Kapat"><CloseIcon /></button>
                 </div>
 
-                <div className="mt-5">
+                <div className="mt-5" ref={searchBlockRef}>
                   <PageSearchBar
                     value={searchTerm}
                     onChange={setSearchTerm}
-                    placeholder="Article code, article no, mamül adı veya renk"
+                    placeholder="Kayıtlı mamül ara"
                     onSearch={searchMamuller}
                     onQrDetected={(value) => handleQrAdd(null, value)}
                     showResults={Boolean(searchTerm.trim())}
@@ -557,9 +566,11 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
                       setResults([]);
                     }}
                     getResultPrimary={(item) => item.mamul_adi}
-                    getResultSecondary={(item) =>
-                      `${item.article_code} / ${item.article_no}${item.renk ? ` / ${item.renk}` : ''} / ${Number(item.bir_kg_satis_fiyati || 0).toFixed(2)}`
-                    }
+                    getResultSecondary={(item) => (
+                      canSeePrices
+                        ? `${item.article_code} / ${item.article_no}${item.renk ? ` / ${item.renk}` : ''} / ${Number(item.bir_kg_satis_fiyati || 0).toFixed(2)}`
+                        : `${item.article_code} / ${item.article_no}${item.renk ? ` / ${item.renk}` : ''}`
+                    )}
                     emptyResultsText={loading ? 'Aranıyor...' : 'Bu aramaya uygun mamül bulunamadı.'}
                   />
                 </div>
@@ -569,16 +580,12 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
                 ) : null}
 
                 <div className="mt-4 space-y-3">
-                  {selectedItems.length === 0 ? (
-                    <div className="app-soft-panel px-4 py-5 text-sm text-[color:var(--app-text-muted)]">Eklenen ürünler burada görünür.</div>
-                  ) : null}
-
                   {selectedItems.map((item) => (
-                    <div key={item.lineId} className="rounded-2xl border border-slate-200 p-3">
+                    <div key={item.lineId} className="app-order-item-card">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="font-semibold text-slate-900">{item.mamul_adi}</div>
-                          <div className="mt-1 text-sm text-slate-600">{item.article_code}</div>
+                          <div className="mt-0.5 text-sm text-slate-600">{item.article_code}</div>
                         </div>
                         <button type="button" onClick={() => removeItem(item.lineId)} className="text-sm text-red-600 hover:text-red-700">
                           Kaldır
@@ -588,17 +595,22 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
                       <div className="mt-3 app-order-line-grid">
                         <label className="app-order-line-field">
                           <span className="app-order-line-label">Renk</span>
-                          <input value={item.renk} onChange={(event) => updateItem(item.lineId, 'renk', event.target.value)} placeholder="Renk" className="rounded-2xl border border-slate-200 px-4 py-3" />
+                          <select value={item.renk} onChange={(event) => updateItem(item.lineId, 'renk', event.target.value)} className="app-select app-order-line-input">
+                            <option value="">Renk seç</option>
+                            {colorOptions.map((color) => (
+                              <option key={color.id} value={color.ad}>{color.ad}</option>
+                            ))}
+                          </select>
                         </label>
                         <label className="app-order-line-field">
                           <span className="app-order-line-label">Kg</span>
-                          <input value={item.miktarKg} onChange={(event) => updateItem(item.lineId, 'miktarKg', event.target.value)} placeholder="0" className="rounded-2xl border border-slate-200 px-4 py-3" />
+                          <input value={item.miktarKg} onChange={(event) => updateItem(item.lineId, 'miktarKg', event.target.value)} placeholder="0" className="app-order-line-input" />
                         </label>
                         {canSeePrices ? (
                           <>
                             <label className="app-order-line-field">
                               <span className="app-order-line-label">1 kg fiyat</span>
-                              <input value={item.birimFiyat} onChange={(event) => updateItem(item.lineId, 'birimFiyat', event.target.value)} placeholder="0" className="rounded-2xl border border-slate-200 px-4 py-3" />
+                              <input value={item.birimFiyat} onChange={(event) => updateItem(item.lineId, 'birimFiyat', event.target.value)} placeholder="0" className="app-order-line-input" />
                             </label>
                             <div className="app-order-line-total">
                               <span className="app-order-line-label">Toplam</span>
@@ -612,13 +624,26 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
                 </div>
 
                 <div className="mt-5">
+                  {selectedItems.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchTerm('');
+                        setResults([]);
+                        searchBlockRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }}
+                      className="app-btn-secondary app-order-continue-button mb-3"
+                    >
+                      Yeni ürün ekle
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     disabled={!canContinueToDetails}
                     onClick={() => setCreateStep('details')}
                     className="app-btn-primary app-order-continue-button disabled:opacity-50"
                   >
-                    Siparişe devam et
+                    Eklemeyi bitir ve devam et
                   </button>
                 </div>
 
@@ -711,7 +736,7 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
                   ) : null}
 
                   {selectedItems.map((item) => (
-                    <div key={item.lineId} className="rounded-2xl border border-slate-200 p-4">
+                    <div key={item.lineId} className="app-order-item-card app-order-item-card-detail">
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <div className="font-semibold text-slate-900">{item.mamul_adi}</div>
@@ -726,17 +751,22 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
                       <div className="mt-4 app-order-line-grid">
                         <label className="app-order-line-field">
                           <span className="app-order-line-label">Renk</span>
-                          <input value={item.renk} onChange={(event) => updateItem(item.lineId, 'renk', event.target.value)} placeholder="Renk" className="rounded-2xl border border-slate-200 px-4 py-3" />
+                          <select value={item.renk} onChange={(event) => updateItem(item.lineId, 'renk', event.target.value)} className="app-select app-order-line-input">
+                            <option value="">Renk seç</option>
+                            {colorOptions.map((color) => (
+                              <option key={color.id} value={color.ad}>{color.ad}</option>
+                            ))}
+                          </select>
                         </label>
                         <label className="app-order-line-field">
                           <span className="app-order-line-label">Kg</span>
-                          <input value={item.miktarKg} onChange={(event) => updateItem(item.lineId, 'miktarKg', event.target.value)} placeholder="0" className="rounded-2xl border border-slate-200 px-4 py-3" />
+                          <input value={item.miktarKg} onChange={(event) => updateItem(item.lineId, 'miktarKg', event.target.value)} placeholder="0" className="app-order-line-input" />
                         </label>
                         {canSeePrices ? (
                           <>
                             <label className="app-order-line-field">
                               <span className="app-order-line-label">1 kg fiyat</span>
-                              <input value={item.birimFiyat} onChange={(event) => updateItem(item.lineId, 'birimFiyat', event.target.value)} placeholder="0" className="rounded-2xl border border-slate-200 px-4 py-3" />
+                              <input value={item.birimFiyat} onChange={(event) => updateItem(item.lineId, 'birimFiyat', event.target.value)} placeholder="0" className="app-order-line-input" />
                             </label>
                             <div className="app-order-line-total">
                               <span className="app-order-line-label">Satır toplamı</span>

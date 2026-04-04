@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import QrCameraModal from './QrCameraModal';
-import { decodeQrFromFile, isMobileCameraDevice } from '../utils/qr';
+import { isMobileCameraDevice } from '../utils/qr';
 
 const SearchIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
@@ -25,7 +25,6 @@ const PageSearchBar = ({
 }) => {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const fileInputRef = useRef(null);
   const [canUseQr] = useState(() => isMobileCameraDevice());
 
   useEffect(() => {
@@ -35,25 +34,6 @@ const PageSearchBar = ({
   const selectResult = (result) => {
     if (onResultSelect) {
       onResultSelect(result);
-    }
-  };
-
-  const handleQrPick = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const detectedValue = await decodeQrFromFile(file);
-      onChange(detectedValue);
-      if (onQrDetected) {
-        onQrDetected(detectedValue);
-      }
-    } catch {
-      window.alert('QR okunamadı. Kodu daha net ve kadraja yakın çekerek tekrar deneyin.');
-    } finally {
-      if (event.target) {
-        event.target.value = '';
-      }
     }
   };
 
@@ -69,16 +49,6 @@ const PageSearchBar = ({
         }}
       >
         <div className="app-searchbar-field">
-          {canUseQr ? (
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handleQrPick}
-              className="hidden"
-            />
-          ) : null}
           <input
             value={value}
             onChange={(event) => onChange(event.target.value)}
@@ -157,7 +127,7 @@ const PageSearchBar = ({
 
       {scannerOpen && canUseQr ? (
         <QrCameraModal
-          title="QR okut"
+          title="QR ile urun ara"
           onClose={() => setScannerOpen(false)}
           onDetected={(detectedValue) => {
             setScannerOpen(false);

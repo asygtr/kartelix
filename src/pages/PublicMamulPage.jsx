@@ -30,6 +30,21 @@ const PublicMamulPage = () => {
     fetchMamul();
   }, [slug]);
 
+  const materialHighlights = mamul ? [
+    {
+      label: 'Yüzey Karakteri',
+      value: mamul.materyal_notlari || 'Yumuşak, dengeli ve koleksiyonla uyumlu bir yüzey dili.'
+    },
+    {
+      label: 'Koleksiyon',
+      value: mamul.koleksiyon_adi || 'Kartelix seçki serisi'
+    },
+    {
+      label: 'Kullanım Hissi',
+      value: mamul.yayin_durumu === 'yayinda' ? 'Sunuma ve sipariş görüşmelerine hazır' : 'Preview aşamasında, koleksiyon sunumunda'
+    }
+  ] : [];
+
   return (
     <div className="app-page">
       <div className="app-container space-y-6">
@@ -62,6 +77,20 @@ const PublicMamulPage = () => {
               <p className="mt-5 max-w-3xl text-base leading-8 text-white/78">
                 {mamul.tanitim_hikayesi || mamul.aciklama || 'Bu mamül için tanıtım hikâyesi henüz tanımlanmadı.'}
               </p>
+              <div className="public-hero-notes">
+                <div className="public-hero-note">
+                  <span className="public-hero-note-label">Mamül</span>
+                  <strong>{mamul.mamul_adi}</strong>
+                </div>
+                <div className="public-hero-note">
+                  <span className="public-hero-note-label">Renk</span>
+                  <strong>{mamul.renk || '-'}</strong>
+                </div>
+                <div className="public-hero-note">
+                  <span className="public-hero-note-label">Ölçü</span>
+                  <strong>{mamul.en || '-'} EN / {mamul.gramaj || '-'} GR</strong>
+                </div>
+              </div>
             </section>
 
             <section className="public-product-grid">
@@ -69,8 +98,11 @@ const PublicMamulPage = () => {
                 {!mamul.gorsel_url ? (
                   <div className="relative z-10 flex h-full items-end p-8 text-white">
                     <div>
-                      <div className="text-xs uppercase tracking-[0.3em] text-white/60">Kartelix Story Surface</div>
+                      <div className="text-xs uppercase tracking-[0.3em] text-white/60">Kartelix Signature Surface</div>
                       <div className="mt-3 text-3xl font-bold">{mamul.mamul_adi}</div>
+                      <div className="mt-3 max-w-md text-sm leading-7 text-white/72">
+                        {mamul.aciklama || 'Bu yüzey, koleksiyon sunumlarında ürünün karakterini hızlıca anlatmak için hazırlandı.'}
+                      </div>
                     </div>
                   </div>
                 ) : null}
@@ -106,14 +138,27 @@ const PublicMamulPage = () => {
                   </p>
                 </div>
 
+                <div className="app-panel p-6">
+                  <div className="app-chip">Vitrin Yorumu</div>
+                  <div className="mt-4 grid gap-3">
+                    {materialHighlights.map((item) => (
+                      <div key={item.label} className="public-story-card">
+                        <div className="public-story-card-label">{item.label}</div>
+                        <div className="public-story-card-value">{item.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 {mamul.benzer_urunler?.length ? (
                   <div className="app-panel p-6">
                     <div className="app-chip">Benzer Ürünler</div>
                     <div className="mt-4 grid gap-3">
                       {mamul.benzer_urunler.map((item) => (
-                        <Link key={item.id} to={`/u/${item.qr_slug}`} className="app-soft-panel p-4 no-underline">
-                          <div className="font-semibold text-[color:var(--app-text)]">{item.tanitim_basligi || item.mamul_adi}</div>
-                          <div className="mt-1 text-sm text-[color:var(--app-text-muted)]">{item.article_code}{item.renk ? ` / ${item.renk}` : ''}</div>
+                        <Link key={item.id} to={`/u/${item.qr_slug}`} className="public-related-card no-underline">
+                          <div className="public-related-card-badge">{item.article_code}</div>
+                          <div className="mt-3 font-semibold text-[color:var(--app-text)]">{item.tanitim_basligi || item.mamul_adi}</div>
+                          <div className="mt-1 text-sm text-[color:var(--app-text-muted)]">{item.renk ? item.renk : 'Renk bekleniyor'}</div>
                         </Link>
                       ))}
                     </div>

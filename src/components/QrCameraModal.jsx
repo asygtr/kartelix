@@ -18,6 +18,7 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
   const stoppedRef = useRef(false);
   const fileInputRef = useRef(null);
   const [status, setStatus] = useState('Arka kamera hazırlanıyor...');
+  const [showFallback, setShowFallback] = useState(false);
   const reactId = useId();
   const scannerId = useMemo(() => `kartelix-qr-${reactId.replace(/:/g, '')}`, [reactId]);
   const mobileOnly = useMemo(() => isMobileDevice(), []);
@@ -53,11 +54,13 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
     const startScanner = async () => {
       if (!mobileOnly) {
         setStatus('QR okutma bu uygulamada sadece mobil cihazin yerlesik arka kamerasiyla kullanilir.');
+        setShowFallback(false);
         return;
       }
 
       if (!canUseLiveCamera) {
         setStatus('Canli kamera akisi bu baglantida acilamadi. Asagidaki butonla arka kamerayi acip QR fotografi cekebilirsiniz.');
+        setShowFallback(true);
         return;
       }
 
@@ -91,6 +94,7 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
 
         if (mounted) {
           setStatus('QR kodu arka kameraya hizalayin.');
+          setShowFallback(true);
         }
       } catch (error) {
         if (mounted) {
@@ -102,6 +106,7 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
           } else {
             setStatus('Kamera başlatılamadı. Android için Chrome, iPhone için Safari veya Chrome deneyin.');
           }
+          setShowFallback(true);
         }
         await stopScanner();
       }
@@ -161,7 +166,8 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
           <div id={scannerId} className="min-h-[18rem] w-full sm:min-h-[22rem]" />
         </div>
 
-        <div className="mt-4 flex justify-center">
+        {showFallback ? (
+        <div className="mt-4 flex flex-col items-center gap-3">
           <input
             ref={fileInputRef}
             type="file"
@@ -173,11 +179,15 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="app-btn-primary w-full sm:w-auto"
+            className="app-btn-secondary w-full sm:w-auto"
           >
-            Kamerayi ac ve QR cek
+            QR gorseli sec
           </button>
+          <p className="text-center text-xs leading-6 text-[color:var(--app-text-muted)]">
+            Canli okumada zorlaniyorsa QR kodu daha yakin cekip gorsel olarak secin.
+          </p>
         </div>
+        ) : null}
       </div>
     </div>
   );

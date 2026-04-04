@@ -1,9 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../theme/ThemeProvider';
 import { getSession } from '../utils/auth';
 import QrCameraModal from './QrCameraModal';
-import { decodeQrFromFile, isMobileCameraDevice } from '../utils/qr';
+import { isMobileCameraDevice } from '../utils/qr';
 
 const navSets = {
   admin: [
@@ -97,7 +97,6 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchMessage, setSearchMessage] = useState('');
   const [searchResult, setSearchResult] = useState(null);
-  const mobileQrInputRef = useRef(null);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [canUseMobileQr] = useState(() => isMobileCameraDevice());
 
@@ -191,25 +190,7 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
     }
   };
 
-  const handleMobileQrPick = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const detectedValue = await decodeQrFromFile(file);
-      setSearchValue(detectedValue);
-      setSearchOpen(true);
-      runGlobalSearch(detectedValue);
-    } catch {
-      setSearchOpen(true);
-      setSearchMessage('QR okunamadı. Kodu daha net ve kadraja yakın çekerek tekrar deneyin.');
-      setSearchResult(null);
-    } finally {
-      if (event.target) {
-        event.target.value = '';
-      }
-    }
-  };
+  const canSeeSearchPrices = role === 'admin';
 
   return (
     <>
@@ -383,16 +364,6 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
             }}
           >
             <div className="app-searchbar-field">
-              {canUseMobileQr ? (
-                <input
-                  ref={mobileQrInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleMobileQrPick}
-                  className="hidden"
-                />
-              ) : null}
               <input
                 value={searchValue}
                 onChange={(event) => setSearchValue(event.target.value)}
@@ -432,6 +403,36 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
                 <div>Renk: <span className="font-semibold text-[color:var(--app-text)]">{searchResult.renk || '-'}</span></div>
                 <div>Kompozisyon: <span className="font-semibold text-[color:var(--app-text)]">{searchResult.kompozisyon_ozeti || '-'}</span></div>
               </div>
+
+              <div className="app-mobile-search-summary">
+                <div className="app-mobile-search-summary-card">
+                  <div className="app-mobile-search-summary-label">Yayın</div>
+                  <div className="app-mobile-search-summary-value">{searchResult.yayin_durumu || '-'}</div>
+                </div>
+                <div className="app-mobile-search-summary-card">
+                  <div className="app-mobile-search-summary-label">Ölçü</div>
+                  <div className="app-mobile-search-summary-value">{searchResult.en || '-'} EN / {searchResult.gramaj || '-'} GR</div>
+                </div>
+              </div>
+
+              {canSeeSearchPrices ? (
+                <div className="app-mobile-search-pricing">
+                  <div className="app-mobile-search-price-card">
+                    <div className="app-mobile-search-summary-label">1 kg satış</div>
+                    <div className="app-mobile-search-price-value">{Number(searchResult.bir_kg_satis_fiyati || 0).toFixed(2)} TRY</div>
+                  </div>
+                  <div className="app-mobile-search-price-card">
+                    <div className="app-mobile-search-summary-label">1 kg maliyet</div>
+                    <div className="app-mobile-search-price-value">{Number(searchResult.bir_kg_maliyet || 0).toFixed(2)} TRY</div>
+                  </div>
+                </div>
+              ) : null}
+
+              {role === 'staff' ? (
+                <div className="app-soft-panel mt-4 p-4 text-sm text-[color:var(--app-text-muted)]">
+                  Bu görünüm ürünün ne olduğunu hızlıca doğrulamak içindir. Fiyatlar yalnızca yönetici aramasında görünür.
+                </div>
+              ) : null}
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <a href={`/u/${searchResult.qr_slug}`} className="app-btn-secondary text-center" onClick={() => setSearchOpen(false)}>
@@ -482,7 +483,7 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
 
     {scannerOpen && canUseMobileQr ? (
       <QrCameraModal
-        title="Mobil arama için QR okut"
+        title="QR ile urun ac"
         onClose={() => setScannerOpen(false)}
         onDetected={(value) => {
           setScannerOpen(false);
