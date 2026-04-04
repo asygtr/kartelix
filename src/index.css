@@ -106,14 +106,14 @@ code {
   width: 100vw;
   margin-left: calc(50% - 50vw);
   padding: 0.6rem 1rem 0.45rem;
-  background: color-mix(in srgb, var(--app-surface) 62%, transparent 38%);
+  background: color-mix(in srgb, var(--app-surface) 96%, white 4%);
   border-top: 0;
   border-left: 0;
   border-right: 0;
   border-bottom: 1px solid color-mix(in srgb, var(--app-border) 70%, white 30%);
   border-radius: 0;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
-  backdrop-filter: blur(14px) saturate(1.04);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+  backdrop-filter: none;
   position: sticky;
   top: 0;
   z-index: 40;
@@ -149,7 +149,7 @@ code {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 1);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--app-border) 80%, white 20%);
@@ -194,7 +194,7 @@ code {
   height: 2.35rem;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--app-border) 72%, white 28%);
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 1);
   color: var(--app-text);
 }
 
@@ -236,7 +236,7 @@ code {
   height: 2.35rem;
   border-radius: 0.75rem;
   border: 1px solid color-mix(in srgb, var(--app-border) 72%, white 28%);
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 1);
   display: inline-flex;
   flex-direction: column;
   justify-content: center;
@@ -502,17 +502,17 @@ code {
   justify-content: space-between;
   gap: 0.38rem;
   padding: 0.66rem 0.55rem calc(0.72rem + env(safe-area-inset-bottom, 0px));
-  background: color-mix(in srgb, var(--app-surface) 72%, transparent 28%);
+  background: color-mix(in srgb, var(--app-surface) 98%, white 2%);
   border-top: 1px solid color-mix(in srgb, var(--app-border) 68%, white 32%);
-  box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.12);
-  backdrop-filter: blur(18px) saturate(1.06);
+  box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.14);
+  backdrop-filter: none;
 }
 
 .app-mobile-nav-item {
   min-width: 0;
   flex: 1;
   border: 0;
-  background: color-mix(in srgb, var(--app-surface-soft) 34%, transparent 66%);
+  background: color-mix(in srgb, var(--app-surface-soft) 82%, white 18%);
   border: 1px solid transparent;
   text-decoration: none;
   color: var(--app-text-muted);

@@ -342,7 +342,10 @@ const initDatabase = () => {
     const defaultRenkler = [
       { ad: 'Ham', kod: 'HM-00' },
       { ad: 'Ekru', kod: 'EKR-01' },
-      { ad: 'Antrasit', kod: 'ANT-01' }
+      { ad: 'Antrasit', kod: 'ANT-01' },
+      { ad: 'Indigo', kod: 'IND-07' },
+      { ad: 'Tas', kod: 'TAS-12' },
+      { ad: 'Siyah', kod: 'SYH-99' }
     ];
 
     defaultRenkler.forEach((renk) => {
@@ -355,7 +358,9 @@ const initDatabase = () => {
     const defaultIplikler = [
       { ad: 'Pamuk 30/1', kod: 'PMK-301', birim_fiyat: 5.5 },
       { ad: 'Polyester', kod: 'POL-001', birim_fiyat: 4.25 },
-      { ad: 'Viskon', kod: 'VIS-001', birim_fiyat: 6.1 }
+      { ad: 'Viskon', kod: 'VIS-001', birim_fiyat: 6.1 },
+      { ad: 'Elastan', kod: 'ELS-001', birim_fiyat: 8.2 },
+      { ad: 'Organik Pamuk 24/1', kod: 'OPM-241', birim_fiyat: 6.85 }
     ];
 
     defaultIplikler.forEach((iplik) => {
@@ -367,7 +372,10 @@ const initDatabase = () => {
 
     const defaultProsesler = [
       { ad: 'Boyama', tip: 'Renk', birim_maliyet: 1.4, renk_bazli: 1 },
-      { ad: 'Sanfor', tip: 'Finisaj', birim_maliyet: 0.8, renk_bazli: 0 }
+      { ad: 'Sanfor', tip: 'Finisaj', birim_maliyet: 0.8, renk_bazli: 0 },
+      { ad: 'Compact', tip: 'Finisaj', birim_maliyet: 0.65, renk_bazli: 0 },
+      { ad: 'Enzim Yikama', tip: 'Yikama', birim_maliyet: 1.1, renk_bazli: 0 },
+      { ad: 'Soft Touch', tip: 'Apre', birim_maliyet: 0.55, renk_bazli: 0 }
     ];
 
     defaultProsesler.forEach((proses) => {
@@ -391,6 +399,182 @@ const initDatabase = () => {
       `INSERT OR IGNORE INTO ui_ayarlari (anahtar, deger) VALUES (?, ?)`,
       ['app_background', '/showroom-bg.png']
     );
+
+    const demoMamuller = [
+        {
+          turAdi: '2 İplik',
+          mamul_adi: 'Deneme 2 Iplik',
+          article_no: '54321',
+          article_code: '20-54321',
+          koleksiyon_adi: 'Urban Core',
+          yayin_durumu: 'yayinda',
+          renk: 'Antrasit',
+          renk_kodu: 'ANT-01',
+          kompozisyon_ozeti: '%33 Pamuk / %7 Polyester / %60 Viskon',
+          en: '180',
+          gramaj: '240',
+          aciklama: 'Fuar ve showroom sunumu icin yumusak tuseli 2 iplik demo mamul.',
+          bir_kg_maliyet: 8.92,
+          bir_kg_satis_fiyati: 12.75,
+          qr_slug: '20-54321-deneme-2-iplik-antrasit',
+          aktif: 1,
+          tanitim_basligi: 'Yumusak tutumlu iki iplik demo serisi',
+          tanitim_hikayesi: 'Urban Core koleksiyonu icin gelistirilen bu yuzey, yumusak tusesi ve dengeli gramaji ile gunluk premium giyim gruplarina hitap eder.',
+          materyal_notlari: 'Ic yuzeyde konfor, dis yuzeyde tok bir durus hedeflenmistir.',
+          gorsel_url: '',
+          vurgu_etiketi: 'Yeni Sezon',
+          iplikler: [
+            { iplik_adi: 'Pamuk 30/1', oran_yuzde: 33, birim_fiyat: 5.5 },
+            { iplik_adi: 'Polyester', oran_yuzde: 7, birim_fiyat: 4.25 },
+            { iplik_adi: 'Viskon', oran_yuzde: 60, birim_fiyat: 6.1 }
+          ],
+          prosesler: [
+            { proses_adi: 'Boyama', proses_tipi: 'Renk', renk_bazli: 1, birim_maliyet: 1.4, aciklama: 'Antrasit boya prosesi' },
+            { proses_adi: 'Sanfor', proses_tipi: 'Finisaj', renk_bazli: 0, birim_maliyet: 0.8, aciklama: 'Cekme kontrolu' }
+          ]
+        },
+        {
+          turAdi: 'Suprem',
+          mamul_adi: 'Soft Suprem Indigo',
+          article_no: '10124',
+          article_code: '10-10124',
+          koleksiyon_adi: 'Daily Ease',
+          yayin_durumu: 'yayinda',
+          renk: 'Indigo',
+          renk_kodu: 'IND-07',
+          kompozisyon_ozeti: '%95 Organik Pamuk / %5 Elastan',
+          en: '175',
+          gramaj: '190',
+          aciklama: 'Gunluk giyim icin esnek ve nefes alan suprem demo mamul.',
+          bir_kg_maliyet: 9.35,
+          bir_kg_satis_fiyati: 14.4,
+          qr_slug: '10-10124-soft-suprem-indigo',
+          aktif: 1,
+          tanitim_basligi: 'Esnek ve rafine suprem yapisi',
+          tanitim_hikayesi: 'Daily Ease kapsulu icin hazirlanan bu mamul, elastan katkisi ile hareket ozgurlugu saglarken organik pamuk yapisiyla dogal bir yuzey verir.',
+          materyal_notlari: 'Hafif gramajli, yakin ten temasinda konfor odakli.',
+          gorsel_url: '',
+          vurgu_etiketi: 'Core',
+          iplikler: [
+            { iplik_adi: 'Organik Pamuk 24/1', oran_yuzde: 95, birim_fiyat: 6.85 },
+            { iplik_adi: 'Elastan', oran_yuzde: 5, birim_fiyat: 8.2 }
+          ],
+          prosesler: [
+            { proses_adi: 'Boyama', proses_tipi: 'Renk', renk_bazli: 1, birim_maliyet: 1.4, aciklama: 'Indigo renk uygulamasi' },
+            { proses_adi: 'Soft Touch', proses_tipi: 'Apre', renk_bazli: 0, birim_maliyet: 0.55, aciklama: 'Yumusak tutum bitisi' }
+          ]
+        },
+        {
+          turAdi: '3 İplik',
+          mamul_adi: 'Compact 3 Iplik Tas',
+          article_no: '30018',
+          article_code: '30-30018',
+          koleksiyon_adi: 'Studio Layer',
+          yayin_durumu: 'taslak',
+          renk: 'Tas',
+          renk_kodu: 'TAS-12',
+          kompozisyon_ozeti: '%70 Pamuk / %30 Polyester',
+          en: '185',
+          gramaj: '310',
+          aciklama: 'Tok duruslu, ust giyim ve dis katman urunleri icin 3 iplik demo mamul.',
+          bir_kg_maliyet: 10.65,
+          bir_kg_satis_fiyati: 16.9,
+          qr_slug: '30-30018-compact-3-iplik-tas',
+          aktif: 1,
+          tanitim_basligi: 'Tok duruslu compact 3 iplik',
+          tanitim_hikayesi: 'Studio Layer grubu icin gelistirilen bu yapida compact ve enzim yikama kombinasyonu ile daha rafine bir yuzey elde edilir.',
+          materyal_notlari: 'Daha tok, daha net siluet isteyen ust grup icin konumlanir.',
+          gorsel_url: '',
+          vurgu_etiketi: 'Preview',
+          iplikler: [
+            { iplik_adi: 'Pamuk 30/1', oran_yuzde: 70, birim_fiyat: 5.5 },
+            { iplik_adi: 'Polyester', oran_yuzde: 30, birim_fiyat: 4.25 }
+          ],
+          prosesler: [
+            { proses_adi: 'Compact', proses_tipi: 'Finisaj', renk_bazli: 0, birim_maliyet: 0.65, aciklama: 'Yuzey toparlama' },
+            { proses_adi: 'Enzim Yikama', proses_tipi: 'Yikama', renk_bazli: 0, birim_maliyet: 1.1, aciklama: 'Tuse yumusatma' }
+          ]
+        }
+      ];
+
+    demoMamuller.forEach((demo) => {
+      db.get(`SELECT id FROM mamul_kartlari WHERE article_code = ?`, [demo.article_code], (existingErr, existingRow) => {
+        if (existingErr) {
+          console.error('Demo mamul kontrol hatasi:', existingErr);
+          return;
+        }
+
+        if (existingRow) {
+          return;
+        }
+
+        db.get(`SELECT id FROM mamul_turleri WHERE ad = ?`, [demo.turAdi], (turErr, turRow) => {
+          if (turErr || !turRow) {
+            if (turErr) console.error('Demo mamul tur hatasi:', turErr);
+            return;
+          }
+
+          db.run(
+            `INSERT OR IGNORE INTO mamul_kartlari (
+              mamul_adi, mamul_turu_id, article_no, article_code, koleksiyon_adi, yayin_durumu,
+              renk, renk_kodu, kompozisyon_ozeti, en, gramaj, aciklama,
+              bir_kg_maliyet, bir_kg_satis_fiyati, qr_slug, aktif,
+              tanitim_basligi, tanitim_hikayesi, materyal_notlari, gorsel_url, vurgu_etiketi
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              demo.mamul_adi,
+              turRow.id,
+              demo.article_no,
+              demo.article_code,
+              demo.koleksiyon_adi,
+              demo.yayin_durumu,
+              demo.renk,
+              demo.renk_kodu,
+              demo.kompozisyon_ozeti,
+              demo.en,
+              demo.gramaj,
+              demo.aciklama,
+              demo.bir_kg_maliyet,
+              demo.bir_kg_satis_fiyati,
+              demo.qr_slug,
+              demo.aktif,
+              demo.tanitim_basligi,
+              demo.tanitim_hikayesi,
+              demo.materyal_notlari,
+              demo.gorsel_url,
+              demo.vurgu_etiketi
+            ],
+            function (insertErr) {
+              if (insertErr) {
+                console.error('Demo mamul ekleme hatasi:', insertErr);
+                return;
+              }
+
+              const mamulId = this.lastID;
+
+              if (!mamulId) return;
+
+              demo.iplikler.forEach((iplik, index) => {
+                const maliyetTutari = Number((((Number(iplik.oran_yuzde || 0) / 100) * Number(iplik.birim_fiyat || 0))).toFixed(2));
+                db.run(
+                  `INSERT INTO mamul_iplik_detaylari (mamul_id, iplik_adi, oran_yuzde, birim_fiyat, maliyet_tutari, sira_no)
+                   VALUES (?, ?, ?, ?, ?, ?)`,
+                  [mamulId, iplik.iplik_adi, Number(iplik.oran_yuzde || 0), Number(iplik.birim_fiyat || 0), maliyetTutari, index + 1]
+                );
+              });
+
+              demo.prosesler.forEach((proses, index) => {
+                db.run(
+                  `INSERT INTO mamul_proses_detaylari (mamul_id, proses_adi, proses_tipi, renk_bazli, birim_maliyet, aciklama, sira_no)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                  [mamulId, proses.proses_adi, proses.proses_tipi, proses.renk_bazli ? 1 : 0, Number(proses.birim_maliyet || 0), proses.aciklama, index + 1]
+                );
+              });
+            }
+          );
+        });
+      });
+    });
 
     ensureColumnExists('siparisler', 'created_at', `DATETIME DEFAULT CURRENT_TIMESTAMP`);
     ensureColumnExists('siparisler', 'firma_adi', `TEXT`);
