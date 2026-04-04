@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../theme/ThemeProvider';
 import { getSession } from '../utils/auth';
-import QrCameraModal from './QrCameraModal';
+import { decodeQrFromFile, isMobileCameraDevice } from '../utils/qr';
 
 const navSets = {
   admin: [
@@ -96,11 +96,8 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchMessage, setSearchMessage] = useState('');
   const [searchResult, setSearchResult] = useState(null);
-  const [scannerOpen, setScannerOpen] = useState(false);
-  const [canUseMobileQr] = useState(() => {
-    if (typeof navigator === 'undefined') return false;
-    return /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent || navigator.vendor || '');
-  });
+  const mobileQrInputRef = useRef(null);
+  const [canUseMobileQr] = useState(() => isMobileCameraDevice());
 
   useEffect(() => {
     setMenuOpen(false);
@@ -189,6 +186,26 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
       setSearchMessage(error.message);
     } finally {
       setSearchLoading(false);
+    }
+  };
+
+  const handleMobileQrPick = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const detectedValue = await decodeQrFromFile(file);
+      setSearchValue(detectedValue);
+      setSearchOpen(true);
+      runGlobalSearch(detectedValue);
+    } catch {
+      setSearchOpen(true);
+      setSearchMessage('QR okunamadı. Kodu daha net ve kadraja yakın çekerek tekrar deneyin.');
+      setSearchResult(null);
+    } finally {
+      if (event.target) {
+        event.target.value = '';
+      }
     }
   };
 
@@ -364,6 +381,16 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
             }}
           >
             <div className="app-searchbar-field">
+              {canUseMobileQr ? (
+                <input
+                  ref={mobileQrInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleMobileQrPick}
+                  className="hidden"
+                />
+              ) : null}
               <input
                 value={searchValue}
                 onChange={(event) => setSearchValue(event.target.value)}
@@ -377,7 +404,7 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
                 {canUseMobileQr ? (
                   <button
                     type="button"
-                    onClick={() => setScannerOpen(true)}
+                    onClick={() => mobileQrInputRef.current?.click()}
                     className="app-searchbar-qr"
                     aria-label="QR okut"
                     title="QR okut"
@@ -449,18 +476,6 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
           ) : null}
         </div>
       </div>
-    ) : null}
-
-    {scannerOpen && canUseMobileQr ? (
-      <QrCameraModal
-        title="Mobil arama için QR okut"
-        onClose={() => setScannerOpen(false)}
-        onDetected={(value) => {
-          setScannerOpen(false);
-          setSearchValue(value);
-          runGlobalSearch(value);
-        }}
-      />
     ) : null}
     </>
   );

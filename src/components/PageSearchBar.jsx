@@ -1,10 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import QrCameraModal from './QrCameraModal';
-
-const isMobileQrCapable = () => {
-  if (typeof navigator === 'undefined') return false;
-  return /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent || navigator.vendor || '');
-};
+import React, { useEffect, useRef, useState } from 'react';
+import { decodeQrFromFile, isMobileCameraDevice } from '../utils/qr';
 
 const SearchIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
@@ -27,9 +22,9 @@ const PageSearchBar = ({
   getResultSecondary,
   emptyResultsText = 'Sonuç bulunamadı.'
 }) => {
-  const [scannerOpen, setScannerOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [canUseQr] = useState(() => isMobileQrCapable());
+  const fileInputRef = useRef(null);
+  const [canUseQr] = useState(() => isMobileCameraDevice());
 
   useEffect(() => {
     setHighlightedIndex(results.length > 0 ? 0 : -1);
@@ -38,6 +33,25 @@ const PageSearchBar = ({
   const selectResult = (result) => {
     if (onResultSelect) {
       onResultSelect(result);
+    }
+  };
+
+  const handleQrPick = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const detectedValue = await decodeQrFromFile(file);
+      onChange(detectedValue);
+      if (onQrDetected) {
+        onQrDetected(detectedValue);
+      }
+    } catch {
+      window.alert('QR okunamadı. Kodu daha net ve kadraja yakın çekerek tekrar deneyin.');
+    } finally {
+      if (event.target) {
+        event.target.value = '';
+      }
     }
   };
 
@@ -53,6 +67,16 @@ const PageSearchBar = ({
         }}
       >
         <div className="app-searchbar-field">
+          {canUseQr ? (
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleQrPick}
+              className="hidden"
+            />
+          ) : null}
           <input
             value={value}
             onChange={(event) => onChange(event.target.value)}
@@ -90,7 +114,7 @@ const PageSearchBar = ({
             {canUseQr ? (
               <button
                 type="button"
-                onClick={() => setScannerOpen(true)}
+                onClick={() => fileInputRef.current?.click()}
                 className="app-searchbar-qr"
                 aria-label={qrLabel}
                 title={qrLabel}
@@ -128,20 +152,6 @@ const PageSearchBar = ({
           </div>
         ) : null}
       </form>
-
-      {scannerOpen && canUseQr ? (
-        <QrCameraModal
-          title="QR okut"
-          onClose={() => setScannerOpen(false)}
-          onDetected={(detectedValue) => {
-            setScannerOpen(false);
-            onChange(detectedValue);
-            if (onQrDetected) {
-              onQrDetected(detectedValue);
-            }
-          }}
-        />
-      ) : null}
     </>
   );
 };
