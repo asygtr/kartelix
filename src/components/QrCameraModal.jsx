@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
 const CloseIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
@@ -6,97 +7,109 @@ const CloseIcon = () => (
   </svg>
 );
 
+const isMobileDevice = () => {
+  if (typeof navigator === 'undefined') return false;
+  const userAgent = navigator.userAgent || navigator.vendor || '';
+  return /android|iphone|ipad|ipod|mobile/i.test(userAgent);
+};
+
 const QrCameraModal = ({ title, onClose, onDetected }) => {
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
-  const frameRef = useRef(null);
-  const detectorRef = useRef(null);
-  const [status, setStatus] = useState('Kamera hazırlanıyor...');
+  const html5QrRef = useRef(null);
+  const stoppedRef = useRef(false);
+  const [status, setStatus] = useState('Arka kamera hazırlanıyor...');
+  const reactId = useId();
+  const scannerId = useMemo(() => `kartelix-qr-${reactId.replace(/:/g, '')}`, [reactId]);
+  const mobileOnly = useMemo(() => isMobileDevice(), []);
 
   useEffect(() => {
-    let active = true;
+    let mounted = true;
 
-    const stopScanner = () => {
-      if (frameRef.current) {
-        cancelAnimationFrame(frameRef.current);
-      }
+    const stopScanner = async () => {
+      const scanner = html5QrRef.current;
+      html5QrRef.current = null;
 
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-        streamRef.current = null;
-      }
-    };
-
-    const scan = async () => {
-      if (!active || !videoRef.current || !detectorRef.current) {
-        return;
-      }
+      if (!scanner) return;
 
       try {
-        if (videoRef.current.readyState >= 2) {
-          const barcodes = await detectorRef.current.detect(videoRef.current);
-          const match = barcodes.find((item) => item.rawValue);
-
-          if (match?.rawValue) {
-            onDetected(match.rawValue);
-            stopScanner();
-            return;
-          }
+        if (scanner.isScanning) {
+          await scanner.stop();
         }
       } catch {}
 
-      frameRef.current = requestAnimationFrame(scan);
+      try {
+        await scanner.clear();
+      } catch {}
     };
 
     const startScanner = async () => {
-      if (!('mediaDevices' in navigator) || !navigator.mediaDevices.getUserMedia) {
-        setStatus('Bu tarayıcı kamera erişimini desteklemiyor.');
+      if (!mobileOnly) {
+        setStatus('QR okutma bu uygulamada sadece mobil cihazin yerlesik arka kamerasiyla kullanilir.');
         return;
       }
 
-      if (!('BarcodeDetector' in window)) {
-        setStatus('Bu tarayıcı QR algılamayı desteklemiyor. Bu alan mock değil; yerleşik kamera desteği için Chrome veya Edge gibi BarcodeDetector destekli bir tarayıcı gerekir.');
+      if (!('mediaDevices' in navigator) || !navigator.mediaDevices.getUserMedia) {
+        setStatus('Bu cihaz kamera erisimini desteklemiyor.');
         return;
       }
+
+      const scanner = new Html5Qrcode(scannerId, {
+        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
+      });
+
+      html5QrRef.current = scanner;
+
+      const onScanSuccess = async (decodedText) => {
+        if (stoppedRef.current) return;
+        stoppedRef.current = true;
+        setStatus('QR algılandı.');
+        await stopScanner();
+        if (mounted) {
+          onDetected(decodedText);
+        }
+      };
 
       try {
-        detectorRef.current = new window.BarcodeDetector({ formats: ['qr_code'] });
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
-          audio: false
-        });
+        await scanner.start(
+          { facingMode: 'environment' },
+          {
+            fps: 10,
+            qrbox: { width: 220, height: 220 },
+            aspectRatio: 1
+          },
+          onScanSuccess,
+          () => {}
+        );
 
-        if (!active) {
-          stream.getTracks().forEach((track) => track.stop());
-          return;
-        }
-
-        streamRef.current = stream;
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-          setStatus('QR kodu kameraya gösterin.');
-          frameRef.current = requestAnimationFrame(scan);
+        if (mounted) {
+          setStatus('QR kodu arka kameraya hizalayin.');
         }
       } catch (error) {
-        setStatus(error?.name === 'NotAllowedError'
-          ? 'Kamera izni verilmedi.'
-          : 'Kamera başlatılamadı.');
+        if (mounted) {
+          const message = String(error?.message || '');
+          if (/permission|NotAllowedError/i.test(message)) {
+            setStatus('Kamera izni verilmedi. Tarayıcı ayarlarından kamera iznini açın.');
+          } else if (/Requested device not found|OverconstrainedError/i.test(message)) {
+            setStatus('Arka kamera bulunamadı. Cihazın kamera erişimini kontrol edin.');
+          } else {
+            setStatus('Kamera başlatılamadı. Android için Chrome, iPhone için Safari veya Chrome deneyin.');
+          }
+        }
+        await stopScanner();
       }
     };
 
     startScanner();
 
     return () => {
-      active = false;
+      mounted = false;
+      stoppedRef.current = true;
       stopScanner();
     };
-  }, [onDetected]);
+  }, [mobileOnly, onDetected, scannerId]);
 
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/78 p-4">
-      <div className="app-panel w-full max-w-2xl p-4 sm:p-6">
+      <div className="app-panel w-full max-w-xl p-4 sm:p-6">
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-[color:var(--app-text)]">{title}</h2>
@@ -114,7 +127,7 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
         </div>
 
         <div className="mt-4 overflow-hidden rounded-3xl border border-[color:var(--app-border)] bg-black">
-          <video ref={videoRef} className="h-[18rem] w-full object-cover sm:h-[22rem]" muted playsInline />
+          <div id={scannerId} className="min-h-[18rem] w-full sm:min-h-[22rem]" />
         </div>
       </div>
     </div>

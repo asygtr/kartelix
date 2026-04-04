@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import QrCameraModal from './QrCameraModal';
 
+const isMobileQrCapable = () => {
+  if (typeof navigator === 'undefined') return false;
+  return /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent || navigator.vendor || '');
+};
+
 const SearchIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
     <path d="M10.5 4a6.5 6.5 0 1 0 4.03 11.6l4.43 4.43 1.41-1.41-4.43-4.43A6.5 6.5 0 0 0 10.5 4Zm0 2a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z" fill="currentColor" />
@@ -24,6 +29,7 @@ const PageSearchBar = ({
 }) => {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [canUseQr] = useState(() => isMobileQrCapable());
 
   useEffect(() => {
     setHighlightedIndex(results.length > 0 ? 0 : -1);
@@ -81,17 +87,19 @@ const PageSearchBar = ({
             <button type="submit" className="app-searchbar-submit" aria-label="Ara" title="Ara">
               <SearchIcon />
             </button>
-            <button
-              type="button"
-              onClick={() => setScannerOpen(true)}
-              className="app-searchbar-qr"
-              aria-label={qrLabel}
-              title={qrLabel}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-                <path d="M4 4h5v2H6v3H4V4Zm10 0h6v6h-2V6h-4V4ZM4 15h2v3h3v2H4v-5Zm14 3v-3h2v5h-5v-2h3ZM8 8h8v8H8V8Zm2 2v4h4v-4h-4Z" fill="currentColor" />
-              </svg>
-            </button>
+            {canUseQr ? (
+              <button
+                type="button"
+                onClick={() => setScannerOpen(true)}
+                className="app-searchbar-qr"
+                aria-label={qrLabel}
+                title={qrLabel}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
+                  <path d="M4 4h5v2H6v3H4V4Zm10 0h6v6h-2V6h-4V4ZM4 15h2v3h3v2H4v-5Zm14 3v-3h2v5h-5v-2h3ZM8 8h8v8H8V8Zm2 2v4h4v-4h-4Z" fill="currentColor" />
+                </svg>
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -121,7 +129,7 @@ const PageSearchBar = ({
         ) : null}
       </form>
 
-      {scannerOpen ? (
+      {scannerOpen && canUseQr ? (
         <QrCameraModal
           title="QR okut"
           onClose={() => setScannerOpen(false)}

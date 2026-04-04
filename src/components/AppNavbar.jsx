@@ -97,6 +97,10 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
   const [searchMessage, setSearchMessage] = useState('');
   const [searchResult, setSearchResult] = useState(null);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [canUseMobileQr] = useState(() => {
+    if (typeof navigator === 'undefined') return false;
+    return /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent || navigator.vendor || '');
+  });
 
   useEffect(() => {
     setMenuOpen(false);
@@ -370,17 +374,19 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
                 <button type="submit" className="app-searchbar-submit" aria-label="Ara" title="Ara">
                   <SearchIcon />
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setScannerOpen(true)}
-                  className="app-searchbar-qr"
-                  aria-label="QR okut"
-                  title="QR okut"
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-                    <path d="M4 4h5v2H6v3H4V4Zm10 0h6v6h-2V6h-4V4ZM4 15h2v3h3v2H4v-5Zm14 3v-3h2v5h-5v-2h3ZM8 8h8v8H8V8Zm2 2v4h4v-4h-4Z" fill="currentColor" />
-                  </svg>
-                </button>
+                {canUseMobileQr ? (
+                  <button
+                    type="button"
+                    onClick={() => setScannerOpen(true)}
+                    className="app-searchbar-qr"
+                    aria-label="QR okut"
+                    title="QR okut"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
+                      <path d="M4 4h5v2H6v3H4V4Zm10 0h6v6h-2V6h-4V4ZM4 15h2v3h3v2H4v-5Zm14 3v-3h2v5h-5v-2h3ZM8 8h8v8H8V8Zm2 2v4h4v-4h-4Z" fill="currentColor" />
+                    </svg>
+                  </button>
+                ) : null}
               </div>
             </div>
           </form>
@@ -445,7 +451,7 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
       </div>
     ) : null}
 
-    {scannerOpen ? (
+    {scannerOpen && canUseMobileQr ? (
       <QrCameraModal
         title="Mobil arama için QR okut"
         onClose={() => setScannerOpen(false)}
