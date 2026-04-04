@@ -16,10 +16,19 @@ const isMobileDevice = () => {
 const QrCameraModal = ({ title, onClose, onDetected }) => {
   const html5QrRef = useRef(null);
   const stoppedRef = useRef(false);
+  const fileInputRef = useRef(null);
   const [status, setStatus] = useState('Arka kamera hazırlanıyor...');
   const reactId = useId();
   const scannerId = useMemo(() => `kartelix-qr-${reactId.replace(/:/g, '')}`, [reactId]);
   const mobileOnly = useMemo(() => isMobileDevice(), []);
+  const canUseLiveCamera = useMemo(() => (
+    mobileOnly &&
+    typeof window !== 'undefined' &&
+    window.isSecureContext &&
+    typeof navigator !== 'undefined' &&
+    'mediaDevices' in navigator &&
+    !!navigator.mediaDevices.getUserMedia
+  ), [mobileOnly]);
 
   useEffect(() => {
     let mounted = true;
@@ -47,8 +56,8 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
         return;
       }
 
-      if (!('mediaDevices' in navigator) || !navigator.mediaDevices.getUserMedia) {
-        setStatus('Bu cihaz kamera erisimini desteklemiyor.');
+      if (!canUseLiveCamera) {
+        setStatus('Canli kamera akisi bu baglantida acilamadi. Asagidaki butonla arka kamerayi acip QR fotografi cekebilirsiniz.');
         return;
       }
 
@@ -105,7 +114,29 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
       stoppedRef.current = true;
       stopScanner();
     };
-  }, [mobileOnly, onDetected, scannerId]);
+  }, [canUseLiveCamera, mobileOnly, onDetected, scannerId]);
+
+  const handleFileCapture = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setStatus('QR gorseli okunuyor...');
+      const scanner = html5QrRef.current || new Html5Qrcode(scannerId, {
+        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
+      });
+      html5QrRef.current = scanner;
+      const decodedText = await scanner.scanFile(file, true);
+      setStatus('QR algılandı.');
+      onDetected(decodedText);
+    } catch {
+      setStatus('QR okunamadi. Kodu kadraja daha yakin ve net cekerek tekrar deneyin.');
+    } finally {
+      if (event.target) {
+        event.target.value = '';
+      }
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/78 p-4">
@@ -128,6 +159,24 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
 
         <div className="mt-4 overflow-hidden rounded-3xl border border-[color:var(--app-border)] bg-black">
           <div id={scannerId} className="min-h-[18rem] w-full sm:min-h-[22rem]" />
+        </div>
+
+        <div className="mt-4 flex justify-center">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleFileCapture}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="app-btn-primary w-full sm:w-auto"
+          >
+            Kamerayi ac ve QR cek
+          </button>
         </div>
       </div>
     </div>
