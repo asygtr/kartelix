@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../theme/ThemeProvider';
 import { getSession } from '../utils/auth';
+import QrCameraModal from './QrCameraModal';
 import { decodeQrFromFile, isMobileCameraDevice } from '../utils/qr';
 
 const navSets = {
@@ -97,6 +98,7 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
   const [searchMessage, setSearchMessage] = useState('');
   const [searchResult, setSearchResult] = useState(null);
   const mobileQrInputRef = useRef(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const [canUseMobileQr] = useState(() => isMobileCameraDevice());
 
   useEffect(() => {
@@ -404,7 +406,7 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
                 {canUseMobileQr ? (
                   <button
                     type="button"
-                    onClick={() => mobileQrInputRef.current?.click()}
+                    onClick={() => setScannerOpen(true)}
                     className="app-searchbar-qr"
                     aria-label="QR okut"
                     title="QR okut"
@@ -476,6 +478,18 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
           ) : null}
         </div>
       </div>
+    ) : null}
+
+    {scannerOpen && canUseMobileQr ? (
+      <QrCameraModal
+        title="Mobil arama için QR okut"
+        onClose={() => setScannerOpen(false)}
+        onDetected={(value) => {
+          setScannerOpen(false);
+          setSearchValue(value);
+          runGlobalSearch(value);
+        }}
+      />
     ) : null}
     </>
   );

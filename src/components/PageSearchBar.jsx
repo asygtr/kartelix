@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import QrCameraModal from './QrCameraModal';
 import { decodeQrFromFile, isMobileCameraDevice } from '../utils/qr';
 
 const SearchIcon = () => (
@@ -22,6 +23,7 @@ const PageSearchBar = ({
   getResultSecondary,
   emptyResultsText = 'Sonuç bulunamadı.'
 }) => {
+  const [scannerOpen, setScannerOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const fileInputRef = useRef(null);
   const [canUseQr] = useState(() => isMobileCameraDevice());
@@ -114,7 +116,7 @@ const PageSearchBar = ({
             {canUseQr ? (
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => setScannerOpen(true)}
                 className="app-searchbar-qr"
                 aria-label={qrLabel}
                 title={qrLabel}
@@ -152,6 +154,20 @@ const PageSearchBar = ({
           </div>
         ) : null}
       </form>
+
+      {scannerOpen && canUseQr ? (
+        <QrCameraModal
+          title="QR okut"
+          onClose={() => setScannerOpen(false)}
+          onDetected={(detectedValue) => {
+            setScannerOpen(false);
+            onChange(detectedValue);
+            if (onQrDetected) {
+              onQrDetected(detectedValue);
+            }
+          }}
+        />
+      ) : null}
     </>
   );
 };
