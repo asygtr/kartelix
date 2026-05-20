@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import AppNavbar from '../components/AppNavbar';
 import MamulEtiketModal from '../components/MamulEtiketModal';
 import { clearSession } from '../utils/auth';
@@ -36,10 +36,6 @@ const MamulLabelPage = () => {
     return () => clearTimeout(timeout);
   }, [searchTerm]);
 
-  const activeCount = useMemo(
-    () => records.filter((item) => item.aktif).length,
-    [records]
-  );
   const hasSearchContext = Boolean(normalizeSearchValue(searchTerm)) || Boolean(selectedRecord);
 
   const handleLogout = () => {
@@ -110,9 +106,7 @@ const MamulLabelPage = () => {
     <div className="app-page">
       <div className="app-container space-y-6">
         <AppNavbar
-          eyebrow="Kartelix / Etiket"
-          title="Mamül etiket basım merkezi"
-          description="Kayıtlı mamül kartlarından etiketi seçin, QR önizlemesini görün ve müşteri sayfasına giden baskıyı alın."
+          title="Etiket"
           links={[
             { to: '/mamul', label: 'Mamül merkezi' },
             { to: '/mamul/create', label: 'Mamül ekle' }
@@ -149,87 +143,66 @@ const MamulLabelPage = () => {
         />
 
         {hasSearchContext ? (
-          <div className="grid gap-6 xl:grid-cols-[0.7fr,1.3fr]">
           <section className="app-panel p-6">
-            <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Etiket filtresi</h2>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-              <div className="app-stat">
-                <div className="text-xs uppercase tracking-[0.3em] text-slate-500">Toplam etiket</div>
-                <div className="mt-2 text-3xl font-semibold text-slate-900">{records.length}</div>
-              </div>
-              <div className="app-stat">
-                <div className="text-xs uppercase tracking-[0.3em] text-slate-500">Public aktif</div>
-                <div className="mt-2 text-3xl font-semibold text-emerald-700">{activeCount}</div>
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Kayıtlı mamül etiketleri</h2>
+              <div className="flex items-center gap-3">
+                {selectedIds.length > 0 ? (
+                  <button type="button" onClick={printSelected} className="app-btn-primary">
+                    Toplu yazdır ({selectedIds.length})
+                  </button>
+                ) : null}
+                {loading ? <span className="text-sm text-[color:var(--app-text-muted)]">Yükleniyor...</span> : null}
               </div>
             </div>
 
-            <div className="app-soft-panel mt-6 p-4 text-sm text-[color:var(--app-text-muted)]">
-              Buradaki tüm etiketler doğrudan mamül kartlarından gelir. Ayarlarda tanımlanan tür, renk, iplik ve proses yapısı etikete dolaylı olarak yansır.
-            </div>
-          </section>
-
-            <section className="app-panel p-6">
-              <div className="flex items-center justify-between gap-4">
-                <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Kayıtlı mamül etiketleri</h2>
-                <div className="flex items-center gap-3">
-                  {selectedIds.length > 0 ? (
-                    <button type="button" onClick={printSelected} className="app-btn-primary">
-                      Toplu yazdır ({selectedIds.length})
-                    </button>
-                  ) : null}
-                  {loading ? <span className="text-sm text-[color:var(--app-text-muted)]">Yükleniyor...</span> : null}
-                </div>
+            {!loading && records.length === 0 ? (
+              <div className="mt-5 app-soft-panel px-4 py-8 text-sm text-[color:var(--app-text-muted)]">
+                Filtreye uygun etiket bulunamadı.
               </div>
+            ) : null}
 
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              {!loading && records.length === 0 ? (
-                <div className="app-soft-panel px-4 py-8 text-sm text-[color:var(--app-text-muted)]">
-                  Filtreye uygun etiket bulunamadı.
+            {records.length > 0 ? (
+              <div className="mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-white">
+                <div className="grid grid-cols-[56px_120px_minmax(220px,1.4fr)_140px_120px_120px_120px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  <div>Seç</div>
+                  <div>Article</div>
+                  <div>Mamül</div>
+                  <div>Tür</div>
+                  <div>Renk</div>
+                  <div>En</div>
+                  <div>Gramaj</div>
                 </div>
-              ) : null}
 
-                {records.map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-3xl border border-slate-200 p-5 text-left transition hover:border-emerald-300 hover:shadow-md"
-                  >
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <label className="flex items-center gap-2 text-sm text-slate-600">
+                <div className="max-h-[68vh] overflow-y-auto">
+                  {records.map((item) => (
+                    <div
+                      key={item.id}
+                      className="grid cursor-pointer grid-cols-[56px_120px_minmax(220px,1.4fr)_140px_120px_120px_120px] gap-3 border-b border-slate-100 px-4 py-3 text-sm text-slate-700 transition hover:bg-emerald-50"
+                      onClick={() => setSelectedRecord(item)}
+                    >
+                      <div className="flex items-center" onClick={(event) => event.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={selectedIds.includes(item.id)}
                           onChange={() => toggleSelected(item.id)}
                         />
-                        Seç
-                      </label>
-                      <button type="button" onClick={() => setSelectedRecord(item)} className="app-btn-secondary">Aç</button>
+                      </div>
+                      <div className="flex items-center font-medium text-slate-900">{item.article_code}</div>
+                      <div className="min-w-0">
+                        <div className="truncate font-medium text-slate-900">{item.mamul_adi}</div>
+                        <div className="truncate text-xs text-slate-500">{item.kompozisyon_ozeti || '-'}</div>
+                      </div>
+                      <div className="flex items-center">{item.mamul_turu_adi || '-'}</div>
+                      <div className="flex items-center">{item.renk || '-'}</div>
+                      <div className="flex items-center">{item.en || '-'}</div>
+                      <div className="flex items-center">{item.gramaj || '-'}</div>
                     </div>
-                    <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.3em] text-slate-500">{item.mamul_turu_adi}</div>
-                      <h3 className="mt-2 text-lg font-semibold text-slate-900">{item.mamul_adi}</h3>
-                    </div>
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${item.aktif ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                      {item.aktif ? 'Public aktif' : 'Pasif'}
-                    </span>
-                  </div>
-
-                  <div className="mt-4 space-y-1 text-sm text-slate-600">
-                    <div>{item.article_code} / {item.article_no}</div>
-                    <div>{item.renk || 'Renk tanımsız'} {item.renk_kodu ? `(${item.renk_kodu})` : ''}</div>
-                    <div>{item.kompozisyon_ozeti || 'Kompozisyon girilmedi'}</div>
-                  </div>
-
-                    <div className="mt-4 flex items-center justify-between text-sm">
-                      <span className="text-slate-500">1 kg satış: {Number(item.bir_kg_satis_fiyati || 0).toFixed(2)}</span>
-                      <span className="font-medium text-emerald-700">Etiketi aç</span>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
+            ) : null}
           </section>
-          </div>
         ) : null}
       </div>
 

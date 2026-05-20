@@ -192,10 +192,6 @@ const MamulEtiketModal = ({ mamul, onClose }) => {
             </div>
           </div>
 
-          <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
-            Bu etiket QR okutuldugunda ziyaretciyi public urun sayfasina goturur.
-          </div>
-
           <div className="mt-6 flex flex-wrap justify-end gap-3">
             <a
               href={publicUrl}

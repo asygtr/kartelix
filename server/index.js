@@ -3,6 +3,7 @@ const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const { startExcelSync, SOURCE_ORDER } = require('./excelSync');
 
 const app = express();
 app.use(cors());
@@ -271,6 +272,27 @@ const initDatabase = () => {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
+    db.run(`CREATE TABLE IF NOT EXISTS excel_kaynaklari (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      kaynak_tipi TEXT NOT NULL UNIQUE,
+      dosya_adi TEXT NOT NULL,
+      uzanti TEXT NOT NULL DEFAULT '.xlsx',
+      sheet_adi TEXT,
+      aktif BOOLEAN DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS excel_snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      file_path TEXT NOT NULL,
+      file_mtime_ms INTEGER NOT NULL,
+      file_size INTEGER DEFAULT 0,
+      summary_json TEXT,
+      preview_json TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
   // Varsayılan etiket ayarlarını ekle
   const defaultEtiketAyarlari = [
     { alan_adi: 'ARTICLE NR', sira_no: 1, aktif: 1 },
@@ -398,6 +420,11 @@ const initDatabase = () => {
     db.run(
       `INSERT OR IGNORE INTO ui_ayarlari (anahtar, deger) VALUES (?, ?)`,
       ['app_background', '/showroom-bg.png']
+    );
+
+    db.run(
+      `INSERT OR IGNORE INTO ui_ayarlari (anahtar, deger) VALUES (?, ?)`,
+      ['excel_poll_ms', '60000']
     );
 
     const demoMamuller = [
@@ -1512,6 +1539,166 @@ app.put('/api/admin/theme-settings', (req, res, next) => {
       );
     });
   });
+});
+
+app.get('/api/admin/excel-settings', async (req, res, next) => {
+  try {
+    const sources = await new Promise((resolve, reject) => {
+      db.all(
+        `SELECT id, kaynak_tipi, dosya_adi, uzanti, sheet_adi, aktif, updated_at
+         FROM excel_kaynaklari
+         ORDER BY CASE kaynak_tipi
+           ${SOURCE_ORDER.map((type, index) => `WHEN '${type}' THEN ${index + 1}`).join(' ')}
+           ELSE 999 END, id ASC`,
+        [],
+        (err, rows) => (err ? reject(err) : resolve(rows || []))
+      );
+    });
+
+    const pollRow = await new Promise((resolve, reject) => {
+      db.get(
+        `SELECT deger FROM ui_ayarlari WHERE anahtar = 'excel_poll_ms'`,
+        [],
+        (err, row) => (err ? reject(err) : resolve(row || null))
+      );
+    });
+
+    res.json({
+      success: true,
+      data: {
+        pollMs: Number(pollRow?.deger || 60000),
+        sources: sources.map((row) => ({
+          id: row.id,
+          kaynak_tipi: row.kaynak_tipi,
+          dosya_adi: row.dosya_adi,
+          uzanti: row.uzanti || '.xlsx',
+          sheet_adi: row.sheet_adi || '',
+          aktif: Boolean(row.aktif),
+          updated_at: row.updated_at
+        }))
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.put('/api/admin/excel-settings/poll', (req, res, next) => {
+  const pollMs = Number(req.body?.pollMs || 0);
+  if (!Number.isFinite(pollMs) || pollMs < 5000) {
+    return res.status(400).json({ error: 'Excel okuma sıklığı en az 5000 ms olmalıdır' });
+  }
+
+  db.run(
+    `INSERT INTO ui_ayarlari (anahtar, deger)
+     VALUES ('excel_poll_ms', ?)
+     ON CONFLICT(anahtar) DO UPDATE SET deger = excluded.deger, updated_at = CURRENT_TIMESTAMP`,
+    [String(Math.round(pollMs))],
+    (err) => {
+      if (err) return next(err);
+      res.json({ success: true, data: { pollMs: Math.round(pollMs) } });
+    }
+  );
+});
+
+app.post('/api/admin/excel-sources', (req, res, next) => {
+  const { kaynakTipi, dosyaAdi, uzanti = '.xlsx', sheetAdi = '', aktif = true } = req.body;
+
+  if (!kaynakTipi || !SOURCE_ORDER.includes(String(kaynakTipi).trim())) {
+    return res.status(400).json({ error: 'Geçerli bir kaynak tipi seçilmelidir' });
+  }
+  if (!dosyaAdi || !String(dosyaAdi).trim()) {
+    return res.status(400).json({ error: 'Dosya adı zorunludur' });
+  }
+  if (!['.xls', '.xlsx'].includes(String(uzanti).trim().toLowerCase())) {
+    return res.status(400).json({ error: 'Uzantı .xls veya .xlsx olmalıdır' });
+  }
+
+  db.run(
+    `INSERT INTO excel_kaynaklari (kaynak_tipi, dosya_adi, uzanti, sheet_adi, aktif)
+     VALUES (?, ?, ?, ?, ?)`,
+    [
+      String(kaynakTipi).trim(),
+      String(dosyaAdi).trim(),
+      String(uzanti).trim().toLowerCase(),
+      String(sheetAdi || '').trim(),
+      aktif ? 1 : 0
+    ],
+    function(err) {
+      if (err) return next(err);
+      res.status(201).json({
+        success: true,
+        data: {
+          id: this.lastID,
+          kaynak_tipi: String(kaynakTipi).trim(),
+          dosya_adi: String(dosyaAdi).trim(),
+          uzanti: String(uzanti).trim().toLowerCase(),
+          sheet_adi: String(sheetAdi || '').trim(),
+          aktif: Boolean(aktif)
+        }
+      });
+    }
+  );
+});
+
+app.put('/api/admin/excel-sources/:id', (req, res, next) => {
+  const { kaynakTipi, dosyaAdi, uzanti = '.xlsx', sheetAdi = '', aktif = true } = req.body;
+  const id = req.params.id;
+
+  if (!kaynakTipi || !SOURCE_ORDER.includes(String(kaynakTipi).trim())) {
+    return res.status(400).json({ error: 'Geçerli bir kaynak tipi seçilmelidir' });
+  }
+  if (!dosyaAdi || !String(dosyaAdi).trim()) {
+    return res.status(400).json({ error: 'Dosya adı zorunludur' });
+  }
+  if (!['.xls', '.xlsx'].includes(String(uzanti).trim().toLowerCase())) {
+    return res.status(400).json({ error: 'Uzantı .xls veya .xlsx olmalıdır' });
+  }
+
+  db.run(
+    `UPDATE excel_kaynaklari
+     SET kaynak_tipi = ?, dosya_adi = ?, uzanti = ?, sheet_adi = ?, aktif = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`,
+    [
+      String(kaynakTipi).trim(),
+      String(dosyaAdi).trim(),
+      String(uzanti).trim().toLowerCase(),
+      String(sheetAdi || '').trim(),
+      aktif ? 1 : 0,
+      id
+    ],
+    function(err) {
+      if (err) return next(err);
+      res.json({
+        success: true,
+        data: {
+          id: Number(id),
+          kaynak_tipi: String(kaynakTipi).trim(),
+          dosya_adi: String(dosyaAdi).trim(),
+          uzanti: String(uzanti).trim().toLowerCase(),
+          sheet_adi: String(sheetAdi || '').trim(),
+          aktif: Boolean(aktif)
+        }
+      });
+    }
+  );
+});
+
+app.delete('/api/admin/excel-sources/:id', (req, res, next) => {
+  db.run(`DELETE FROM excel_kaynaklari WHERE id = ?`, [req.params.id], function(err) {
+    if (err) return next(err);
+    res.json({ success: true, data: { deleted: this.changes > 0 } });
+  });
+});
+
+app.post('/api/admin/excel-sync/run', async (req, res) => {
+  try {
+    await excelSync.runNow();
+    const status = await excelSync.getStatus();
+    res.json({ success: true, data: status });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err?.message || 'Excel sync calistirilamadi' });
+  }
 });
 
 app.post('/api/admin/prosesler', (req, res, next) => {
@@ -3365,6 +3552,51 @@ app.use(errorHandler);
 
 // Sunucuyu başlat
 const PORT = process.env.PORT || 5000;
+
+// Excel klasor senkronizasyonu (ayarlar ekranindaki kaynak tanimlarina gore dosya okur)
+const excelInboxDir = process.env.EXCEL_INBOX_DIR || path.join(__dirname, '..', 'excel');
+const excelPollMs = Number(process.env.EXCEL_POLL_MS || 60_000);
+const excelPreviewLimit = Number(process.env.EXCEL_PREVIEW_LIMIT || 50);
+const excelSync = startExcelSync({
+  db,
+  directory: excelInboxDir,
+  defaultIntervalMs: excelPollMs,
+  previewLimit: excelPreviewLimit
+});
+
+app.get('/api/excel-sync/status', async (req, res) => {
+  try {
+    const status = await excelSync.getStatus();
+    res.json({ success: true, data: status });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err?.message || 'Excel sync status alinamadi' });
+  }
+});
+
+app.get('/api/excel-sync/latest', async (req, res) => {
+  try {
+    const snapshot = await excelSync.getLatestSnapshot();
+    res.json({ success: true, data: snapshot });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err?.message || 'Excel snapshot alinamadi' });
+  }
+});
+
+// Kaynak tipine bagli dosyayi tekrar parse ederek satir dondurur (limit verilmezse tum sheet)
+app.get('/api/excel-sync/parse', async (req, res) => {
+  try {
+    const sourceType = req.query.sourceType ? String(req.query.sourceType) : '';
+    const limit = req.query.limit ? Number(req.query.limit) : undefined;
+    const parsed = await excelSync.parseFileBySource(sourceType, limit);
+    if (!parsed) {
+      return res.status(404).json({ success: false, error: 'Okunacak excel kaynagi bulunamadi' });
+    }
+    res.json({ success: true, data: parsed });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err?.message || 'Excel parse basarisiz' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`✅ ARKA PLAN İŞLEMLERİ DEVREDE: http://localhost:${PORT}`);
   console.log(`✅ Yeni özellikler aktif:`);
@@ -3373,6 +3605,7 @@ app.listen(PORT, () => {
   console.log(`   🔤 Prefix ayarları API'leri`);
   console.log(`   📧 Email gönderme API'leri`);
   console.log(`   📱 QR kod okuma API'leri`);
+  console.log(`   📊 Excel sync: ${excelInboxDir} (poll: ${excelPollMs}ms)`);
 });
 
 // Graceful shutdown

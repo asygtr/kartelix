@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../theme/ThemeProvider';
 import { palettes } from '../theme/palettes';
 import AppNavbar from '../components/AppNavbar';
@@ -8,6 +9,7 @@ const tabs = [
   { id: 'colors', label: 'Renkler' },
   { id: 'yarns', label: 'İplik Tanımı' },
   { id: 'processes', label: 'Proses' },
+  { id: 'excel', label: 'Excel Kaynakları' },
   { id: 'theme', label: 'Marka Varlıkları' },
   { id: 'system', label: 'Operasyon' }
 ];
@@ -16,12 +18,16 @@ const initialTypeForm = { ad: '', kodPrefix: '', aciklama: '' };
 const initialColorForm = { ad: '', kod: '' };
 const initialYarnForm = { ad: '', kod: '', birim: 'kg', birimFiyat: '' };
 const initialProcessForm = { ad: '', tip: '', birimMaliyet: '', renkBazli: false };
-
-const MenuIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-    <path d="M4 7h16v2H4V7Zm0 4h16v2H4v-2Zm0 4h16v2H4v-2Z" fill="currentColor" />
-  </svg>
-);
+const initialExcelForm = { kaynakTipi: 'mamul_turleri', dosyaAdi: '', uzanti: '.xlsx', sheetAdi: '', aktif: true };
+const excelSourceOptions = [
+  { value: 'mamul_turleri', label: 'Ürün Grupları' },
+  { value: 'renkler', label: 'Renkler' },
+  { value: 'iplikler', label: 'İplikler' },
+  { value: 'prosesler', label: 'Prosesler' },
+  { value: 'mamuller', label: 'Mamuller' },
+  { value: 'mamul_iplikleri', label: 'Mamül İplikleri' },
+  { value: 'mamul_prosesleri', label: 'Mamül Prosesleri' }
+];
 
 const CloseIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
@@ -30,6 +36,8 @@ const CloseIcon = () => (
 );
 
 const SettingsPage = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const {
     activePalette,
     setActivePalette,
@@ -51,10 +59,16 @@ const SettingsPage = () => {
   const [colorForm, setColorForm] = useState(initialColorForm);
   const [yarnForm, setYarnForm] = useState(initialYarnForm);
   const [processForm, setProcessForm] = useState(initialProcessForm);
+  const [excelForm, setExcelForm] = useState(initialExcelForm);
   const [editingTypeId, setEditingTypeId] = useState(null);
   const [editingColorId, setEditingColorId] = useState(null);
   const [editingYarnId, setEditingYarnId] = useState(null);
   const [editingProcessId, setEditingProcessId] = useState(null);
+  const [excelSources, setExcelSources] = useState([]);
+  const [editingExcelId, setEditingExcelId] = useState(null);
+  const [excelPollMs, setExcelPollMs] = useState('60000');
+  const [excelStatus, setExcelStatus] = useState('');
+  const [excelSyncStatus, setExcelSyncStatus] = useState(null);
   const [themeStatus, setThemeStatus] = useState('');
   const [brandingForm, setBrandingForm] = useState({ appLogo: '/nevres.png', appBackground: '/showroom-bg.png' });
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -91,9 +105,31 @@ const SettingsPage = () => {
     setProcesses(processesResult.success ? processesResult.data : []);
   };
 
+  const loadExcelSettings = async () => {
+    const [settingsResponse, statusResponse] = await Promise.all([
+      fetch('/api/admin/excel-settings'),
+      fetch('/api/excel-sync/status')
+    ]);
+
+    const [settingsResult, statusResult] = await Promise.all([
+      settingsResponse.json(),
+      statusResponse.json()
+    ]);
+
+    if (settingsResult.success) {
+      setExcelSources(settingsResult.data.sources || []);
+      setExcelPollMs(String(settingsResult.data.pollMs || 60000));
+    }
+
+    if (statusResult.success) {
+      setExcelSyncStatus(statusResult.data);
+    }
+  };
+
   useEffect(() => {
     loadSystemStats();
     loadDefinitions();
+    loadExcelSettings();
   }, []);
 
   useEffect(() => {
@@ -113,6 +149,23 @@ const SettingsPage = () => {
     return () => clearTimeout(timeout);
   }, [drawerOpen]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search || '');
+    const shouldOpen = params.get('menu') === '1';
+    if (!shouldOpen) return;
+
+    // Open the animated drawer when arriving from navbar settings icon.
+    setDrawerOpen(true);
+
+    // Clean the URL to avoid reopening on refresh/back in odd ways.
+    params.delete('menu');
+    const nextSearch = params.toString();
+    navigate(
+      { pathname: location.pathname, search: nextSearch ? `?${nextSearch}` : '' },
+      { replace: true }
+    );
+  }, [location.pathname, location.search, navigate]);
+
   const resetTypeForm = () => {
     setTypeForm(initialTypeForm);
     setEditingTypeId(null);
@@ -131,6 +184,11 @@ const SettingsPage = () => {
   const resetProcessForm = () => {
     setProcessForm(initialProcessForm);
     setEditingProcessId(null);
+  };
+
+  const resetExcelForm = () => {
+    setExcelForm(initialExcelForm);
+    setEditingExcelId(null);
   };
 
   const handleBackup = async () => {
@@ -186,6 +244,31 @@ const SettingsPage = () => {
       throw new Error(result.error || 'Kayıt güncellenemedi');
     }
     await onSuccess();
+  };
+
+  const saveExcelPoll = async () => {
+    const response = await fetch('/api/admin/excel-settings/poll', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pollMs: Number(excelPollMs || 0) })
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Excel okuma sıklığı kaydedilemedi');
+    }
+    setExcelStatus('Excel okuma sıklığı kaydedildi.');
+    await loadExcelSettings();
+  };
+
+  const runExcelSync = async () => {
+    const response = await fetch('/api/admin/excel-sync/run', { method: 'POST' });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Excel senkronizasyonu çalıştırılamadı');
+    }
+    setExcelStatus('Excel senkronizasyonu tamamlandı.');
+    setExcelSyncStatus(result.data);
+    await loadDefinitions();
   };
 
   const renderDefinitionList = (items, activeId, onSelect, renderText) => (
@@ -413,6 +496,183 @@ const SettingsPage = () => {
         (item) => `${item.ad} / ${item.tip || '-'} / ${Number(item.birim_maliyet || 0).toFixed(2)}`
       )
     },
+    excel: {
+      title: 'Excel kaynakları',
+      description: 'Paylaşılan klasördeki dosyaları burada tanımlayın. Sistem bu kayıtlara göre dosyaları belirli aralıklarla okuyup veritabanına yazar.',
+      form: (
+        <div className="space-y-4">
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault();
+              const payload = {
+                kaynakTipi: excelForm.kaynakTipi,
+                dosyaAdi: excelForm.dosyaAdi,
+                uzanti: excelForm.uzanti,
+                sheetAdi: excelForm.sheetAdi,
+                aktif: excelForm.aktif
+              };
+
+              if (editingExcelId) {
+                await updateDefinition(`/api/admin/excel-sources/${editingExcelId}`, payload, async () => {
+                  resetExcelForm();
+                  await loadExcelSettings();
+                });
+                return;
+              }
+
+              await createDefinition('/api/admin/excel-sources', payload, async () => {
+                resetExcelForm();
+                await loadExcelSettings();
+              });
+            }}
+            className="space-y-3"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm font-semibold text-[color:var(--app-text)]">
+                {editingExcelId ? 'Excel kaynağını düzenle' : 'Yeni Excel kaynağı ekle'}
+              </div>
+              {editingExcelId ? <button type="button" onClick={resetExcelForm} className="app-btn-secondary">İptal</button> : null}
+            </div>
+            <select className="app-input" value={excelForm.kaynakTipi} onChange={(e) => setExcelForm((prev) => ({ ...prev, kaynakTipi: e.target.value }))}>
+              {excelSourceOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr,140px]">
+              <input className="app-input" placeholder="Dosya adı (uzantısız)" value={excelForm.dosyaAdi} onChange={(e) => setExcelForm((prev) => ({ ...prev, dosyaAdi: e.target.value }))} />
+              <select className="app-input" value={excelForm.uzanti} onChange={(e) => setExcelForm((prev) => ({ ...prev, uzanti: e.target.value }))}>
+                <option value=".xlsx">.xlsx</option>
+                <option value=".xls">.xls</option>
+              </select>
+            </div>
+            <input className="app-input" placeholder="Sheet adı (boşsa ilk sheet okunur)" value={excelForm.sheetAdi} onChange={(e) => setExcelForm((prev) => ({ ...prev, sheetAdi: e.target.value }))} />
+            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3">
+              <input type="checkbox" checked={excelForm.aktif} onChange={(e) => setExcelForm((prev) => ({ ...prev, aktif: e.target.checked }))} />
+              Kaynak aktif
+            </label>
+            <button type="submit" className="app-btn-primary">
+              {editingExcelId ? 'Excel kaynağını güncelle' : 'Excel kaynağı ekle'}
+            </button>
+          </form>
+
+          <div className="app-soft-panel p-4 space-y-3">
+            <div className="text-sm font-semibold text-[color:var(--app-text)]">Okuma sıklığı</div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr,auto]">
+              <input className="app-input" placeholder="60000" value={excelPollMs} onChange={(e) => setExcelPollMs(e.target.value)} />
+              <button
+                type="button"
+                className="app-btn-secondary"
+                onClick={async () => {
+                  try {
+                    await saveExcelPoll();
+                  } catch (err) {
+                    setExcelStatus(err.message);
+                  }
+                }}
+              >
+                Sıklığı kaydet
+              </button>
+            </div>
+            <div className="text-xs text-slate-500">Milisaniye cinsinden yazın. Örnek: 60000 = 60 saniye.</div>
+          </div>
+
+          <div className="app-soft-panel p-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-[color:var(--app-text)]">Senkron durumu</div>
+                <div className="text-xs text-slate-500">Son çalışma: {excelSyncStatus?.lastRunAt || '-'}</div>
+              </div>
+              <button
+                type="button"
+                className="app-btn-primary"
+                onClick={async () => {
+                  try {
+                    setExcelStatus('Excel senkronizasyonu çalıştırılıyor...');
+                    await runExcelSync();
+                  } catch (err) {
+                    setExcelStatus(err.message);
+                  }
+                }}
+              >
+                Şimdi oku
+              </button>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
+                Klasör: {excelSyncStatus?.directory || '-'}
+              </div>
+              <div className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
+                Son hata: {excelSyncStatus?.lastError || 'Yok'}
+              </div>
+            </div>
+            {excelStatus ? <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700">{excelStatus}</div> : null}
+          </div>
+        </div>
+      ),
+      list: (
+        <div className="mt-4 space-y-3 max-h-[560px] overflow-y-auto pr-1">
+          {excelSources.length === 0 ? (
+            <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-500">Henüz Excel kaynağı tanımlanmadı.</div>
+          ) : (
+            excelSources.map((item) => (
+              <div key={item.id} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingExcelId(item.id);
+                    setExcelForm({
+                      kaynakTipi: item.kaynak_tipi,
+                      dosyaAdi: item.dosya_adi,
+                      uzanti: item.uzanti || '.xlsx',
+                      sheetAdi: item.sheet_adi || '',
+                      aktif: Boolean(item.aktif)
+                    });
+                  }}
+                  className="w-full text-left"
+                >
+                  <div className="font-semibold text-[color:var(--app-text)]">
+                    {excelSourceOptions.find((option) => option.value === item.kaynak_tipi)?.label || item.kaynak_tipi}
+                  </div>
+                  <div className="mt-1 text-slate-600">
+                    {item.dosya_adi}{item.uzanti}{item.sheet_adi ? ` / sheet: ${item.sheet_adi}` : ''}
+                  </div>
+                  <div className="mt-1 text-xs uppercase tracking-[0.24em] text-slate-400">
+                    {item.aktif ? 'Aktif' : 'Pasif'}
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await fetch(`/api/admin/excel-sources/${item.id}`, { method: 'DELETE' });
+                    if (editingExcelId === item.id) {
+                      resetExcelForm();
+                    }
+                    await loadExcelSettings();
+                  }}
+                  className="mt-3 text-xs font-semibold uppercase tracking-[0.24em] text-rose-600"
+                >
+                  Kaydı sil
+                </button>
+              </div>
+            ))
+          )}
+
+          {excelSyncStatus?.latestSnapshots?.length ? (
+            excelSyncStatus.latestSnapshots.map((snapshot) => (
+              <div key={`snapshot-${snapshot.id}`} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
+                <div className="font-semibold text-[color:var(--app-text)]">
+                  {snapshot.summary?.sourceType || 'Kaynak'} / {snapshot.summary?.status || 'durum yok'}
+                </div>
+                <div className="mt-1 break-all text-slate-600">{snapshot.filePath}</div>
+                <div className="mt-1 text-xs text-slate-500">
+                  {snapshot.summary?.message || '-'} / satır: {snapshot.summary?.importedRows ?? 0}
+                </div>
+              </div>
+            ))
+          ) : null}
+        </div>
+      )
+    },
     theme: {
       title: 'Marka varlıkları',
       description: 'Login ekranı, navbar ve tüm uygulama zemini için kullanılan logo ve arka plan görselleri ile kurumsal renk paleti burada belirlenir.',
@@ -447,7 +707,6 @@ const SettingsPage = () => {
                   <div className="app-login-logo-wrap h-16 w-16">
                     <img src={brandingForm.appLogo || '/nevres.png'} alt="Logo önizleme" className="app-login-logo" />
                   </div>
-                  <div className="text-sm text-[color:var(--app-text-muted)]">Navbar ve giriş ekranında aynı logo kullanılır.</div>
                 </div>
               </div>
               <div className="rounded-3xl border border-[color:var(--app-border)] bg-white/70 p-4">
@@ -491,7 +750,6 @@ const SettingsPage = () => {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <div className="font-semibold text-[color:var(--app-text)]">{palette.name}</div>
-                  <div className="mt-1 text-sm text-[color:var(--app-text-muted)]">{palette.description}</div>
                 </div>
                 <div className="flex gap-2">
                   {Object.values(palette.colors).slice(0, 4).map((color) => (
@@ -531,7 +789,7 @@ const SettingsPage = () => {
         <div className="mt-4 space-y-3 max-h-[560px] overflow-y-auto pr-1">
           {Object.values(palettes).map((palette) => (
             <div key={palette.id} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
-              {palette.name} / {palette.description}
+              {palette.name}
             </div>
           ))}
         </div>
@@ -572,20 +830,7 @@ const SettingsPage = () => {
     <div className="app-page">
       <div className="app-container space-y-6">
         <AppNavbar
-          eyebrow="Kartelix / Üretim Altyapısı"
-          title="Üretim altyapısı ve marka yönetimi"
-          description="Ürün grupları, maliyet parametreleri, üretim prosesleri ve kurumsal varlıklar gibi temel sistem kararlarını buradan yönetin."
-          action={(
-            <button
-              type="button"
-              onClick={() => setDrawerOpen(true)}
-              className="app-nav-icon-button"
-              aria-label="Ayarlar menüsü"
-              title="Ayarlar menüsü"
-            >
-              <MenuIcon />
-            </button>
-          )}
+          title="Ayarlar"
         />
 
         <section className="app-panel p-6">
@@ -593,12 +838,11 @@ const SettingsPage = () => {
             <div>
               <div className="app-chip">{tabs.find((tab) => tab.id === activeTab)?.label}</div>
               <h2 className="mt-4 text-2xl font-semibold text-slate-900">{current.title}</h2>
-              <p className="mt-3 text-sm leading-6 text-slate-600">{current.description}</p>
               <div className="mt-6">{current.form}</div>
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-slate-900">Mevcut tanımlar</h3>
+              <h3 className="text-lg font-semibold text-slate-900">{activeTab === 'excel' ? 'Kayıtlar ve son senkronlar' : 'Mevcut tanımlar'}</h3>
               {current.list}
             </div>
           </div>
