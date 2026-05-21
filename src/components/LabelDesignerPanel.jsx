@@ -14,6 +14,32 @@ import {
   saveLabelTemplate
 } from '../utils/labelTemplate';
 
+const NumericControl = ({ label, value, onChange, min = 0, max = 100, step = 0.5 }) => (
+  <label className="app-label-control">
+    <div className="app-label-control-head">
+      <span className="text-sm font-medium text-[color:var(--app-text)]">{label}</span>
+      <input
+        className="app-input app-label-control-number"
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
+    <input
+      className="app-label-control-range"
+      type="range"
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  </label>
+);
+
 const previewRecord = {
   id: 'preview-record',
   article_code: '10-10124',
@@ -92,54 +118,49 @@ const LabelDesignerPanel = () => {
             </div>
 
             <div className="mt-4 app-label-compact-grid">
-              <label className="block">
-                <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Genişlik</div>
-                <input className="app-input" type="number" value={template.widthMm} onChange={(event) => updateTemplate({ widthMm: event.target.value })} />
+              <NumericControl label="Sayfa genişliği" value={template.widthMm} min={40} max={140} step={1} onChange={(value) => updateTemplate({ widthMm: value })} />
+              <NumericControl label="Sayfa yüksekliği" value={template.heightMm} min={30} max={120} step={1} onChange={(value) => updateTemplate({ heightMm: value })} />
+              <NumericControl label="Kart genişliği" value={template.innerWidthMm} min={20} max={120} step={0.5} onChange={(value) => updateTemplate({ innerWidthMm: value })} />
+              <NumericControl label="Kart yüksekliği" value={template.innerHeightMm} min={20} max={100} step={0.5} onChange={(value) => updateTemplate({ innerHeightMm: value })} />
+              <label className="app-label-control">
+                <div className="app-label-control-head">
+                  <span className="text-sm font-medium text-[color:var(--app-text)]">Çerçeve stili</span>
+                </div>
+                <select className="app-select" value={template.frameStyle} onChange={(event) => updateTemplate({ frameStyle: event.target.value })}>
+                  <option value="solid">Düz çizgi</option>
+                  <option value="double">Çift çizgi</option>
+                  <option value="dashed">Kesik çizgi</option>
+                  <option value="corners">Köşe süslemeli</option>
+                </select>
               </label>
-              <label className="block">
-                <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Yükseklik</div>
-                <input className="app-input" type="number" value={template.heightMm} onChange={(event) => updateTemplate({ heightMm: event.target.value })} />
+              <NumericControl label="Çerçeve kalınlığı" value={template.borderWidthMm} min={0.2} max={2} step={0.05} onChange={(value) => updateTemplate({ borderWidthMm: value })} />
+              <NumericControl label="Köşe süs boyutu" value={template.cornerSizeMm} min={2} max={10} step={0.2} onChange={(value) => updateTemplate({ cornerSizeMm: value })} />
+              <NumericControl label="Köşe yuvarlama" value={template.borderRadiusMm} min={0} max={6} step={0.1} onChange={(value) => updateTemplate({ borderRadiusMm: value })} />
+              <NumericControl label="Sayfa üst boşluğu" value={template.pageMarginTopMm} min={0} max={20} step={0.5} onChange={(value) => updateTemplate({ pageMarginTopMm: value })} />
+              <NumericControl label="Sayfa sol boşluğu" value={template.pageMarginLeftMm} min={0} max={20} step={0.5} onChange={(value) => updateTemplate({ pageMarginLeftMm: value })} />
+              <NumericControl label="Sayfa sağ boşluğu" value={template.pageMarginRightMm} min={0} max={20} step={0.5} onChange={(value) => updateTemplate({ pageMarginRightMm: value })} />
+              <NumericControl label="Sayfa alt boşluğu" value={template.pageMarginBottomMm} min={0} max={20} step={0.5} onChange={(value) => updateTemplate({ pageMarginBottomMm: value })} />
+              <NumericControl label="Başlık sütunu" value={template.labelColumnMm} min={6} max={30} step={0.5} onChange={(value) => updateTemplate({ labelColumnMm: value })} />
+              <NumericControl label="QR sütunu" value={template.qrColumnWidthMm} min={8} max={30} step={0.5} onChange={(value) => updateTemplate({ qrColumnWidthMm: value })} />
+              <NumericControl label="Marka şeridi" value={template.railWidthMm} min={2} max={16} step={0.5} onChange={(value) => updateTemplate({ railWidthMm: value })} />
+              <NumericControl label="QR boyutu" value={template.qrSizeMm} min={8} max={24} step={0.5} onChange={(value) => updateTemplate({ qrSizeMm: value })} />
+              <NumericControl label="Ana font" value={template.bodyFontPt} min={3} max={12} step={0.1} onChange={(value) => updateTemplate({ bodyFontPt: value })} />
+              <NumericControl label="Kompakt font" value={template.compactFontPt} min={3} max={11} step={0.1} onChange={(value) => updateTemplate({ compactFontPt: value })} />
+              <NumericControl label="Satır aralığı" value={template.rowGapMm} min={0} max={3} step={0.05} onChange={(value) => updateTemplate({ rowGapMm: value })} />
+              <NumericControl label="Kolon aralığı" value={template.columnGapMm} min={0} max={3} step={0.05} onChange={(value) => updateTemplate({ columnGapMm: value })} />
+              <NumericControl label="Blok aralığı" value={template.contentGapMm} min={0} max={6} step={0.05} onChange={(value) => updateTemplate({ contentGapMm: value })} />
+              <label className="app-label-control">
+                <div className="app-label-control-head">
+                  <span className="text-sm font-medium text-[color:var(--app-text)]">QR dikey hizası</span>
+                </div>
+                <select className="app-select" value={template.qrVerticalAlign} onChange={(event) => updateTemplate({ qrVerticalAlign: event.target.value })}>
+                  <option value="top">Üst</option>
+                  <option value="center">Orta</option>
+                  <option value="bottom">Alt</option>
+                </select>
               </label>
-              <label className="block">
-                <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Başlık sütunu</div>
-                <input className="app-input" type="number" step="0.5" value={template.labelColumnMm} onChange={(event) => updateTemplate({ labelColumnMm: event.target.value })} />
-              </label>
-              <label className="block">
-                <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">QR sütunu</div>
-                <input className="app-input" type="number" step="0.5" value={template.qrColumnWidthMm} onChange={(event) => updateTemplate({ qrColumnWidthMm: event.target.value })} />
-              </label>
-              <label className="block">
-                <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Marka şeridi</div>
-                <input className="app-input" type="number" step="0.5" value={template.railWidthMm} onChange={(event) => updateTemplate({ railWidthMm: event.target.value })} />
-              </label>
-              <label className="block">
-                <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">QR boyutu</div>
-                <input className="app-input" type="number" step="0.5" value={template.qrSizeMm} onChange={(event) => updateTemplate({ qrSizeMm: event.target.value })} />
-              </label>
-              <label className="block">
-                <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Ana font</div>
-                <input className="app-input" type="number" step="0.1" value={template.bodyFontPt} onChange={(event) => updateTemplate({ bodyFontPt: event.target.value })} />
-              </label>
-              <label className="block">
-                <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Kompakt font</div>
-                <input className="app-input" type="number" step="0.1" value={template.compactFontPt} onChange={(event) => updateTemplate({ compactFontPt: event.target.value })} />
-              </label>
-              <label className="block">
-                <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Satır aralığı</div>
-                <input className="app-input" type="number" step="0.05" value={template.rowGapMm} onChange={(event) => updateTemplate({ rowGapMm: event.target.value })} />
-              </label>
-              <label className="block">
-                <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Kolon aralığı</div>
-                <input className="app-input" type="number" step="0.05" value={template.columnGapMm} onChange={(event) => updateTemplate({ columnGapMm: event.target.value })} />
-              </label>
-              <label className="block">
-                <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Blok aralığı</div>
-                <input className="app-input" type="number" step="0.05" value={template.contentGapMm} onChange={(event) => updateTemplate({ contentGapMm: event.target.value })} />
-              </label>
-              <label className="block">
-                <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">İkon üst boşluğu</div>
-                <input className="app-input" type="number" step="0.05" value={template.careTopGapMm} onChange={(event) => updateTemplate({ careTopGapMm: event.target.value })} />
-              </label>
+              <NumericControl label="İkon üst boşluğu" value={template.careTopGapMm} min={0} max={6} step={0.05} onChange={(value) => updateTemplate({ careTopGapMm: value })} />
+              <NumericControl label="QR üst offset" value={template.qrOffsetTopMm} min={0} max={20} step={0.5} onChange={(value) => updateTemplate({ qrOffsetTopMm: value })} />
             </div>
 
             <div className="mt-4 app-label-compact-grid">

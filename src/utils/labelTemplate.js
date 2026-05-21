@@ -25,10 +25,16 @@ export const defaultLabelTemplate = {
   innerWidthMm: 86,
   innerHeightMm: 56,
   paddingMm: 2,
+  pageMarginTopMm: 2,
+  pageMarginRightMm: 2,
+  pageMarginBottomMm: 2,
+  pageMarginLeftMm: 2,
   railWidthMm: 4,
   brandPosition: 'left',
   qrColumnWidthMm: 15,
   qrSizeMm: 13.75,
+  qrVerticalAlign: 'top',
+  qrOffsetTopMm: 0,
   labelColumnMm: 10,
   rowGapMm: 0.45,
   columnGapMm: 0.45,
@@ -36,6 +42,9 @@ export const defaultLabelTemplate = {
   careGapMm: 0.55,
   careTopGapMm: 0.7,
   borderRadiusMm: 0.4,
+  borderWidthMm: 0.35,
+  frameStyle: 'solid',
+  cornerSizeMm: 3.2,
   borderColor: '#111827',
   accentColor: '#111827',
   backgroundColor: '#ffffff',
@@ -63,6 +72,11 @@ const defaultTemplateRecord = {
 const coerceNumber = (value, fallback) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const coerceNumberAllowZero = (value, fallback) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
 };
 
 const createTemplateId = () => `template-${Math.random().toString(36).slice(2, 10)}`;
@@ -116,9 +130,14 @@ export const mergeLabelTemplate = (incomingTemplate = {}) => {
     innerWidthMm: coerceNumber(incomingTemplate.innerWidthMm, defaultLabelTemplate.innerWidthMm),
     innerHeightMm: coerceNumber(incomingTemplate.innerHeightMm, defaultLabelTemplate.innerHeightMm),
     paddingMm: coerceNumber(incomingTemplate.paddingMm, defaultLabelTemplate.paddingMm),
+    pageMarginTopMm: coerceNumber(incomingTemplate.pageMarginTopMm, incomingTemplate.paddingMm ?? defaultLabelTemplate.pageMarginTopMm),
+    pageMarginRightMm: coerceNumber(incomingTemplate.pageMarginRightMm, incomingTemplate.paddingMm ?? defaultLabelTemplate.pageMarginRightMm),
+    pageMarginBottomMm: coerceNumber(incomingTemplate.pageMarginBottomMm, incomingTemplate.paddingMm ?? defaultLabelTemplate.pageMarginBottomMm),
+    pageMarginLeftMm: coerceNumber(incomingTemplate.pageMarginLeftMm, incomingTemplate.paddingMm ?? defaultLabelTemplate.pageMarginLeftMm),
     railWidthMm: coerceNumber(incomingTemplate.railWidthMm, defaultLabelTemplate.railWidthMm),
     qrColumnWidthMm: coerceNumber(incomingTemplate.qrColumnWidthMm, defaultLabelTemplate.qrColumnWidthMm),
     qrSizeMm: coerceNumber(incomingTemplate.qrSizeMm, defaultLabelTemplate.qrSizeMm),
+    qrOffsetTopMm: coerceNumberAllowZero(incomingTemplate.qrOffsetTopMm, defaultLabelTemplate.qrOffsetTopMm),
     labelColumnMm: coerceNumber(incomingTemplate.labelColumnMm, defaultLabelTemplate.labelColumnMm),
     rowGapMm: coerceNumber(incomingTemplate.rowGapMm, defaultLabelTemplate.rowGapMm),
     columnGapMm: coerceNumber(incomingTemplate.columnGapMm, defaultLabelTemplate.columnGapMm),
@@ -126,11 +145,15 @@ export const mergeLabelTemplate = (incomingTemplate = {}) => {
     careGapMm: coerceNumber(incomingTemplate.careGapMm, defaultLabelTemplate.careGapMm),
     careTopGapMm: coerceNumber(incomingTemplate.careTopGapMm, defaultLabelTemplate.careTopGapMm),
     borderRadiusMm: coerceNumber(incomingTemplate.borderRadiusMm, defaultLabelTemplate.borderRadiusMm),
+    borderWidthMm: coerceNumber(incomingTemplate.borderWidthMm, defaultLabelTemplate.borderWidthMm),
+    cornerSizeMm: coerceNumber(incomingTemplate.cornerSizeMm, defaultLabelTemplate.cornerSizeMm),
     bodyFontPt: coerceNumber(incomingTemplate.bodyFontPt, defaultLabelTemplate.bodyFontPt),
     compactFontPt: coerceNumber(incomingTemplate.compactFontPt, defaultLabelTemplate.compactFontPt),
     bodyLineHeight: coerceNumber(incomingTemplate.bodyLineHeight, defaultLabelTemplate.bodyLineHeight),
     brandLetterSpacing: coerceNumber(incomingTemplate.brandLetterSpacing, defaultLabelTemplate.brandLetterSpacing),
     brandPosition: ['left', 'right', 'top', 'bottom'].includes(incomingTemplate.brandPosition) ? incomingTemplate.brandPosition : defaultLabelTemplate.brandPosition,
+    qrVerticalAlign: ['top', 'center', 'bottom'].includes(incomingTemplate.qrVerticalAlign) ? incomingTemplate.qrVerticalAlign : defaultLabelTemplate.qrVerticalAlign,
+    frameStyle: ['solid', 'double', 'dashed', 'corners'].includes(incomingTemplate.frameStyle) ? incomingTemplate.frameStyle : defaultLabelTemplate.frameStyle,
     fieldOrder: [...nextOrder, ...remainingFields],
     hiddenFields: Array.isArray(incomingTemplate.hiddenFields) ? incomingTemplate.hiddenFields : [],
     careIcons: nextCareIcons
@@ -259,19 +282,76 @@ export const getVisibleFieldIds = (templateInput) => {
 
 const getScanText = (template, lang) => (lang === 'en' ? template.scanTextEn : template.scanTextTr);
 
+const withUnit = (value, unit) => `${value}${unit}`;
+
+export const getFramePresentation = (templateInput, unit = 'mm') => {
+  const template = mergeLabelTemplate(templateInput);
+  const borderWidth = Math.max(template.borderWidthMm, 0.2);
+  const borderRadius = Math.max(template.borderRadiusMm, 0);
+  const cornerSize = Math.max(template.cornerSizeMm, borderWidth * 4);
+  const innerInset = Math.max(borderWidth * 2.6, 0.9);
+
+  const base = {
+    border: `${withUnit(borderWidth, unit)} solid ${template.borderColor}`,
+    borderRadius: withUnit(borderRadius, unit),
+    showInnerFrame: false,
+    innerFrameStyle: {},
+    showCorners: false,
+    cornerStyle: {
+      width: withUnit(cornerSize, unit),
+      height: withUnit(cornerSize, unit),
+      borderColor: template.borderColor,
+      borderWidth: withUnit(borderWidth, unit),
+      borderRadius: withUnit(Math.max(borderRadius * 0.75, 0), unit)
+    }
+  };
+
+  if (template.frameStyle === 'double') {
+    return {
+      ...base,
+      showInnerFrame: true,
+      innerFrameStyle: {
+        inset: withUnit(innerInset, unit),
+        border: `${withUnit(Math.max(borderWidth * 0.7, 0.2), unit)} solid ${template.borderColor}`,
+        borderRadius: withUnit(Math.max(borderRadius * 0.72, 0), unit)
+      }
+    };
+  }
+
+  if (template.frameStyle === 'dashed') {
+    return {
+      ...base,
+      border: `${withUnit(borderWidth, unit)} dashed ${template.borderColor}`
+    };
+  }
+
+  if (template.frameStyle === 'corners') {
+    return {
+      ...base,
+      showCorners: true
+    };
+  }
+
+  return base;
+};
+
 export const getResolvedLabelMetrics = (templateInput) => {
   const template = mergeLabelTemplate(templateInput);
   const outerWidthMm = template.widthMm;
   const outerHeightMm = template.heightMm;
-  const cardWidthMm = Math.max(outerWidthMm - (template.paddingMm * 2), 10);
-  const cardHeightMm = Math.max(outerHeightMm - (template.paddingMm * 2), 10);
+  const maxCardWidthMm = Math.max(outerWidthMm - template.pageMarginLeftMm - template.pageMarginRightMm, 10);
+  const maxCardHeightMm = Math.max(outerHeightMm - template.pageMarginTopMm - template.pageMarginBottomMm, 10);
+  const cardWidthMm = Math.min(template.innerWidthMm, maxCardWidthMm);
+  const cardHeightMm = Math.min(template.innerHeightMm, maxCardHeightMm);
 
   return {
     ...template,
     outerWidthMm,
     outerHeightMm,
     cardWidthMm,
-    cardHeightMm
+    cardHeightMm,
+    maxCardWidthMm,
+    maxCardHeightMm
   };
 };
 
@@ -280,6 +360,11 @@ export const buildPublicUrl = (record) => `${window.location.origin}/u/${record?
 const getCardLayout = (template) => {
   const hasBrandRail = template.showBrandRail;
   const hasQr = template.showQr;
+  const qrJustifyContent = ({
+    top: 'flex-start',
+    center: 'center',
+    bottom: 'flex-end'
+  })[template.qrVerticalAlign] || 'flex-start';
 
   if (template.brandPosition === 'top' || template.brandPosition === 'bottom') {
     return {
@@ -297,9 +382,9 @@ const getCardLayout = (template) => {
       qrStyle: hasQr
         ? hasBrandRail
           ? template.brandPosition === 'top'
-            ? 'grid-column: 2; grid-row: 2;'
-            : 'grid-column: 2; grid-row: 1;'
-          : 'grid-column: 2; grid-row: 1;'
+            ? `grid-column: 2; grid-row: 2; justify-content:${qrJustifyContent}; padding-top:${template.qrOffsetTopMm}mm;`
+            : `grid-column: 2; grid-row: 1; justify-content:${qrJustifyContent}; padding-top:${template.qrOffsetTopMm}mm;`
+          : `grid-column: 2; grid-row: 1; justify-content:${qrJustifyContent}; padding-top:${template.qrOffsetTopMm}mm;`
         : ''
     };
   }
@@ -319,7 +404,7 @@ const getCardLayout = (template) => {
       : `border-left: 1px solid ${template.borderColor}; justify-content:flex-start; align-items:center;`,
     brandInnerStyle: 'writing-mode: vertical-rl; transform: rotate(180deg);',
     mainStyle: 'grid-column: auto; grid-row: 1;',
-    qrStyle: hasQr ? 'grid-column: auto; grid-row: 1;' : ''
+    qrStyle: hasQr ? `grid-column: auto; grid-row: 1; justify-content:${qrJustifyContent}; padding-top:${template.qrOffsetTopMm}mm;` : ''
   };
 };
 
@@ -328,6 +413,7 @@ export const buildLabelPrintMarkup = (record, templateInput, lang = 'tr') => {
   const visibleFieldIds = getVisibleFieldIds(template);
   const publicUrl = buildPublicUrl(record);
   const layout = getCardLayout(template);
+  const frame = getFramePresentation(template, 'mm');
 
   const rowsMarkup = visibleFieldIds.map((fieldId) => {
     const definition = getFieldDefinition(fieldId);
@@ -351,6 +437,13 @@ export const buildLabelPrintMarkup = (record, templateInput, lang = 'tr') => {
   return `
     <div class="sheet">
       <div class="card">
+        ${frame.showInnerFrame ? `<div class="frame-inner" style="inset:${frame.innerFrameStyle.inset}; border:${frame.innerFrameStyle.border}; border-radius:${frame.innerFrameStyle.borderRadius};"></div>` : ''}
+        ${frame.showCorners ? `
+          <div class="frame-corner top-left" style="width:${frame.cornerStyle.width}; height:${frame.cornerStyle.height}; border-color:${frame.cornerStyle.borderColor}; border-width:${frame.cornerStyle.borderWidth}; border-radius:${frame.cornerStyle.borderRadius};"></div>
+          <div class="frame-corner top-right" style="width:${frame.cornerStyle.width}; height:${frame.cornerStyle.height}; border-color:${frame.cornerStyle.borderColor}; border-width:${frame.cornerStyle.borderWidth}; border-radius:${frame.cornerStyle.borderRadius};"></div>
+          <div class="frame-corner bottom-left" style="width:${frame.cornerStyle.width}; height:${frame.cornerStyle.height}; border-color:${frame.cornerStyle.borderColor}; border-width:${frame.cornerStyle.borderWidth}; border-radius:${frame.cornerStyle.borderRadius};"></div>
+          <div class="frame-corner bottom-right" style="width:${frame.cornerStyle.width}; height:${frame.cornerStyle.height}; border-color:${frame.cornerStyle.borderColor}; border-width:${frame.cornerStyle.borderWidth}; border-radius:${frame.cornerStyle.borderRadius};"></div>
+        ` : ''}
         ${template.showBrandRail ? `
           <div class="brand-rail" style="${layout.brandStyle}">
             <div class="brand" style="${layout.brandInnerStyle}">${normalizeLabelText(template.brandName)}</div>
@@ -374,6 +467,7 @@ export const buildLabelPrintMarkup = (record, templateInput, lang = 'tr') => {
 export const buildLabelPrintDocument = (records, templateInput, lang = 'tr') => {
   const template = getResolvedLabelMetrics(templateInput);
   const layout = getCardLayout(template);
+  const frame = getFramePresentation(template, 'mm');
   const content = records.map((record) => buildLabelPrintMarkup(record, template, lang)).join('');
 
   return `
@@ -392,12 +486,17 @@ export const buildLabelPrintDocument = (records, templateInput, lang = 'tr') => 
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
-        .sheet { width: ${template.outerWidthMm}mm; height: ${template.outerHeightMm}mm; padding: ${template.paddingMm}mm; page-break-after: always; }
+        .sheet {
+          width: ${template.outerWidthMm}mm;
+          height: ${template.outerHeightMm}mm;
+          padding: ${template.pageMarginTopMm}mm ${template.pageMarginRightMm}mm ${template.pageMarginBottomMm}mm ${template.pageMarginLeftMm}mm;
+          page-break-after: always;
+        }
         .sheet:last-child { page-break-after: auto; }
         .card {
           width: ${template.cardWidthMm}mm;
           height: ${template.cardHeightMm}mm;
-          border: 1px solid ${template.borderColor};
+          border: ${frame.border};
           padding: ${template.paddingMm}mm;
           display: grid;
           grid-template-columns: ${layout.cardColumns};
@@ -405,7 +504,19 @@ export const buildLabelPrintDocument = (records, templateInput, lang = 'tr') => 
           gap: ${template.contentGapMm}mm;
           background: ${template.backgroundColor};
           border-radius: ${template.borderRadiusMm}mm;
+          position: relative;
+          overflow: hidden;
         }
+        .frame-inner { position:absolute; pointer-events:none; }
+        .frame-corner {
+          position:absolute;
+          pointer-events:none;
+          border-style:solid;
+        }
+        .frame-corner.top-left { top:0; left:0; border-right:none; border-bottom:none; }
+        .frame-corner.top-right { top:0; right:0; border-left:none; border-bottom:none; }
+        .frame-corner.bottom-left { bottom:0; left:0; border-right:none; border-top:none; }
+        .frame-corner.bottom-right { bottom:0; right:0; border-left:none; border-top:none; }
         .brand-rail { display:flex; padding-left:.1mm; padding-right:.1mm; }
         .brand { font-size: 5.4pt; font-weight: 800; letter-spacing: ${template.brandLetterSpacing}em; }
         .left { min-width: 0; align-self: start; }

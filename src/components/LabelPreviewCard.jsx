@@ -3,6 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import {
   buildPublicUrl,
   getFieldDefinition,
+  getFramePresentation,
   getFieldLabel,
   getFieldValue,
   getResolvedLabelMetrics,
@@ -17,11 +18,16 @@ const LabelPreviewCard = ({ record, template: templateInput, lang = 'tr', classN
   const template = getResolvedLabelMetrics(templateInput);
   const visibleFieldIds = getVisibleFieldIds(template);
   const careIcons = template.careIcons.filter((icon) => icon.enabled && icon.label);
+  const frame = getFramePresentation(template, 'px');
   const shellRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const stageWidthPx = template.outerWidthMm * PX_PER_MM;
   const stageHeightPx = template.outerHeightMm * PX_PER_MM;
-  const shellPaddingPx = template.paddingMm * PX_PER_MM;
+  const cardPaddingPx = template.paddingMm * PX_PER_MM;
+  const pageMarginTopPx = template.pageMarginTopMm * PX_PER_MM;
+  const pageMarginRightPx = template.pageMarginRightMm * PX_PER_MM;
+  const pageMarginBottomPx = template.pageMarginBottomMm * PX_PER_MM;
+  const pageMarginLeftPx = template.pageMarginLeftMm * PX_PER_MM;
   const cardWidthPx = template.cardWidthMm * PX_PER_MM;
   const cardHeightPx = template.cardHeightMm * PX_PER_MM;
   const brandPx = template.railWidthMm * PX_PER_MM;
@@ -38,6 +44,7 @@ const LabelPreviewCard = ({ record, template: templateInput, lang = 'tr', classN
   const scanFontPx = 4.2 * PX_PER_PT;
   const careFontPx = 2.65 * PX_PER_PT;
   const qrSizePx = template.qrSizeMm * PX_PER_MM;
+  const qrOffsetTopPx = template.qrOffsetTopMm * PX_PER_MM;
   const careHeightPx = 4 * PX_PER_MM;
   const columns = [
     template.showBrandRail && template.brandPosition === 'left' ? `${brandPx}px` : null,
@@ -94,16 +101,31 @@ const LabelPreviewCard = ({ record, template: templateInput, lang = 'tr', classN
             style={{
               width: `${cardWidthPx}px`,
               height: `${cardHeightPx}px`,
-              borderColor: template.borderColor,
               background: template.backgroundColor,
               fontFamily: 'Arial, Helvetica, sans-serif',
               gridTemplateColumns: topBottomRows ? (template.showQr ? `minmax(0,1fr) ${qrColumnPx}px` : 'minmax(0,1fr)') : previewGridColumns,
               gridTemplateRows: topBottomRows ? `${brandPx}px 1fr` : '1fr',
               gap: `${contentGapPx}px`,
-              padding: `${shellPaddingPx}px`,
-              borderRadius: `${template.borderRadiusMm * PX_PER_MM}px`
+              padding: `${cardPaddingPx}px`,
+              marginTop: `${pageMarginTopPx}px`,
+              marginRight: `${pageMarginRightPx}px`,
+              marginBottom: `${pageMarginBottomPx}px`,
+              marginLeft: `${pageMarginLeftPx}px`,
+              borderRadius: `${template.borderRadiusMm * PX_PER_MM}px`,
+              border: frame.border
             }}
           >
+            {frame.showInnerFrame ? (
+              <div className="app-label-preview-frame" style={frame.innerFrameStyle} />
+            ) : null}
+            {frame.showCorners ? (
+              <>
+                <div className="app-label-preview-corner is-top-left" style={frame.cornerStyle} />
+                <div className="app-label-preview-corner is-top-right" style={frame.cornerStyle} />
+                <div className="app-label-preview-corner is-bottom-left" style={frame.cornerStyle} />
+                <div className="app-label-preview-corner is-bottom-right" style={frame.cornerStyle} />
+              </>
+            ) : null}
             {template.showBrandRail ? (
               <div
                 className={`app-label-preview-rail ${template.brandPosition === 'right' ? 'is-right' : ''} ${template.brandPosition === 'top' || template.brandPosition === 'bottom' ? 'is-horizontal' : ''}`}
@@ -183,7 +205,9 @@ const LabelPreviewCard = ({ record, template: templateInput, lang = 'tr', classN
                 className="app-label-preview-qr"
                 style={{
                   gridColumn: topBottomRows ? '2' : 'auto',
-                  gridRow: topBottomRows ? (template.brandPosition === 'top' ? '2' : '1') : '1'
+                  gridRow: topBottomRows ? (template.brandPosition === 'top' ? '2' : '1') : '1',
+                  justifyContent: template.qrVerticalAlign === 'bottom' ? 'flex-end' : template.qrVerticalAlign === 'center' ? 'center' : 'flex-start',
+                  paddingTop: `${qrOffsetTopPx}px`
                 }}
               >
                 <QRCodeSVG value={buildPublicUrl(record)} size={64} style={{ width: `${qrSizePx}px`, height: `${qrSizePx}px` }} />
