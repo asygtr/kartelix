@@ -23,6 +23,11 @@ html, body, #root {
   min-height: 100%;
 }
 
+html {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   font-family: 'Manrope', sans-serif;
@@ -63,14 +68,15 @@ code {
   background: color-mix(in srgb, var(--app-surface) 70%, transparent 30%);
   backdrop-filter: blur(14px) saturate(1.05);
   border: 1px solid color-mix(in srgb, var(--app-border) 70%, white 30%);
-  border-radius: 1.75rem;
+  border-radius: 0.9rem;
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
 .app-soft-panel {
   background: color-mix(in srgb, var(--app-surface-soft) 45%, transparent 55%);
   border: 1px solid color-mix(in srgb, var(--app-border) 65%, white 35%);
-  border-radius: 1.5rem;
+  border-radius: 0.8rem;
   backdrop-filter: blur(12px);
 }
 
@@ -727,7 +733,7 @@ code {
 .app-btn-secondary,
 .app-btn-danger {
   border: 0;
-  border-radius: 999px;
+  border-radius: 0.7rem;
   padding: 0.78rem 1.15rem;
   font-weight: 700;
   cursor: pointer;
@@ -759,7 +765,7 @@ code {
 .app-textarea,
 .app-select {
   width: 100%;
-  border-radius: 1.15rem;
+  border-radius: 0.7rem;
   border: 1px solid var(--app-border);
   background: color-mix(in srgb, var(--app-surface) 82%, white 18%);
   color: var(--app-text);
@@ -801,12 +807,13 @@ code {
 
 .app-card {
   padding: 1.75rem;
-  border-radius: 1.75rem;
+  border-radius: 0.9rem;
   text-decoration: none;
   border: 1px solid color-mix(in srgb, var(--app-border) 68%, white 32%);
   background: linear-gradient(180deg, color-mix(in srgb, var(--app-surface) 66%, transparent 34%), color-mix(in srgb, var(--app-surface-soft) 30%, transparent 70%));
   box-shadow: 0 16px 30px rgba(15, 23, 42, 0.06);
   backdrop-filter: blur(12px);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
 .app-card:hover {
@@ -826,7 +833,7 @@ code {
 .app-quick-card-icon {
   width: 3.1rem;
   height: 3.1rem;
-  border-radius: 1rem;
+  border-radius: 0.7rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -850,7 +857,7 @@ code {
   align-items: center;
   gap: 0.45rem;
   padding: 0.4rem 0.8rem;
-  border-radius: 999px;
+  border-radius: 0.45rem;
   background: color-mix(in srgb, var(--app-primary) 14%, white 86%);
   color: var(--app-primary-strong);
   font-size: 0.72rem;
@@ -861,12 +868,14 @@ code {
 
 .app-hero {
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--app-surface-strong) 92%, black 8%) 0%, color-mix(in srgb, var(--app-primary) 28%, var(--app-surface-strong) 72%) 100%);
-  color: white;
-  border-radius: 2rem;
+    linear-gradient(180deg, color-mix(in srgb, var(--app-surface) 96%, white 4%) 0%, color-mix(in srgb, var(--app-surface-soft) 74%, white 26%) 100%);
+  color: var(--app-text);
+  border: 1px solid color-mix(in srgb, var(--app-border) 72%, white 28%);
+  border-radius: 0.55rem;
   padding: clamp(1.5rem, 4vw, 3rem);
   overflow: hidden;
   position: relative;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
 }
 
 .app-hero::after {
@@ -875,9 +884,371 @@ code {
   inset: auto -6rem -5rem auto;
   width: 15rem;
   height: 15rem;
-  border-radius: 999px;
+  border-radius: 0;
   background: color-mix(in srgb, var(--app-accent) 30%, transparent);
   filter: blur(8px);
+}
+
+.app-page-hero {
+  min-height: 12.5rem;
+}
+
+.app-page-hero-grid {
+  display: grid;
+  gap: 1.5rem;
+  align-items: end;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.app-page-hero-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.app-reveal-up {
+  animation: appRevealUp 420ms ease both;
+}
+
+.app-reveal-delay-1 {
+  animation-delay: 90ms;
+}
+
+.app-reveal-delay-2 {
+  animation-delay: 150ms;
+}
+
+.app-reveal-delay-3 {
+  animation-delay: 210ms;
+}
+
+.app-reveal-delay-4 {
+  animation-delay: 260ms;
+}
+
+@keyframes appRevealUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.app-label-designer {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.app-label-designer-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: minmax(0, 0.96fr) minmax(360px, 0.74fr);
+}
+
+.app-label-designer-stack {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.app-label-designer-preview-column {
+  min-width: 0;
+  align-self: start;
+  position: sticky;
+  top: 5.25rem;
+}
+
+.app-label-preview-panel {
+  position: static;
+}
+
+.app-label-record-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.app-label-record-item {
+  width: 100%;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--app-border) 68%, white 32%);
+  border-radius: 0.75rem;
+  padding: 0.95rem 1rem;
+  background: color-mix(in srgb, var(--app-surface-soft) 48%, white 52%);
+  transition: 180ms ease;
+}
+
+.app-label-record-item.is-active {
+  border-color: color-mix(in srgb, var(--app-primary) 34%, white 66%);
+  background: color-mix(in srgb, var(--app-primary) 10%, white 90%);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.app-label-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 3.2rem;
+  border-radius: 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--app-border) 68%, white 32%);
+  background: color-mix(in srgb, var(--app-surface-soft) 40%, white 60%);
+  padding: 0.85rem 1rem;
+  font-size: 0.94rem;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.app-label-field-row,
+.app-label-care-row {
+  display: grid;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.app-label-field-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--app-border) 68%, white 32%);
+  background: color-mix(in srgb, var(--app-surface-soft) 40%, white 60%);
+}
+
+.app-label-care-row {
+  grid-template-columns: 130px minmax(72px, 92px) minmax(0, 1fr);
+}
+
+.app-label-compact-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.app-label-compact-span-2 {
+  grid-column: span 2;
+}
+
+@media (max-width: 1023px) {
+  .app-label-compact-span-2 {
+    grid-column: span 1;
+  }
+}
+
+.app-label-preview-shell {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 0.8rem;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--app-accent) 18%, transparent) 0%, transparent 35%),
+    linear-gradient(180deg, color-mix(in srgb, var(--app-surface-soft) 54%, white 46%), color-mix(in srgb, var(--app-surface) 86%, white 14%));
+  border: 1px solid color-mix(in srgb, var(--app-border) 68%, white 32%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.app-label-preview-stage {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.app-label-preview-sheet {
+  position: relative;
+}
+
+.app-label-preview-card {
+  border: 1.5px solid;
+  display: grid;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+}
+
+.app-label-preview-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 18rem;
+  padding: 1.25rem;
+  border-radius: 0.7rem;
+  border: 1px dashed color-mix(in srgb, var(--app-border) 72%, white 28%);
+  background: color-mix(in srgb, var(--app-surface-soft) 28%, white 72%);
+  color: var(--app-text-muted);
+  text-align: center;
+}
+
+.app-label-preview-rail {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  border-right: 1px solid;
+}
+
+.app-label-preview-rail.is-right {
+  border-right: 0;
+  border-left: 1px solid;
+}
+
+.app-label-preview-rail.is-horizontal {
+  border-right: 0;
+  border-left: 0;
+  justify-content: center;
+}
+
+.app-label-preview-rail.is-horizontal:not(.is-right) {
+  border-bottom: 1px solid;
+}
+
+.app-label-preview-rail.is-horizontal.is-right {
+  border-top: 1px solid;
+}
+
+.app-label-preview-brand {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.app-label-preview-brand.is-horizontal {
+  writing-mode: horizontal-tb;
+  transform: none;
+}
+
+.app-label-preview-main {
+  min-width: 0;
+  align-self: start;
+}
+
+.app-label-preview-grid {
+  display: grid;
+  gap: 0.22rem 0.42rem;
+  align-items: start;
+}
+
+.app-label-preview-key {
+  font-weight: 800;
+  color: var(--app-text);
+  white-space: nowrap;
+}
+
+.app-label-preview-value {
+  min-width: 0;
+  word-break: break-word;
+  color: var(--app-text);
+  overflow-wrap: anywhere;
+}
+
+.app-label-preview-key.is-compact,
+.app-label-preview-value.is-compact {
+  line-height: 1.08;
+}
+
+.app-label-preview-care-grid {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+
+.app-label-preview-care-item {
+  min-height: 1.85rem;
+  border: 1px solid;
+  border-radius: 0.3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.app-label-preview-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-start;
+  align-self: start;
+}
+
+.app-label-preview-scan-text {
+  margin-top: 0.55rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  transform: rotate(-7deg);
+  color: var(--app-text-muted);
+}
+
+.app-data-table {
+  border: 1px solid color-mix(in srgb, var(--app-border) 72%, white 28%);
+  border-radius: 0.8rem;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--app-surface) 84%, white 16%);
+}
+
+.app-data-row {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 1rem;
+  padding: 0.95rem 1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--app-border) 58%, white 42%);
+}
+
+.app-data-row:last-child {
+  border-bottom: 0;
+}
+
+.app-data-key {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--app-text-muted);
+}
+
+.app-data-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--app-text);
+}
+
+.app-table-head,
+.app-table-row {
+  display: grid;
+  align-items: center;
+}
+
+.app-mamul-table {
+  grid-template-columns: minmax(180px, 1.3fr) minmax(150px, 1fr) minmax(160px, 1fr) 110px 110px minmax(280px, 1.5fr);
+}
+
+.app-table-head {
+  background: color-mix(in srgb, var(--app-surface-soft) 64%, white 36%);
+  border-bottom: 1px solid color-mix(in srgb, var(--app-border) 72%, white 28%);
+}
+
+.app-table-head > div {
+  padding: 0.9rem 1rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--app-text-muted);
+}
+
+.app-table-row {
+  border-bottom: 1px solid color-mix(in srgb, var(--app-border) 50%, white 50%);
+  background: color-mix(in srgb, var(--app-surface) 88%, white 12%);
+}
+
+.app-table-row:last-child {
+  border-bottom: 0;
+}
+
+.app-table-row > div {
+  padding: 1rem;
 }
 
 .app-order-band {
@@ -1268,6 +1639,28 @@ code {
 
   .app-container {
     padding: 0 1rem;
+  }
+
+  .app-page-hero-grid,
+  .app-label-designer-grid,
+  .app-label-compact-grid,
+  .app-label-care-row,
+  .app-label-field-row,
+  .app-data-row {
+    grid-template-columns: 1fr;
+  }
+
+  .app-page-hero-actions {
+    justify-content: flex-start;
+  }
+
+  .app-label-preview-panel {
+    position: static;
+  }
+
+  .app-label-designer-preview-column {
+    position: static;
+    top: auto;
   }
 
   .app-mobile-bottom-nav {

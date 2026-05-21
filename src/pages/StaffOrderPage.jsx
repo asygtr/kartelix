@@ -822,7 +822,6 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <div className="text-sm font-semibold text-[color:var(--app-text)]">Kartvizit / firma görseli</div>
-                      <div className="mt-1 text-sm text-[color:var(--app-text-muted)]">Firma adı bilinmese bile siparişi kaydedin. Kartvizit ekleyip sonra düzenleyebilirsiniz.</div>
                     </div>
                     <button type="button" onClick={() => fileInputRef.current?.click()} className="app-btn-secondary">
                       <span className="inline-flex items-center gap-2"><CardIcon />Kartvizit ekle</span>
@@ -850,10 +849,6 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
                     </div>
                   ) : null}
                 </div>
-
-                {form.firmaAdi && !companies.some((company) => company.ad?.toLowerCase() === form.firmaAdi.trim().toLowerCase()) ? (
-                  <div className="app-soft-panel mt-4 px-4 py-3 text-sm text-[color:var(--app-text-muted)]">Bu firma yeni kayıt olarak siparişle birlikte eklenecek.</div>
-                ) : null}
 
                 <div className="mt-6 grid gap-3 md:grid-cols-2">
                   <div className="rounded-2xl bg-slate-100 p-4">

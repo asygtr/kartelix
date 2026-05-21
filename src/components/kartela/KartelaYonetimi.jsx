@@ -44,7 +44,7 @@ const KartelaYonetimi = () => {
       <div className="mt-8">
         <h3 className="text-lg font-semibold mb-4">Son Eklenen Kartelalar</h3>
         <div className="bg-gray-50 rounded-lg p-4">
-          <p className="text-gray-600 text-center">Kartela listesi burada gösterilecek</p>
+          <p className="text-gray-600 text-center">-</p>
         </div>
       </div>
     </div>

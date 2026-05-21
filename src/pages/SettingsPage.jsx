@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../theme/ThemeProvider';
 import { palettes } from '../theme/palettes';
 import AppNavbar from '../components/AppNavbar';
+import LabelDesignerPanel from '../components/LabelDesignerPanel';
+import { clearSession } from '../utils/auth';
 
 const tabs = [
   { id: 'types', label: 'Ürün Grupları' },
@@ -11,6 +13,7 @@ const tabs = [
   { id: 'processes', label: 'Proses' },
   { id: 'excel', label: 'Excel Kaynakları' },
   { id: 'theme', label: 'Marka Varlıkları' },
+  { id: 'labels', label: 'Etiket Tasarımcısı' },
   { id: 'system', label: 'Operasyon' }
 ];
 
@@ -32,6 +35,12 @@ const excelSourceOptions = [
 const CloseIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
     <path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5Z" fill="currentColor" />
+  </svg>
+);
+
+const MenuIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
+    <path d="M4 7h16v2H4V7Zm0 4h16v2H4v-2Zm0 4h16v2H4v-2Z" fill="currentColor" />
   </svg>
 );
 
@@ -218,6 +227,11 @@ const SettingsPage = () => {
         })
         .finally(() => setLoading(false));
     }
+  };
+
+  const handleLogout = () => {
+    clearSession();
+    window.location.href = '/';
   };
 
   const createDefinition = async (url, payload, onSuccess) => {
@@ -795,6 +809,12 @@ const SettingsPage = () => {
         </div>
       )
     },
+    labels: {
+      title: 'Etiket Tasarımcısı',
+      description: 'Baskı düzenini örnek içerikle ayarlayabileceğiniz sade tasarım alanı.',
+      fullWidth: true,
+      content: <LabelDesignerPanel />
+    },
     system: {
       title: 'Operasyon merkezi',
       description: 'Yedekleme, veri temizleme ve temel operasyon göstergeleri.',
@@ -831,22 +851,53 @@ const SettingsPage = () => {
       <div className="app-container space-y-6">
         <AppNavbar
           title="Ayarlar"
+          action={(
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              className="app-nav-icon-button"
+              aria-label="Ayar bolumlerini ac"
+              title="Ayar bolumlerini ac"
+            >
+              <MenuIcon />
+            </button>
+          )}
+          onLogout={handleLogout}
         />
 
-        <section className="app-panel p-6">
-          <div className="grid gap-8 xl:grid-cols-[0.95fr,1.05fr]">
-            <div>
-              <div className="app-chip">{tabs.find((tab) => tab.id === activeTab)?.label}</div>
-              <h2 className="mt-4 text-2xl font-semibold text-slate-900">{current.title}</h2>
-              <div className="mt-6">{current.form}</div>
+        {activeTab !== 'labels' ? (
+          <section className="app-hero app-page-hero app-reveal-up">
+            <div className="app-page-hero-grid">
+              <div>
+                <div className="app-chip">{tabs.find((tab) => tab.id === activeTab)?.label}</div>
+                <h1 className="mt-4 text-3xl font-semibold text-[color:var(--app-text)]">{current.title}</h1>
+                <p className="mt-3 max-w-3xl text-sm leading-7 text-[color:var(--app-text-muted)]">{current.description}</p>
+              </div>
+              <div className="app-page-hero-actions" />
             </div>
+          </section>
+        ) : null}
 
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900">{activeTab === 'excel' ? 'Kayıtlar ve son senkronlar' : 'Mevcut tanımlar'}</h3>
-              {current.list}
+        {current.fullWidth ? (
+          <section className="app-reveal-up app-reveal-delay-1">
+            {current.content}
+          </section>
+        ) : (
+          <section className="app-panel p-6 app-reveal-up app-reveal-delay-1">
+            <div className="grid gap-8 xl:grid-cols-[0.95fr,1.05fr]">
+              <div>
+                <div className="app-chip">{tabs.find((tab) => tab.id === activeTab)?.label}</div>
+                <h2 className="mt-4 text-2xl font-semibold text-slate-900">{current.title}</h2>
+                <div className="mt-6">{current.form}</div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">{activeTab === 'excel' ? 'Kayıtlar ve son senkronlar' : 'Mevcut tanımlar'}</h3>
+                {current.list}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
       </div>
 
       {drawerVisible ? (

@@ -3,6 +3,7 @@ import AppNavbar from '../components/AppNavbar';
 import MamulEtiketModal from '../components/MamulEtiketModal';
 import { clearSession } from '../utils/auth';
 import PageSearchBar from '../components/PageSearchBar';
+import { getActiveLabelTemplateId, listLabelTemplates, loadLabelTemplate, printLabels } from '../utils/labelTemplate';
 
 const normalizeSearchValue = (value) => String(value || '').trim().toLowerCase();
 
@@ -12,6 +13,8 @@ const MamulLabelPage = () => {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [templates] = useState(() => listLabelTemplates());
+  const [selectedTemplateId, setSelectedTemplateId] = useState(() => getActiveLabelTemplateId());
 
   const loadRecords = async (term = '') => {
     try {
@@ -50,44 +53,7 @@ const MamulLabelPage = () => {
   const printSelected = () => {
     const selectedLabels = records.filter((item) => selectedIds.includes(item.id));
     if (selectedLabels.length === 0) return;
-
-    const printWindow = window.open('', '_blank', 'width=900,height=700');
-    const content = selectedLabels.map((item) => {
-      const publicUrl = `${window.location.origin}/u/${item.qr_slug}`;
-      return `
-        <div style="width:90mm;height:60mm;padding:2mm;page-break-after:always;">
-          <div style="width:86mm;height:56mm;border:1px solid #111;padding:2mm;display:grid;grid-template-columns:4mm 1fr 15mm;gap:1.4mm;font-family:Arial,sans-serif;">
-            <div style="display:flex;align-items:center;justify-content:flex-start;padding-left:.1mm;border-right:1px solid #111;">
-              <div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:5.8pt;font-weight:800;letter-spacing:.06em;">KARTELIX</div>
-            </div>
-            <div style="min-width:0;">
-              <div style="display:grid;grid-template-columns:11mm 1fr;gap:.55mm;font-size:5.55pt;line-height:1.06;">
-                <div style="font-weight:700;">ARTICLE:</div><div style="min-width:0;word-break:break-word;overflow-wrap:anywhere;">${item.article_code}</div>
-                <div style="font-weight:700;">MAMUL:</div><div style="min-width:0;word-break:break-word;overflow-wrap:anywhere;">${item.mamul_adi || '-'}</div>
-                <div style="font-weight:700;">KOMP:</div><div style="min-width:0;word-break:normal;overflow-wrap:anywhere;line-height:1.06;font-size:5.2pt;">${item.kompozisyon_ozeti || '-'}</div>
-                <div style="font-weight:700;">RENK:</div><div style="min-width:0;word-break:break-word;overflow-wrap:anywhere;">${item.renk || '-'}</div>
-                <div style="font-weight:700;">EN:</div><div style="min-width:0;word-break:break-word;overflow-wrap:anywhere;">${item.en || '-'}</div>
-                <div style="font-weight:700;">GR:</div><div style="min-width:0;word-break:break-word;overflow-wrap:anywhere;">${item.gramaj || '-'}</div>
-              </div>
-              <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.8mm;margin-top:1mm;">
-                <div style="height:4.6mm;border:.35mm solid #111;border-radius:.8mm;display:flex;align-items:center;justify-content:center;font-size:2.85pt;font-weight:700;">30</div>
-                <div style="height:4.6mm;border:.35mm solid #111;border-radius:.8mm;display:flex;align-items:center;justify-content:center;font-size:2.85pt;font-weight:700;">X</div>
-                <div style="height:4.6mm;border:.35mm solid #111;border-radius:.8mm;display:flex;align-items:center;justify-content:center;font-size:2.85pt;font-weight:700;">I</div>
-                <div style="height:4.6mm;border:.35mm solid #111;border-radius:.8mm;display:flex;align-items:center;justify-content:center;font-size:2.85pt;font-weight:700;">D</div>
-                <div style="height:4.6mm;border:.35mm solid #111;border-radius:.8mm;display:flex;align-items:center;justify-content:center;font-size:2.85pt;font-weight:700;">P</div>
-              </div>
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;justify-content:center;text-align:center;">
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(publicUrl)}" alt="QR" style="width:13.75mm;height:13.75mm;" />
-              <div style="font-size:4.8pt;font-weight:800;margin-top:.7mm;transform:rotate(-7deg);align-self:center;">↗ BENI TARA</div>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8" /><title>Toplu Etiket</title></head><body>${content}<script>window.onload=function(){setTimeout(function(){window.print();},300);};</script></body></html>`);
-    printWindow.document.close();
+    printLabels(selectedLabels, loadLabelTemplate(selectedTemplateId), 'tr');
   };
 
   const resolveRecordMatch = (rawValue) => {
@@ -107,10 +73,6 @@ const MamulLabelPage = () => {
       <div className="app-container space-y-6">
         <AppNavbar
           title="Etiket"
-          links={[
-            { to: '/mamul', label: 'Mamül merkezi' },
-            { to: '/mamul/create', label: 'Mamül ekle' }
-          ]}
           onLogout={handleLogout}
         />
 
@@ -143,13 +105,18 @@ const MamulLabelPage = () => {
         />
 
         {hasSearchContext ? (
-          <section className="app-panel p-6">
+          <section className="app-panel p-6 app-reveal-up app-reveal-delay-2">
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Kayıtlı mamül etiketleri</h2>
               <div className="flex items-center gap-3">
+                <select className="app-select max-w-[220px]" value={selectedTemplateId} onChange={(event) => setSelectedTemplateId(event.target.value)}>
+                  {templates.map((item) => (
+                    <option key={item.id} value={item.id}>{item.name}</option>
+                  ))}
+                </select>
                 {selectedIds.length > 0 ? (
                   <button type="button" onClick={printSelected} className="app-btn-primary">
-                    Toplu yazdır ({selectedIds.length})
+                    Toplu yazdir ({selectedIds.length})
                   </button>
                 ) : null}
                 {loading ? <span className="text-sm text-[color:var(--app-text-muted)]">Yükleniyor...</span> : null}
@@ -206,7 +173,7 @@ const MamulLabelPage = () => {
         ) : null}
       </div>
 
-      <MamulEtiketModal mamul={selectedRecord} onClose={() => setSelectedRecord(null)} />
+      <MamulEtiketModal mamul={selectedRecord} templateId={selectedTemplateId} onClose={() => setSelectedRecord(null)} />
     </div>
   );
 };

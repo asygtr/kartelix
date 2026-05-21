@@ -119,13 +119,7 @@ const MamulShowcasePage = () => {
     <div className="app-page">
       <div className="app-container space-y-6">
         <AppNavbar
-          eyebrow="Kartelix / Ürün Tanıtımı"
-          title="Ürün tanıtımı merkezi"
-          description="Müşterinin göreceği hikâye dili, görsel, materyal notları ve vitrin başlığını buradan yönetin."
-          links={[
-            { to: '/mamul', label: 'Mamül merkezi' },
-            { to: '/mamul/create', label: 'Mamül ekle' }
-          ]}
+          title="Ürün Tanıtımı"
           onLogout={handleLogout}
         />
 
@@ -201,10 +195,10 @@ const MamulShowcasePage = () => {
             <section className="app-hero">
               <div className="app-chip">{form.vurguEtiketi || selectedMamul?.mamul_turu_adi || 'Önizleme'}</div>
               <h2 className="mt-6 text-4xl font-extrabold">{form.tanitimBasligi || selectedMamul?.mamul_adi || 'Mamül seçin'}</h2>
-              <p className="mt-4 max-w-3xl text-white/78 leading-8">
-                {form.tanitimHikayesi || selectedMamul?.aciklama || 'Buradaki yazı müşteriye gidecek vitrin metninin önizlemesidir.'}
+              <p className="mt-4 max-w-3xl text-[color:var(--app-text-muted)] leading-8">
+                {form.tanitimHikayesi || selectedMamul?.aciklama || ''}
               </p>
-              <div className="mt-6 text-sm text-white/70">
+              <div className="mt-6 text-sm text-[color:var(--app-text-muted)]">
                 Public link: {selectedMamul ? `/u/${selectedMamul.qr_slug}` : '-'}
               </div>
             </section>

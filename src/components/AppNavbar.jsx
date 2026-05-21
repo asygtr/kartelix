@@ -28,6 +28,9 @@ const navSets = {
 
 const isActiveLink = (pathname, target) => {
   if (target === '/') return pathname === '/';
+  if (target === '/admin' || target === '/mamul') {
+    return pathname === target;
+  }
   return pathname === target || pathname.startsWith(`${target}/`);
 };
 
@@ -83,7 +86,7 @@ const ReportIcon = () => (
   </svg>
 );
 
-const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }) => {
+const AppNavbar = ({ title, action, onLogout }) => {
   const { appLogo } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
@@ -225,7 +228,7 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
 
         <div className="app-nav-actions">
           {showSettings ? (
-            <Link to="/admin/settings" className="app-nav-icon-button" aria-label="Ayarlar" title="Ayarlar">
+            <Link to="/admin/settings?menu=1" className="app-nav-icon-button" aria-label="Ayarlar" title="Ayarlar">
               <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
                 <path d="M19.14 12.94a7.43 7.43 0 0 0 .05-.94 7.43 7.43 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.12 7.12 0 0 0-1.63-.94l-.36-2.54a.49.49 0 0 0-.49-.42h-3.84a.49.49 0 0 0-.49.42l-.36 2.54a7.12 7.12 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.43 7.43 0 0 0-.05.94 7.43 7.43 0 0 0 .05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.39 1.04.71 1.63.94l.36 2.54a.49.49 0 0 0 .49.42h3.84a.49.49 0 0 0 .49-.42l.36-2.54c.59-.23 1.13-.55 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64ZM12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5Z" fill="currentColor" />
               </svg>
@@ -253,39 +256,14 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
         </div>
       </div>
 
-      <div className="app-nav-meta">
-        <div className="app-nav-meta-copy">
-          <p className="app-eyebrow">{eyebrow}</p>
-          <div className="app-nav-page-title">{title}</div>
-          {description ? <p className="app-nav-page-description">{description}</p> : null}
-        </div>
-      </div>
-
-      {primaryLinks.length ? (
-        <nav className={`app-nav-primary-wrap ${menuOpen ? 'is-open' : ''}`} aria-label="Ana gezinme">
+      {primaryLinks.length && menuOpen ? (
+        <nav className="app-nav-primary-wrap is-open" aria-label="Ana gezinme">
           <div className="app-nav-links">
             {primaryLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
                 className={`app-nav-link ${isActiveLink(location.pathname, link.to) ? 'is-active' : ''}`}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-        </nav>
-      ) : null}
-
-      {links.length ? (
-        <nav className={`app-nav-links-wrap ${menuOpen ? 'is-open' : ''}`} aria-label="Sayfa içi gezinme">
-          <div className="app-nav-subhead">Bu ekranda</div>
-          <div className="app-nav-links app-nav-links-secondary">
-            {links.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className={`app-nav-link app-nav-link-secondary ${isActiveLink(location.pathname, link.to) ? 'is-active' : ''}`}
               >
                 {link.label}
               </Link>

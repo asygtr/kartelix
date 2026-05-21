@@ -88,6 +88,9 @@ const EtiketGoruntule = ({ siparis, firma, onClose, onEdit, onDelete }) => {
             font-family: 'Arial', 'Helvetica', sans-serif;
             background: white;
             font-size: 7.5pt;
+            line-height: 1.1;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
           .etiket-container {
             width: 86mm;
@@ -111,9 +114,18 @@ const EtiketGoruntule = ({ siparis, firma, onClose, onEdit, onDelete }) => {
           .label {
             font-weight: bold;
             text-align: left;
+            align-self: start;
           }
           .value {
             text-align: left;
+            align-self: start;
+          }
+          .label,
+          .value {
+            display: block;
+            margin: 0;
+            padding: 0;
+            line-height: inherit;
           }
           .firma-adi {
             font-size: 9pt;

@@ -302,7 +302,6 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
     }
   };
 
-  const pageLabel = mode === 'mamul' ? 'Kartelix / Mamül' : 'Kartelix / Yönetim';
   const pageTitle = mode === 'mamul' ? 'Mamül ekle' : 'Mamül kartı';
   const resolveMamulMatch = (rawValue) => {
     const term = normalizeSearchValue(rawValue);
@@ -329,19 +328,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
     <div className="app-page">
       <div className="app-container space-y-6">
         <AppNavbar
-          eyebrow={pageLabel}
           title={pageTitle}
-          links={mode === 'admin'
-            ? [
-                { to: '/admin', label: 'Yönetim' },
-                { to: '/admin/settings', label: 'Üretim altyapısı' },
-                { to: '/mamul/showcase', label: 'Ürün tanıtımı' }
-              ]
-            : [
-                { to: '/mamul', label: 'Mamül merkezi' },
-                { to: '/mamul/labels', label: 'Etiket bas' },
-                { to: '/mamul/showcase', label: 'Ürün tanıtımı' }
-              ]}
           onLogout={handleLogout}
         />
 
@@ -394,9 +381,6 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold text-[color:var(--app-text)]">Mamül kartı editörü</h2>
-              <p className="mt-1 text-sm text-[color:var(--app-text-muted)]">
-                Yeni kayıt açmak için butonu kullanın ya da arama sonuçlarından bir mamül seçin.
-              </p>
             </div>
             <button
               type="button"
@@ -418,7 +402,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
           </div>
         </section>
 
-        <div className="grid gap-6 xl:grid-cols-[1.35fr,0.65fr]">
+        <div className="space-y-6">
           <div className="space-y-6">
           {showEditor ? (
           <form onSubmit={submitForm} className="app-collapse-panel space-y-6">
@@ -428,11 +412,6 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                   <h2 className="text-xl font-semibold text-[color:var(--app-text)]">
                     {selectedMamulId ? 'Mamül kartını düzenle' : 'Genel bilgiler'}
                   </h2>
-                  <p className="mt-2 text-sm text-[color:var(--app-text-muted)]">
-                    {selectedMamulId
-                      ? 'Kayıtlı mamül kartını güncelleyip etiket ve public vitrine aynı veriyle devam edin.'
-                      : 'Kimlik, ölçü ve tanıtım alanlarını tek formda düzenleyin.'}
-                  </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   {selectedMamulId ? (
@@ -481,7 +460,6 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Ürün tanıtımı</h2>
-                  <p className="mt-2 text-sm text-[color:var(--app-text-muted)]">Müşterinin göreceği vitrin başlığı, hikâye ve materyal dili.</p>
                 </div>
               </div>
 
@@ -498,7 +476,6 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-semibold text-[color:var(--app-text)]">İplik reçetesi</h2>
-                  <p className="mt-2 text-sm text-[color:var(--app-text-muted)]">Kullanılan iplikler ve oranlar.</p>
                 </div>
                 <button type="button" onClick={() => addArrayItem('iplikler', emptyYarn)} className="app-btn-secondary">Satır ekle</button>
               </div>
@@ -522,7 +499,6 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Proses ve boya</h2>
-                  <p className="mt-2 text-sm text-[color:var(--app-text-muted)]">Uygulanan proseslerin maliyet etkisi.</p>
                 </div>
                 <button type="button" onClick={() => addArrayItem('prosesler', emptyProcess)} className="app-btn-secondary">Satır ekle</button>
               </div>
@@ -576,22 +552,12 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
           <div className="space-y-6">
             <section className="app-panel p-6">
               <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Hızlı özet</h2>
-              <div className="mt-5 space-y-3">
-                <div className="app-soft-panel px-4 py-4 text-sm">
-                  Tür: <span className="font-semibold text-[color:var(--app-text)]">{types.find((item) => String(item.id) === String(form.mamulTuruId))?.ad || '-'}</span>
-                </div>
-                <div className="app-soft-panel px-4 py-4 text-sm">
-                  Koleksiyon: <span className="font-semibold text-[color:var(--app-text)]">{form.koleksiyonAdi || '-'}</span>
-                </div>
-                <div className="app-soft-panel px-4 py-4 text-sm">
-                  Renk: <span className="font-semibold text-[color:var(--app-text)]">{selectedColor?.ad || '-'}</span>
-                </div>
-                <div className="app-soft-panel px-4 py-4 text-sm">
-                  Yayın durumu: <span className="font-semibold text-[color:var(--app-text)]">{form.yayinDurumu || '-'}</span>
-                </div>
-                <div className="app-soft-panel px-4 py-4 text-sm">
-                  Varyant hazırlığı: <span className="font-semibold text-[color:var(--app-text)]">Hazır</span>
-                </div>
+              <div className="mt-5 app-data-table">
+                <div className="app-data-row"><div className="app-data-key">Tür</div><div className="app-data-value">{types.find((item) => String(item.id) === String(form.mamulTuruId))?.ad || '-'}</div></div>
+                <div className="app-data-row"><div className="app-data-key">Koleksiyon</div><div className="app-data-value">{form.koleksiyonAdi || '-'}</div></div>
+                <div className="app-data-row"><div className="app-data-key">Renk</div><div className="app-data-value">{selectedColor?.ad || '-'}</div></div>
+                <div className="app-data-row"><div className="app-data-key">Yayın durumu</div><div className="app-data-value">{form.yayinDurumu || '-'}</div></div>
+                <div className="app-data-row"><div className="app-data-key">Varyant hazırlığı</div><div className="app-data-value">Hazır</div></div>
               </div>
             </section>
 
@@ -604,9 +570,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
               </div>
 
               {!selectedMamulDetail ? (
-                <div className="app-soft-panel mt-5 px-4 py-5 text-sm text-[color:var(--app-text-muted)]">
-                  Kayıtlı mamüllerden birini seçerek teknik, maliyet ve vitrin özetini burada görüntüleyin.
-                </div>
+                null
               ) : (
                 <div className="mt-5 space-y-4">
                   <div className="app-soft-panel p-4">
@@ -615,13 +579,13 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                     <div className="mt-2 text-sm text-[color:var(--app-text-muted)]">{selectedMamulDetail.article_code} / {selectedMamulDetail.article_no}</div>
                   </div>
 
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div className="app-soft-panel px-4 py-4 text-sm">Renk: <span className="font-semibold text-[color:var(--app-text)]">{selectedMamulDetail.renk || '-'}</span></div>
-                    <div className="app-soft-panel px-4 py-4 text-sm">Koleksiyon: <span className="font-semibold text-[color:var(--app-text)]">{selectedMamulDetail.koleksiyon_adi || '-'}</span></div>
-                    <div className="app-soft-panel px-4 py-4 text-sm">Kompozisyon: <span className="font-semibold text-[color:var(--app-text)]">{selectedMamulDetail.kompozisyon_ozeti || '-'}</span></div>
-                    <div className="app-soft-panel px-4 py-4 text-sm">Ölçü: <span className="font-semibold text-[color:var(--app-text)]">{selectedMamulDetail.en || '-'} EN / {selectedMamulDetail.gramaj || '-'} GR</span></div>
-                    <div className="app-soft-panel px-4 py-4 text-sm">1 kg satış: <span className="font-semibold text-[color:var(--app-text)]">{Number(selectedMamulDetail.bir_kg_satis_fiyati || 0).toFixed(2)}</span></div>
-                    <div className="app-soft-panel px-4 py-4 text-sm">Durum: <span className="font-semibold text-[color:var(--app-text)]">{selectedMamulDetail.yayin_durumu || '-'}</span></div>
+                  <div className="app-data-table">
+                    <div className="app-data-row"><div className="app-data-key">Renk</div><div className="app-data-value">{selectedMamulDetail.renk || '-'}</div></div>
+                    <div className="app-data-row"><div className="app-data-key">Koleksiyon</div><div className="app-data-value">{selectedMamulDetail.koleksiyon_adi || '-'}</div></div>
+                    <div className="app-data-row"><div className="app-data-key">Kompozisyon</div><div className="app-data-value">{selectedMamulDetail.kompozisyon_ozeti || '-'}</div></div>
+                    <div className="app-data-row"><div className="app-data-key">Ölçü</div><div className="app-data-value">{selectedMamulDetail.en || '-'} EN / {selectedMamulDetail.gramaj || '-'} GR</div></div>
+                    <div className="app-data-row"><div className="app-data-key">1 kg satış</div><div className="app-data-value">{Number(selectedMamulDetail.bir_kg_satis_fiyati || 0).toFixed(2)}</div></div>
+                    <div className="app-data-row"><div className="app-data-key">Durum</div><div className="app-data-value">{selectedMamulDetail.yayin_durumu || '-'}</div></div>
                   </div>
 
                   <div className="app-soft-panel p-4">
@@ -631,7 +595,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                         <div key={item.id} className="text-sm text-[color:var(--app-text-muted)]">
                           {item.iplik_adi} / %{Number(item.oran_yuzde || 0).toFixed(2)} / {Number(item.birim_fiyat || 0).toFixed(2)}
                         </div>
-                      )) : <div className="text-sm text-[color:var(--app-text-muted)]">Henüz iplik detayı yok.</div>}
+                      )) : <div className="text-sm text-[color:var(--app-text-muted)]">-</div>}
                     </div>
                   </div>
 
@@ -642,16 +606,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                         <div key={item.id} className="text-sm text-[color:var(--app-text-muted)]">
                           {item.proses_adi} / {item.proses_tipi || 'Tip tanımsız'} / {Number(item.birim_maliyet || 0).toFixed(2)}
                         </div>
-                      )) : <div className="text-sm text-[color:var(--app-text-muted)]">Henüz proses detayı yok.</div>}
-                    </div>
-                  </div>
-
-                  <div className="app-soft-panel p-4">
-                    <div className="text-sm font-semibold text-[color:var(--app-text)]">Ürün vitrini özeti</div>
-                    <div className="mt-3 text-sm text-[color:var(--app-text-muted)]">
-                      {selectedMamulDetail.tanitim_basligi || selectedMamulDetail.tanitim_hikayesi || selectedMamulDetail.materyal_notlari
-                        ? 'Bu mamül için vitrin içeriği hazırlanmış.'
-                        : 'Bu mamül için vitrin içeriği henüz sınırlı.'}
+                      )) : <div className="text-sm text-[color:var(--app-text-muted)]">-</div>}
                     </div>
                   </div>
                 </div>
@@ -663,45 +618,34 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                 <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Kayıtlı mamüller</h2>
                 <span className="text-sm text-[color:var(--app-text-muted)]">{mamulList.length} kayıt</span>
               </div>
-              <div className="mt-5 space-y-3 max-h-[760px] overflow-y-auto pr-1">
-                {filteredMamulList.map((item) => (
-                  <div key={item.id} className="app-soft-panel p-4">
-                    <div className="flex justify-between gap-4">
-                      <div>
-                        <div className="font-semibold text-[color:var(--app-text)]">{item.mamul_adi}</div>
-                        <div className="mt-1 text-sm text-[color:var(--app-text-muted)]">{item.article_code} / {item.article_no}</div>
-                        <div className="mt-1 text-sm text-[color:var(--app-text-muted)]">{item.mamul_turu_adi}{item.renk ? ` · ${item.renk}` : ''}</div>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <button type="button" onClick={() => loadMamulIntoForm(item.id)} className="app-nav-link">
-                          Düzenle
-                        </button>
-                        <button type="button" onClick={() => duplicateMamul(item.id)} className="app-nav-link">
-                          Kopyala
-                        </button>
-                        <button type="button" onClick={() => showMamulDetail(item.id)} className="app-nav-link">
-                          Detay gör
-                        </button>
-                        <a
-                          href={`/u/${item.qr_slug}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="app-nav-link"
-                        >
-                          Public gör
-                        </a>
-                      </div>
-                    </div>
-                    <div className="mt-3 text-sm text-[color:var(--app-success)]">
-                      1 kg satış: {Number(item.bir_kg_satis_fiyati || 0).toFixed(2)}
-                    </div>
-                    <div className="mt-2 text-xs text-[color:var(--app-text-muted)]">
-                      Durum: {item.yayin_durumu || (item.aktif ? 'yayinda' : 'taslak')}
-                    </div>
+              <div className="mt-5 overflow-x-auto rounded-xl border border-[color:var(--app-border)]">
+                <div className="min-w-[980px]">
+                  <div className="app-table-head app-mamul-table">
+                    <div>Mamül</div>
+                    <div>Article</div>
+                    <div>Tür / Renk</div>
+                    <div>1 kg satış</div>
+                    <div>Durum</div>
+                    <div>İşlemler</div>
                   </div>
-                ))}
+                  {filteredMamulList.map((item) => (
+                    <div key={item.id} className="app-table-row app-mamul-table">
+                      <div className="font-semibold text-[color:var(--app-text)]">{item.mamul_adi}</div>
+                      <div className="text-sm text-[color:var(--app-text-muted)]">{item.article_code} / {item.article_no}</div>
+                      <div className="text-sm text-[color:var(--app-text-muted)]">{item.mamul_turu_adi}{item.renk ? ` · ${item.renk}` : ''}</div>
+                      <div className="text-sm font-semibold text-[color:var(--app-success)]">{Number(item.bir_kg_satis_fiyati || 0).toFixed(2)}</div>
+                      <div className="text-sm text-[color:var(--app-text-muted)]">{item.yayin_durumu || (item.aktif ? 'yayinda' : 'taslak')}</div>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" onClick={() => loadMamulIntoForm(item.id)} className="app-btn-secondary">Düzenle</button>
+                        <button type="button" onClick={() => duplicateMamul(item.id)} className="app-btn-secondary">Kopyala</button>
+                        <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary">Detay gör</button>
+                        <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary">Public gör</a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
                 {filteredMamulList.length === 0 ? (
-                  <div className="app-soft-panel px-4 py-4 text-sm text-[color:var(--app-text-muted)]">Henüz mamül kaydı yok.</div>
+                  <div className="app-soft-panel m-3 px-4 py-4 text-sm text-[color:var(--app-text-muted)]">Henüz mamül kaydı yok.</div>
                 ) : null}
               </div>
             </section>

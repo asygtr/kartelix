@@ -20,9 +20,6 @@ const HomePage = () => {
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 md:mb-3">
             Kartela Yönetim Sistemi
           </h1>
-          <p className="text-base md:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto">
-            Hangi modüle erişmek istiyorsunuz?
-          </p>
         </div>
 
         {/* Modül Seçim Kartları - Grid yapısı iyileştirildi */}
@@ -37,26 +34,8 @@ const HomePage = () => {
               Kartela Yönetimi
             </h2>
             <p className="text-gray-600 mb-6 md:mb-8 text-center flex-grow">
-              Mamul kartelalarını oluşturun, düzenleyin ve yönetin. Etiket basımı ve stok takibi yapın.
+              Mamul kartelaları
             </p>
-            <div className="space-y-2 mb-6 md:mb-8">
-              <div className="flex items-center text-sm md:text-base text-gray-500">
-                <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
-                Mamul arama ve filtreleme
-              </div>
-              <div className="flex items-center text-sm md:text-base text-gray-500">
-                <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
-                Kartela oluşturma
-              </div>
-              <div className="flex items-center text-sm md:text-base text-gray-500">
-                <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
-                Etiket yazdırma
-              </div>
-              <div className="flex items-center text-sm md:text-base text-gray-500">
-                <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
-                Stok takibi
-              </div>
-            </div>
             <button className="w-full bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-600 transition font-medium text-base md:text-lg">
               Kartela Yönetimine Git →
             </button>
@@ -72,41 +51,16 @@ const HomePage = () => {
               Sipariş Yönetimi
             </h2>
             <p className="text-gray-600 mb-6 md:mb-8 text-center flex-grow">
-              Müşteri siparişlerini oluşturun, takip edin ve yönetin. QR kod ile hızlı kartela ekleyin.
+              Siparişler
             </p>
-            <div className="space-y-2 mb-6 md:mb-8">
-              <div className="flex items-center text-sm md:text-base text-gray-500">
-                <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
-                Yeni sipariş oluşturma
-              </div>
-              <div className="flex items-center text-sm md:text-base text-gray-500">ı
-                <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
-                QR kod ile kartela ekleme
-              </div>
-              <div className="flex items-center text-sm md:text-base text-gray-500">
-                <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
-                Sipariş takibi
-              </div>
-              <div className="flex items-center text-sm md:text-base text-gray-500">
-                <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
-                Email bildirimleri
-              </div>
-            </div>
             <button className="w-full bg-green-500 text-white py-3 px-6 rounded-lg hover:bg-green-600 transition font-medium text-base md:text-lg">
               Sipariş Yönetimine Git →
             </button>
           </div>
-        </div>
-
-        {/* Alt Bilgi */}
-        <div className="mt-8 md:mt-12 lg:mt-16 text-center">
-          <p className="text-sm md:text-base text-gray-500 max-w-2xl mx-auto">
-            İstediğiniz zaman ana sayfaya dönmek için üst menüden "Ana Sayfa" butonunu kullanabilirsiniz.
-          </p>
         </div>
       </div>
     </div>
   );
 };
 
-export default HomePage;ı
+export default HomePage;

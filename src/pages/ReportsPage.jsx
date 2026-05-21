@@ -5,9 +5,11 @@ import { clearSession } from '../utils/auth';
 const ReportsPage = () => {
   const [report, setReport] = useState(null);
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const loadReport = async () => {
     try {
+      setLoading(true);
       setMessage('');
       const response = await fetch('/api/admin/reports/overview');
       const result = await response.json();
@@ -17,6 +19,8 @@ const ReportsPage = () => {
       setReport(result.data);
     } catch (error) {
       setMessage(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -33,17 +37,16 @@ const ReportsPage = () => {
     <div className="app-page">
       <div className="app-container space-y-6">
         <AppNavbar
-          eyebrow="Kartelix / Raporlar"
-          title="Yönetim içgörü ekranı"
-          action={<button type="button" className="app-btn-secondary" onClick={loadReport}>Yenile</button>}
+          title="Raporlar"
           onLogout={handleLogout}
         />
 
         {message ? <div className="app-panel p-4 text-sm">{message}</div> : null}
+        {loading && !report ? <div className="app-panel p-4 text-sm">Rapor verisi yükleniyor...</div> : null}
 
         {report ? (
           <>
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-4 app-reveal-up app-reveal-delay-1">
               <div className="app-stat">
                 <div className="app-stat-label">Toplam mamül</div>
                 <div className="app-stat-value">{report.toplamMamul}</div>
@@ -62,7 +65,7 @@ const ReportsPage = () => {
               </div>
             </div>
 
-            <div className="grid gap-6 xl:grid-cols-2">
+            <div className="grid gap-6 xl:grid-cols-2 app-reveal-up app-reveal-delay-2">
               <section className="app-panel p-6">
                 <h2 className="text-xl font-semibold text-[color:var(--app-text)]">En çok okutulanlar</h2>
                 <div className="mt-5 space-y-3">

@@ -7,37 +7,31 @@ const cards = [
   {
     icon: 'fabric',
     title: 'Mamul Ekle',
-    description: 'Teknik veri, article yapısı, reçete, proses, maliyet ve satış bilgilerini yönetin.',
     to: '/admin/mamuller'
   },
   {
     icon: 'orders',
     title: 'Siparişler',
-    description: 'Staff ekranının birebir akışına girin, sipariş toplayın ve QR bağlamlarını test edin.',
     to: '/staff/orders/new'
   },
   {
     icon: 'label',
     title: 'Etiket Bas',
-    description: 'Mamül tarafındaki etiket merkezi, QR önizleme ve baskı akışlarını görün.',
     to: '/mamul/labels'
   },
   {
     icon: 'story',
     title: 'Ürün Tanıtımı',
-    description: 'Müşteriye giden tanıtım hikâyesi, görsel dili ve vitrin metinlerini yönetin.',
     to: '/mamul/showcase'
   },
   {
     icon: 'settings',
     title: 'Üretim Altyapısı',
-    description: 'Mamül türleri, renkler, iplikler, prosesler ve marka varlıkları gibi temel sistemi yönetin.',
     to: '/admin/settings'
   },
   {
     icon: 'reports',
     title: 'Raporlar',
-    description: 'Public görüntülenme, en çok okutulan mamüller ve sipariş performansını izleyin.',
     to: '/admin/reports'
   }
 ];
@@ -85,8 +79,7 @@ const AdminLandingPage = () => {
     <div className="app-page">
       <div className="app-container space-y-6">
         <AppNavbar
-          eyebrow="Kartelix / Yönetim"
-          title="Merkezi kontrol paneli"
+          title="Yönetim"
           onLogout={handleLogout}
         />
 
@@ -96,7 +89,6 @@ const AdminLandingPage = () => {
               <div className="app-quick-card-icon">{iconMap[card.icon]}</div>
               <div className="app-quick-card-copy">
                 <h3 className="text-xl font-semibold text-[color:var(--app-text)]">{card.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-[color:var(--app-text-muted)]">{card.description}</p>
               </div>
             </Link>
           ))}

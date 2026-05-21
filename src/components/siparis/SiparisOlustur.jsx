@@ -314,7 +314,7 @@ const handleManuelEkle = async () => {
           
           {kartelalar.length === 0 ? (
             <div className="p-4 text-center text-gray-500">
-              Henüz kartela eklenmedi. Yukarıdan mamul arayıp ekleyin.
+              -
             </div>
           ) : (
             <div className="max-h-60 overflow-y-auto">

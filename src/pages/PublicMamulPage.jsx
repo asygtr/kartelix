@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import AppNavbar from '../components/AppNavbar';
 
 const PublicMamulPage = () => {
   const { slug } = useParams();
@@ -30,30 +29,16 @@ const PublicMamulPage = () => {
     fetchMamul();
   }, [slug]);
 
-  const materialHighlights = mamul ? [
-    {
-      label: 'Yüzey Karakteri',
-      value: mamul.materyal_notlari || 'Yumuşak, dengeli ve koleksiyonla uyumlu bir yüzey dili.'
-    },
-    {
-      label: 'Koleksiyon',
-      value: mamul.koleksiyon_adi || 'Kartelix seçki serisi'
-    },
-    {
-      label: 'Kullanım Hissi',
-      value: mamul.yayin_durumu === 'yayinda' ? 'Sunuma ve sipariş görüşmelerine hazır' : 'Preview aşamasında, koleksiyon sunumunda'
-    }
-  ] : [];
+  const materialHighlights = mamul
+    ? [
+        mamul.materyal_notlari ? { label: 'Yüzey', value: mamul.materyal_notlari } : null,
+        mamul.koleksiyon_adi ? { label: 'Koleksiyon', value: mamul.koleksiyon_adi } : null
+      ].filter(Boolean)
+    : [];
 
   return (
     <div className="app-page">
       <div className="app-container space-y-6">
-        <AppNavbar
-          eyebrow="Kartelix / Ürün Vitrini"
-          title="Dijital kartela vitrini"
-          action={<Link to="/" className="app-btn-secondary">Giriş ekranına dön</Link>}
-        />
-
         {loading ? <div className="app-panel p-8">Mamül yükleniyor...</div> : null}
 
         {!loading && error ? (
@@ -74,9 +59,11 @@ const PublicMamulPage = () => {
               <h2 className="mt-6 text-5xl font-extrabold leading-tight">
                 {mamul.tanitim_basligi || mamul.mamul_adi}
               </h2>
-              <p className="mt-5 max-w-3xl text-base leading-8 text-white/78">
-                {mamul.tanitim_hikayesi || mamul.aciklama || 'Bu mamül için tanıtım hikâyesi henüz tanımlanmadı.'}
-              </p>
+              {(mamul.tanitim_hikayesi || mamul.aciklama) ? (
+                <p className="mt-5 max-w-3xl text-base leading-8 text-[color:var(--app-text-muted)]">
+                  {mamul.tanitim_hikayesi || mamul.aciklama}
+                </p>
+              ) : null}
               <div className="public-hero-notes">
                 <div className="public-hero-note">
                   <span className="public-hero-note-label">Mamül</span>
@@ -95,17 +82,7 @@ const PublicMamulPage = () => {
 
             <section className="public-product-grid">
               <div className="public-visual app-panel" style={mamul.gorsel_url ? { backgroundImage: `url('${mamul.gorsel_url}')` } : undefined}>
-                {!mamul.gorsel_url ? (
-                  <div className="relative z-10 flex h-full items-end p-8 text-white">
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.3em] text-white/60">Kartelix Signature Surface</div>
-                      <div className="mt-3 text-3xl font-bold">{mamul.mamul_adi}</div>
-                      <div className="mt-3 max-w-md text-sm leading-7 text-white/72">
-                        {mamul.aciklama || 'Bu yüzey, koleksiyon sunumlarında ürünün karakterini hızlıca anlatmak için hazırlandı.'}
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
+                {!mamul.gorsel_url ? null : null}
               </div>
 
               <div className="space-y-4">
@@ -131,24 +108,18 @@ const PublicMamulPage = () => {
                   </div>
                 </div>
 
-                <div className="app-panel p-6">
-                  <div className="app-chip">Materyal Dili</div>
-                  <p className="mt-4 leading-8 text-[color:var(--app-text-muted)]">
-                    {mamul.materyal_notlari || 'Materyal ve yüzey dili notları henüz girilmedi.'}
-                  </p>
-                </div>
-
-                <div className="app-panel p-6">
-                  <div className="app-chip">Vitrin Yorumu</div>
-                  <div className="mt-4 grid gap-3">
-                    {materialHighlights.map((item) => (
-                      <div key={item.label} className="public-story-card">
-                        <div className="public-story-card-label">{item.label}</div>
-                        <div className="public-story-card-value">{item.value}</div>
-                      </div>
-                    ))}
+                {materialHighlights.length ? (
+                  <div className="app-panel p-6">
+                    <div className="mt-1 grid gap-3">
+                      {materialHighlights.map((item) => (
+                        <div key={item.label} className="public-story-card">
+                          <div className="public-story-card-label">{item.label}</div>
+                          <div className="public-story-card-value">{item.value}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ) : null}
 
                 {mamul.benzer_urunler?.length ? (
                   <div className="app-panel p-6">
