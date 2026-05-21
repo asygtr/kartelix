@@ -2,6 +2,18 @@ import React, { useEffect, useState } from 'react';
 import LabelPreviewCard from './LabelPreviewCard';
 import { loadLabelTemplate, printLabels } from '../utils/labelTemplate';
 
+const CloseIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
+    <path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5Z" fill="currentColor" />
+  </svg>
+);
+
+const PrintIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+    <path d="M7 3h10v4H7V3Zm10 14v4H7v-4h10Zm2-8a2 2 0 0 1 2 2v5h-3v-2H6v2H3v-5a2 2 0 0 1 2-2h14Z" fill="currentColor" />
+  </svg>
+);
+
 const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
   const [template, setTemplate] = useState(() => loadLabelTemplate(templateId));
 
@@ -43,9 +55,11 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-slate-100 px-3 py-2 text-sm text-slate-700 hover:bg-slate-200"
+            className="rounded-full bg-slate-100 p-2 text-slate-700 hover:bg-slate-200"
+            aria-label="Kapat"
+            title="Kapat"
           >
-            Kapat
+            <CloseIcon />
           </button>
         </div>
 
@@ -55,39 +69,25 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
           </div>
 
           <div className="space-y-4">
-            <div className="app-soft-panel p-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--app-text-muted)]">Canlı veri</div>
-              <div className="mt-3 grid gap-3 text-sm text-[color:var(--app-text-muted)]">
-                <div><strong className="text-slate-900">Article:</strong> {mamul.article_code || '-'}</div>
-                <div><strong className="text-slate-900">Mamül:</strong> {mamul.mamul_adi || '-'}</div>
-                <div><strong className="text-slate-900">Renk:</strong> {mamul.renk || '-'}</div>
-                <div><strong className="text-slate-900">Kompozisyon:</strong> {mamul.kompozisyon_ozeti || '-'}</div>
-              </div>
-            </div>
-
-            <div className="app-soft-panel p-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--app-text-muted)]">Tasarım kaynağı</div>
-              <p className="mt-3 text-sm leading-6 text-[color:var(--app-text-muted)]">
-                Bu önizleme ve yazdırma akışı Ayarlar içindeki etiket tasarımcısında kaydettiğiniz şablonu kullanır.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <a
-                href={publicUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="app-btn-secondary text-center"
-              >
-                Public sayfayi ac
-              </a>
-              <button type="button" onClick={() => printLabels([mamul], template, 'tr')} className="app-btn-primary">
-                Yazdir (TR)
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button type="button" onClick={() => printLabels([mamul], template, 'tr')} className="app-btn-primary inline-flex items-center justify-center gap-2">
+                <PrintIcon />
+                <span>Yazdır (TR)</span>
               </button>
-              <button type="button" onClick={() => printLabels([mamul], template, 'en')} className="app-btn-secondary">
-                Print (EN)
+              <button type="button" onClick={() => printLabels([mamul], template, 'en')} className="app-btn-secondary inline-flex items-center justify-center gap-2">
+                <PrintIcon />
+                <span>Print (EN)</span>
               </button>
             </div>
+
+            <a
+              href={publicUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="app-btn-secondary block text-center"
+            >
+              Müşteri görünümü
+            </a>
           </div>
         </div>
       </div>

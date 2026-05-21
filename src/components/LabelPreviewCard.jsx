@@ -18,6 +18,7 @@ const LabelPreviewCard = ({ record, template: templateInput, lang = 'tr', classN
   const template = getResolvedLabelMetrics(templateInput);
   const visibleFieldIds = getVisibleFieldIds(template);
   const careIcons = template.careIcons.filter((icon) => icon.enabled && icon.label);
+  const scanText = String(lang === 'en' ? template.scanTextEn : template.scanTextTr || '').trim();
   const frame = getFramePresentation(template, 'px');
   const shellRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -211,9 +212,11 @@ const LabelPreviewCard = ({ record, template: templateInput, lang = 'tr', classN
                 }}
               >
                 <QRCodeSVG value={buildPublicUrl(record)} size={64} style={{ width: `${qrSizePx}px`, height: `${qrSizePx}px` }} />
-                <div className="app-label-preview-scan-text" style={{ fontSize: `${scanFontPx}px`, marginTop: `${0.55 * PX_PER_MM}px` }}>
-                  {normalizeLabelText(lang === 'en' ? template.scanTextEn : template.scanTextTr)}
-                </div>
+                {scanText ? (
+                  <div className="app-label-preview-scan-text" style={{ fontSize: `${scanFontPx}px`, marginTop: `${0.55 * PX_PER_MM}px`, lineHeight: 1, transform: 'none' }}>
+                    {normalizeLabelText(scanText)}
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>

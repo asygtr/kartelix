@@ -280,7 +280,7 @@ export const getVisibleFieldIds = (templateInput) => {
   return template.fieldOrder.filter((fieldId) => !template.hiddenFields.includes(fieldId));
 };
 
-const getScanText = (template, lang) => (lang === 'en' ? template.scanTextEn : template.scanTextTr);
+const getScanText = (template, lang) => String(lang === 'en' ? template.scanTextEn : template.scanTextTr || '').trim();
 
 const withUnit = (value, unit) => `${value}${unit}`;
 
@@ -414,6 +414,7 @@ export const buildLabelPrintMarkup = (record, templateInput, lang = 'tr') => {
   const publicUrl = buildPublicUrl(record);
   const layout = getCardLayout(template);
   const frame = getFramePresentation(template, 'mm');
+  const scanText = getScanText(template, lang);
 
   const rowsMarkup = visibleFieldIds.map((fieldId) => {
     const definition = getFieldDefinition(fieldId);
@@ -456,7 +457,7 @@ export const buildLabelPrintMarkup = (record, templateInput, lang = 'tr') => {
         ${template.showQr ? `
           <div class="qr" style="${layout.qrStyle}">
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(publicUrl)}" alt="QR" />
-            <div class="scan">${normalizeLabelText(getScanText(template, lang))}</div>
+            ${scanText ? `<div class="scan">${normalizeLabelText(scanText)}</div>` : ''}
           </div>
         ` : ''}
       </div>
@@ -558,7 +559,7 @@ export const buildLabelPrintDocument = (records, templateInput, lang = 'tr') => 
         .wash-icon { height:4mm; border:.3mm solid ${template.borderColor}; border-radius:${template.borderRadiusMm}mm; display:flex; align-items:center; justify-content:center; font-size:2.65pt; font-weight:700; }
         .qr { display:flex; flex-direction:column; align-items:flex-end; justify-content:flex-start; align-self:start; text-align:center; min-width:0; }
         .qr img { width:${template.qrSizeMm}mm; height:${template.qrSizeMm}mm; }
-        .scan { font-size:4.2pt; font-weight:800; margin-top:.55mm; transform:rotate(-7deg); align-self:center; }
+        .scan { font-size:4.2pt; font-weight:800; margin-top:.55mm; line-height:1; transform:none; align-self:center; }
       </style>
     </head>
     <body>
