@@ -3,6 +3,7 @@ const path = require('path');
 const XLSX = require('xlsx');
 
 const SOURCE_ORDER = [
+  'urge_fiyat_listesi',
   'mamul_turleri',
   'renkler',
   'iplikler',
@@ -89,9 +90,45 @@ const getRowValue = (row, keys, fallback = '') => {
 
 const isExcelFile = (filename) => {
   const lower = String(filename || '').toLowerCase();
-  if (!(lower.endsWith('.xlsx') || lower.endsWith('.xls'))) return false;
+  if (!(lower.endsWith('.xlsx') || lower.endsWith('.xls') || lower.endsWith('.xlsm'))) return false;
   if (path.basename(lower).startsWith('~$')) return false;
   return true;
+};
+
+const URGE_TYPE_NAMES = {
+  10: 'Suprem',
+  20: '2 Iplik',
+  30: '3 Iplik',
+  40: 'Interlok Double Face',
+  50: 'Ribana & Kaskorse',
+  60: 'Full Lyc Sup',
+  70: 'Pike Fantazi Ozel Grup',
+  80: 'Baskili'
+};
+
+const URGE_PROCESS_COLUMNS = [
+  'AO', 'AP', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AV',
+  'AW', 'AX', 'AY', 'AZ', 'BA', 'BB', 'BC', 'BD'
+];
+
+const cellValue = (sheet, address, fallback = '') => {
+  const cell = sheet?.[address];
+  return cell && cell.v !== undefined && cell.v !== null ? cell.v : fallback;
+};
+
+const cellNumber = (sheet, address, fallback = 0) => toNumber(cellValue(sheet, address, fallback), fallback);
+
+const compactText = (value) => String(value ?? '').replace(/\s+/g, ' ').trim();
+
+const getFileTypePrefix = (fileName) => {
+  const match = String(fileName || '').match(/(\d{2})\d{3}/);
+  return match ? match[1] : '';
+};
+
+const ensureColumn = async (db, tableName, columnName, definition) => {
+  const columns = await dbAll(db, `PRAGMA table_info(${tableName})`);
+  if (columns.some((column) => column.name === columnName)) return;
+  await dbRun(db, `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
 };
 
 const ensureExcelTables = async (db) => {
@@ -121,6 +158,14 @@ const ensureExcelTables = async (db) => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`
   );
+
+  await ensureColumn(db, 'mamul_kartlari', 'excel_kaynak_dosyasi', 'TEXT');
+  await ensureColumn(db, 'mamul_kartlari', 'excel_satir_no', 'INTEGER');
+  await ensureColumn(db, 'mamul_kartlari', 'excel_ham_maliyet', 'REAL DEFAULT 0');
+  await ensureColumn(db, 'mamul_kartlari', 'excel_proses_maliyeti', 'REAL DEFAULT 0');
+  await ensureColumn(db, 'mamul_kartlari', 'excel_mamul_maliyeti', 'REAL DEFAULT 0');
+  await ensureColumn(db, 'mamul_kartlari', 'excel_formul_json', 'TEXT');
+  await ensureColumn(db, 'mamul_kartlari', 'excel_updated_at', 'DATETIME');
 };
 
 const safeJson = (value) => {
@@ -605,6 +650,306 @@ const importers = {
   mamul_prosesleri: importMamulProsesleri
 };
 
+const upsertUrgeType = async (db, prefix, fileName) => {
+  const normalizedPrefix = String(prefix || '').trim();
+  if (!normalizedPrefix) return null;
+
+  const fallbackName = compactText(String(fileName || '').replace(/^ÜRGE FİYAT\s+/i, '').replace(/\.xlsm?x?$/i, ''));
+  const typeName = URGE_TYPE_NAMES[normalizedPrefix] || fallbackName || `Grup ${normalizedPrefix}`;
+
+  await dbRun(
+    db,
+    `INSERT INTO mamul_turleri (ad, kod_prefix, aciklama, aktif)
+     VALUES (?, ?, ?, 1)
+     ON CONFLICT(kod_prefix) DO UPDATE SET
+       ad = excluded.ad,
+       aciklama = excluded.aciklama,
+       aktif = 1`,
+    [typeName, normalizedPrefix, `Excel kaynakli urun grubu: ${fileName}`]
+  );
+
+  return dbGet(db, `SELECT id, kod_prefix FROM mamul_turleri WHERE kod_prefix = ?`, [normalizedPrefix]);
+};
+
+const upsertDefinition = async (db, tableName, uniqueColumn, payload) => {
+  if (!payload?.[uniqueColumn]) return;
+  const columns = Object.keys(payload);
+  const placeholders = columns.map(() => '?').join(', ');
+  const updateSql = columns
+    .filter((column) => column !== uniqueColumn)
+    .map((column) => `${column} = excluded.${column}`)
+    .join(', ');
+
+  await dbRun(
+    db,
+    `INSERT INTO ${tableName} (${columns.join(', ')})
+     VALUES (${placeholders})
+     ON CONFLICT(${uniqueColumn}) DO UPDATE SET ${updateSql}`,
+    columns.map((column) => payload[column])
+  );
+};
+
+const parseUrgeYarns = (sheet, rowNumber) => {
+  const yarns = [];
+  const yarnColumns = ['F', 'G', 'H', 'I', 'J', 'K'];
+  const ratioColumns = ['U', 'V', 'W', 'X', 'Y', 'Z'];
+  const priceColumns = ['AA', 'AB', 'AC', 'AD', 'AE', 'AF'];
+
+  yarnColumns.forEach((column, index) => {
+    const yarnName = compactText(cellValue(sheet, `${column}${rowNumber}`));
+    if (!yarnName) return;
+
+    const ratio = cellNumber(sheet, `${ratioColumns[index]}${rowNumber}`, 0);
+    const price = cellNumber(sheet, `${priceColumns[index]}${rowNumber}`, 0);
+    const ratioPercent = ratio > 0 && ratio <= 1 ? ratio * 100 : ratio;
+    const cost = Number(((ratioPercent / 100) * price).toFixed(4));
+
+    yarns.push({
+      iplikAdi: yarnName,
+      oranYuzde: Number(ratioPercent.toFixed(4)),
+      birimFiyat: price,
+      maliyetTutari: cost,
+      siraNo: index + 1
+    });
+  });
+
+  return yarns;
+};
+
+const parseUrgeProcesses = (sheet, rowNumber) => {
+  const processes = [];
+
+  URGE_PROCESS_COLUMNS.forEach((column, index) => {
+    const processName = compactText(cellValue(sheet, `${column}2`));
+    if (!processName) return;
+
+    const selectedValue = cellNumber(sheet, `${column}${rowNumber}`, 0);
+    if (!selectedValue) return;
+
+    const unitCost = cellNumber(sheet, `${column}1`, 0);
+    const cost = Number((selectedValue * unitCost).toFixed(4));
+
+    processes.push({
+      prosesAdi: processName,
+      prosesTipi: 'Excel',
+      birimMaliyet: cost,
+      renkBazli: 0,
+      aciklama: `${column}${rowNumber}: ${selectedValue} x ${unitCost}`,
+      siraNo: index + 1
+    });
+  });
+
+  return processes;
+};
+
+const importUrgeWorkbook = async (db, configuredFile, workbook, sheetName) => {
+  const sheet = workbook.Sheets?.[sheetName] || workbook.Sheets?.[workbook.SheetNames[0]];
+  if (!sheet) return { importedRows: 0, skippedRows: 0, typePrefix: '' };
+
+  const fileName = path.basename(configuredFile.filePath);
+  const typePrefix = getFileTypePrefix(fileName);
+  const typeInfo = await upsertUrgeType(db, typePrefix, fileName);
+  const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1');
+  let imported = 0;
+  let skipped = 0;
+
+  for (let rowNumber = 3; rowNumber <= range.e.r + 1; rowNumber += 1) {
+    const rawArticleNo = compactText(cellValue(sheet, `D${rowNumber}`));
+    const product = compactText(cellValue(sheet, `N${rowNumber}`));
+
+    if (!rawArticleNo || !/^\d+/.test(rawArticleNo)) continue;
+    if (!product) {
+      skipped += 1;
+      continue;
+    }
+
+    const articlePrefix = rawArticleNo.slice(0, 2);
+    const articleNo = typePrefix && articlePrefix !== typePrefix
+      ? `${typePrefix}${rawArticleNo.slice(typePrefix.length)}`
+      : rawArticleNo;
+
+    const resolvedType = typeInfo || await upsertUrgeType(db, articleNo.slice(0, 2), fileName);
+    if (!resolvedType) {
+      skipped += 1;
+      continue;
+    }
+
+    const color = compactText(cellValue(sheet, `E${rowNumber}`));
+    const composition = compactText(cellValue(sheet, `AK${rowNumber}`));
+    const dyeProcesses = compactText(cellValue(sheet, `AL${rowNumber}`));
+    const description = compactText(cellValue(sheet, `BI${rowNumber}`));
+    const width = compactText(cellValue(sheet, `R${rowNumber}`));
+    const weight = compactText(cellValue(sheet, `Q${rowNumber}`));
+    const yarnDescription = compactText(cellValue(sheet, `M${rowNumber}`));
+    const hamMaliyet = cellNumber(sheet, `AJ${rowNumber}`, 0);
+    const prosesMaliyeti = cellNumber(sheet, `AN${rowNumber}`, 0);
+    const mamulMaliyeti = cellNumber(sheet, `AM${rowNumber}`, 0);
+    const fasonOrgu = cellNumber(sheet, `AI${rowNumber}`, 0);
+    const qrSlug = slugify(`${articleNo}-${product}-${color}`);
+    const yarns = parseUrgeYarns(sheet, rowNumber);
+    const processes = parseUrgeProcesses(sheet, rowNumber);
+    const formulJson = safeJson({
+      source: 'urge_fiyat_listesi',
+      row: rowNumber,
+      rawArticleNo,
+      yarnDescription,
+      dyeProcesses,
+      fasonOrgu,
+      hamKumasMaliyeti: hamMaliyet,
+      prosesMaliyeti,
+      mamulKumasMaliyeti: mamulMaliyeti,
+      formulas: {
+        hamKumasMaliyeti: sheet[`AJ${rowNumber}`]?.f || '',
+        mamulKumasMaliyeti: sheet[`AM${rowNumber}`]?.f || ''
+      }
+    });
+
+    if (color) {
+      await upsertDefinition(db, 'renk_tanimlari', 'kod', {
+        ad: color,
+        kod: color,
+        aktif: 1
+      });
+    }
+
+    for (const yarn of yarns) {
+      await upsertDefinition(db, 'iplik_tanimlari', 'ad', {
+        ad: yarn.iplikAdi,
+        kod: yarn.iplikAdi,
+        birim: 'kg',
+        birim_fiyat: yarn.birimFiyat,
+        aktif: 1
+      });
+    }
+
+    for (const process of processes) {
+      await upsertDefinition(db, 'proses_tanimlari', 'ad', {
+        ad: process.prosesAdi,
+        tip: process.prosesTipi,
+        birim_maliyet: process.birimMaliyet,
+        renk_bazli: process.renkBazli,
+        aktif: 1
+      });
+    }
+
+    const existing = await dbGet(
+      db,
+      `SELECT id FROM mamul_kartlari WHERE article_code = ? OR article_no = ? LIMIT 1`,
+      [articleNo, articleNo]
+    );
+
+    let mamulId = existing?.id;
+    if (existing) {
+      await dbRun(
+        db,
+        `UPDATE mamul_kartlari
+         SET mamul_adi = ?, mamul_turu_id = ?, article_no = ?, article_code = ?, koleksiyon_adi = ?,
+             yayin_durumu = ?, renk = ?, renk_kodu = ?, kompozisyon_ozeti = ?, en = ?, gramaj = ?,
+             aciklama = ?, tanitim_basligi = ?, tanitim_hikayesi = ?, materyal_notlari = ?,
+             gorsel_url = ?, vurgu_etiketi = ?, bir_kg_maliyet = ?, bir_kg_satis_fiyati = ?,
+             qr_slug = ?, aktif = 1, excel_kaynak_dosyasi = ?, excel_satir_no = ?,
+             excel_ham_maliyet = ?, excel_proses_maliyeti = ?, excel_mamul_maliyeti = ?,
+             excel_formul_json = ?, excel_updated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          product,
+          resolvedType.id,
+          articleNo,
+          articleNo,
+          `Excel ${typePrefix || articlePrefix}`,
+          'yayinda',
+          color,
+          color,
+          composition,
+          width,
+          weight,
+          description,
+          product,
+          dyeProcesses,
+          yarnDescription,
+          '',
+          'Excel',
+          mamulMaliyeti,
+          mamulMaliyeti,
+          qrSlug,
+          fileName,
+          rowNumber,
+          hamMaliyet,
+          prosesMaliyeti,
+          mamulMaliyeti,
+          formulJson,
+          mamulId
+        ]
+      );
+    } else {
+      const result = await dbRun(
+        db,
+        `INSERT INTO mamul_kartlari (
+          mamul_adi, mamul_turu_id, article_no, article_code, koleksiyon_adi, yayin_durumu,
+          renk, renk_kodu, kompozisyon_ozeti, en, gramaj, aciklama, tanitim_basligi,
+          tanitim_hikayesi, materyal_notlari, gorsel_url, vurgu_etiketi, bir_kg_maliyet,
+          bir_kg_satis_fiyati, qr_slug, aktif, excel_kaynak_dosyasi, excel_satir_no,
+          excel_ham_maliyet, excel_proses_maliyeti, excel_mamul_maliyeti, excel_formul_json,
+          excel_updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        [
+          product,
+          resolvedType.id,
+          articleNo,
+          articleNo,
+          `Excel ${typePrefix || articlePrefix}`,
+          'yayinda',
+          color,
+          color,
+          composition,
+          width,
+          weight,
+          description,
+          product,
+          dyeProcesses,
+          yarnDescription,
+          '',
+          'Excel',
+          mamulMaliyeti,
+          mamulMaliyeti,
+          qrSlug,
+          fileName,
+          rowNumber,
+          hamMaliyet,
+          prosesMaliyeti,
+          mamulMaliyeti,
+          formulJson
+        ]
+      );
+      mamulId = result.lastID;
+    }
+
+    await dbRun(db, `DELETE FROM mamul_iplik_detaylari WHERE mamul_id = ?`, [mamulId]);
+    for (const yarn of yarns) {
+      await dbRun(
+        db,
+        `INSERT INTO mamul_iplik_detaylari (mamul_id, iplik_adi, oran_yuzde, birim_fiyat, maliyet_tutari, sira_no)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [mamulId, yarn.iplikAdi, yarn.oranYuzde, yarn.birimFiyat, yarn.maliyetTutari, yarn.siraNo]
+      );
+    }
+
+    await dbRun(db, `DELETE FROM mamul_proses_detaylari WHERE mamul_id = ?`, [mamulId]);
+    for (const process of processes) {
+      await dbRun(
+        db,
+        `INSERT INTO mamul_proses_detaylari (mamul_id, proses_adi, proses_tipi, renk_bazli, birim_maliyet, aciklama, sira_no)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [mamulId, process.prosesAdi, process.prosesTipi, process.renkBazli, process.birimMaliyet, process.aciklama, process.siraNo]
+      );
+    }
+
+    imported += 1;
+  }
+
+  return { importedRows: imported, skippedRows: skipped, typePrefix };
+};
+
 const insertSnapshot = async (db, payload) => {
   await dbRun(
     db,
@@ -648,71 +993,76 @@ const startExcelSync = ({
 
   let timer = null;
 
-  const processSource = async (source) => {
-    const configuredFile = findConfiguredFile(directory, source.fileName, source.extension);
-    if (!configuredFile) {
-      await insertSnapshot(db, {
-        filePath: path.join(directory, `${source.fileName}${source.extension}`),
-        fileMtimeMs: 0,
-        fileSize: 0,
-        sourceType: source.sourceType,
-        sourceId: source.id,
-        status: 'missing',
-        importedRows: 0,
-        message: 'Dosya bulunamadi',
-        summary: null,
-        preview: null
+  const processUrgeDirectory = async () => {
+    const entries = fs.readdirSync(directory)
+      .filter((fileName) => isExcelFile(fileName))
+      .sort((left, right) => left.localeCompare(right, 'tr'));
+
+    let importedRows = 0;
+    let skippedRows = 0;
+    const previews = [];
+
+    for (const fileName of entries) {
+      const filePath = path.join(directory, fileName);
+      const stat = fs.statSync(filePath);
+      const sourceKey = `urge:${fileName}`;
+      const alreadySeen = state.lastSeenBySource[sourceKey];
+
+      if (
+        alreadySeen &&
+        alreadySeen.filePath === filePath &&
+        Number(alreadySeen.mtimeMs) === Number(stat.mtimeMs || 0)
+      ) {
+        continue;
+      }
+
+      const workbook = XLSX.readFile(filePath, { cellDates: true, cellFormula: true });
+      const targetSheet = workbook.SheetNames.includes('SIRA LİSTESİ')
+        ? 'SIRA LİSTESİ'
+        : workbook.SheetNames[0];
+
+      const result = await importUrgeWorkbook(
+        db,
+        {
+          filePath,
+          fileName,
+          mtimeMs: stat.mtimeMs || 0,
+          size: stat.size || 0
+        },
+        workbook,
+        targetSheet
+      );
+
+      importedRows += result.importedRows || 0;
+      skippedRows += result.skippedRows || 0;
+      previews.push({
+        fileName,
+        sheetName: targetSheet,
+        importedRows: result.importedRows || 0,
+        skippedRows: result.skippedRows || 0,
+        typePrefix: result.typePrefix || ''
       });
-      return;
+
+      await insertSnapshot(db, {
+        filePath,
+        fileMtimeMs: stat.mtimeMs || 0,
+        fileSize: stat.size || 0,
+        sourceType: 'urge_fiyat_listesi',
+        sourceId: null,
+        status: 'imported',
+        importedRows: result.importedRows || 0,
+        message: `${fileName} icin URGE fiyat listesi import tamamlandi`,
+        summary: parseWorkbookSummary(workbook),
+        preview: previews[previews.length - 1]
+      });
+
+      state.lastSeenBySource[sourceKey] = {
+        filePath,
+        mtimeMs: stat.mtimeMs || 0
+      };
     }
 
-    const alreadySeen = state.lastSeenBySource[source.sourceType];
-    if (
-      alreadySeen &&
-      alreadySeen.filePath === configuredFile.filePath &&
-      Number(alreadySeen.mtimeMs) === Number(configuredFile.mtimeMs)
-    ) {
-      return;
-    }
-
-    const workbook = XLSX.readFile(configuredFile.filePath, { cellDates: true });
-    const targetSheet = source.sheetName && workbook.SheetNames.includes(source.sheetName)
-      ? source.sheetName
-      : workbook.SheetNames[0];
-
-    if (!targetSheet) {
-      throw new Error(`Sheet bulunamadi: ${source.fileName}${source.extension}`);
-    }
-
-    const sheet = workbook.Sheets?.[targetSheet];
-    const rows = sheet ? XLSX.utils.sheet_to_json(sheet, { defval: '' }) : [];
-    const importer = importers[source.sourceType];
-
-    if (!importer) {
-      throw new Error(`Desteklenmeyen kaynak tipi: ${source.sourceType}`);
-    }
-
-    const result = await importer(db, rows);
-    const summary = parseWorkbookSummary(workbook);
-    const preview = parseWorkbookPreview(workbook, targetSheet, previewLimit);
-
-    await insertSnapshot(db, {
-      filePath: configuredFile.filePath,
-      fileMtimeMs: configuredFile.mtimeMs,
-      fileSize: configuredFile.size,
-      sourceType: source.sourceType,
-      sourceId: source.id,
-      status: 'imported',
-      importedRows: result.importedRows || 0,
-      message: `${source.sourceType} icin import tamamlandi`,
-      summary,
-      preview
-    });
-
-    state.lastSeenBySource[source.sourceType] = {
-      filePath: configuredFile.filePath,
-      mtimeMs: configuredFile.mtimeMs
-    };
+    return { importedRows, skippedRows, files: previews };
   };
 
   const scheduleNext = () => {
@@ -732,11 +1082,10 @@ const startExcelSync = ({
 
       await ensureExcelTables(db);
       state.pollMs = await loadPollMs(db, defaultIntervalMs);
-      state.sources = await loadSources(db);
+      state.sources = [];
 
-      for (const source of state.sources) {
-        await processSource(source);
-      }
+      const urgeResult = await processUrgeDirectory();
+      state.urgeLastResult = urgeResult;
 
       state.lastError = null;
     } catch (err) {
@@ -765,6 +1114,7 @@ const startExcelSync = ({
         running: state.running,
         lastRunAt: state.lastRunAt,
         lastError: state.lastError,
+        urgeLastResult: state.urgeLastResult || null,
         sources: state.sources,
         latestSnapshots: snapshots.map((row) => {
           let parsedSummary = null;

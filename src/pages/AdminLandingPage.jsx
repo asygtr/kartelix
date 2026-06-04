@@ -6,7 +6,7 @@ import AppNavbar from '../components/AppNavbar';
 const cards = [
   {
     icon: 'fabric',
-    title: 'Mamul Ekle',
+    title: 'Mamül Kartları',
     to: '/admin/mamuller'
   },
   {
@@ -18,11 +18,6 @@ const cards = [
     icon: 'label',
     title: 'Etiket Bas',
     to: '/mamul/labels'
-  },
-  {
-    icon: 'story',
-    title: 'Ürün Tanıtımı',
-    to: '/mamul/showcase'
   },
   {
     icon: 'settings',

@@ -11,7 +11,6 @@ import AdminMamulPage from './pages/AdminMamulPage';
 import MamulLandingPage from './pages/MamulLandingPage';
 import MamulLabelPage from './pages/MamulLabelPage';
 import { ThemeProvider } from './theme/ThemeProvider';
-import MamulShowcasePage from './pages/MamulShowcasePage';
 import ScrollToTop from './components/ScrollToTop';
 import ReportsPage from './pages/ReportsPage';
 
@@ -38,9 +37,7 @@ function App() {
 
           <Route element={<ProtectedRoute allowedRoles={['mamul', 'admin']} />}>
             <Route path="/mamul" element={<MamulLandingPage />} />
-            <Route path="/mamul/create" element={<AdminMamulPage mode="mamul" />} />
             <Route path="/mamul/labels" element={<MamulLabelPage />} />
-            <Route path="/mamul/showcase" element={<MamulShowcasePage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

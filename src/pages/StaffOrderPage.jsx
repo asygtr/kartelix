@@ -497,7 +497,15 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
         throw new Error(result.error || 'Sipariş kaydedilemedi');
       }
 
-      setMessage(`${editingOrderId ? 'Sipariş güncellendi' : 'Sipariş kaydedildi'}. No: #${result.data.siparisId} / Toplam: ${result.data.toplamTutar.toFixed(2)}`);
+      const emailStatus = result.data.emailStatus;
+      const emailText = !editingOrderId && emailStatus
+        ? emailStatus.skipped
+          ? ''
+          : emailStatus.error
+          ? ` / E-posta: ${emailStatus.error}`
+          : ` / E-posta: ${emailStatus.message || 'işlendi'}`
+        : '';
+      setMessage(`${editingOrderId ? 'Sipariş güncellendi' : 'Sipariş kaydedildi'}. No: #${result.data.siparisId} / Toplam: ${result.data.toplamTutar.toFixed(2)}${emailText}`);
       closePanel();
       await loadOrders();
     } catch (error) {

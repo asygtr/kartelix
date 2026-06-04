@@ -8,16 +8,6 @@ const cards = [
     icon: 'label',
     title: 'Etiket Bas',
     to: '/mamul/labels'
-  },
-  {
-    icon: 'fabric',
-    title: 'Mamul Ekle',
-    to: '/mamul/create'
-  },
-  {
-    icon: 'story',
-    title: 'Ürün Tanıtımı',
-    to: '/mamul/showcase'
   }
 ];
 
@@ -53,7 +43,7 @@ const MamulLandingPage = () => {
           onLogout={handleLogout}
         />
 
-        <div className="app-card-grid md:grid-cols-3">
+        <div className="app-card-grid md:grid-cols-2">
           {cards.map((card) => (
             <Link key={card.to} to={card.to} className="app-card app-quick-card">
               <div className="app-quick-card-icon">{iconMap[card.icon]}</div>

@@ -43,7 +43,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
   const [selectedMamulId, setSelectedMamulId] = useState(null);
   const [selectedMamulDetail, setSelectedMamulDetail] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showEditor, setShowEditor] = useState(false);
+  const [, setShowEditor] = useState(false);
   const [form, setForm] = useState(createEmptyForm);
 
   const fetchInitial = async () => {
@@ -190,93 +190,11 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
     }
   };
 
-  const duplicateMamul = async (mamulId) => {
-    try {
-      setLoading(true);
-      setMessage('');
-      const response = await fetch(`/api/admin/mamuller/${mamulId}/duplicate`, { method: 'POST' });
-      const result = await response.json();
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Mamül kopyalanamadı');
-      }
-      setMessage(`Mamül kopyalandı. Yeni article code: ${result.data.articleCode}`);
-      await fetchInitial();
-    } catch (err) {
-      setMessage(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const resetEditor = () => {
     setSelectedMamulId(null);
     setMessage('');
     setForm(createEmptyForm());
     setShowEditor(false);
-  };
-
-  const loadMamulIntoForm = async (mamulId) => {
-    try {
-      setLoading(true);
-      setMessage('');
-      const response = await fetch(`/api/admin/mamuller/${mamulId}`);
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Mamül detayı yüklenemedi');
-      }
-
-      const detail = result.data;
-      const matchedColor = colors.find((item) => item.ad === detail.renk || item.kod === detail.renk_kodu);
-
-      setShowEditor(true);
-      setSelectedMamulId(detail.id);
-      setSelectedMamulDetail(detail);
-      setForm({
-        mamulAdi: detail.mamul_adi || '',
-        mamulTuruId: String(detail.mamul_turu_id || ''),
-        articleNoPreview: detail.article_no || '',
-        articleCodePreview: detail.article_code || '',
-        koleksiyonAdi: detail.koleksiyon_adi || '',
-        yayinDurumu: detail.yayin_durumu || (detail.aktif ? 'yayinda' : 'taslak'),
-        renkId: matchedColor ? String(matchedColor.id) : '',
-        renk: detail.renk || '',
-        renkKodu: detail.renk_kodu || '',
-        kompozisyonOzeti: detail.kompozisyon_ozeti || '',
-        en: detail.en || '',
-        gramaj: detail.gramaj || '',
-        aciklama: detail.aciklama || '',
-        tanitimBasligi: detail.tanitim_basligi || '',
-        tanitimHikayesi: detail.tanitim_hikayesi || '',
-        materyalNotlari: detail.materyal_notlari || '',
-        gorselUrl: detail.gorsel_url || '',
-        vurguEtiketi: detail.vurgu_etiketi || '',
-        birKgSatisFiyati: detail.bir_kg_satis_fiyati || '',
-        aktif: Boolean(detail.aktif),
-        iplikler: detail.iplikler?.length
-          ? detail.iplikler.map((item) => ({
-              iplik_tanim_id: '',
-              iplik_adi: item.iplik_adi || '',
-              oran_yuzde: item.oran_yuzde || '',
-              birim_fiyat: item.birim_fiyat || ''
-            }))
-          : [{ ...emptyYarn }],
-        prosesler: detail.prosesler?.length
-          ? detail.prosesler.map((item) => ({
-              proses_tanim_id: '',
-              proses_adi: item.proses_adi || '',
-              proses_tipi: item.proses_tipi || '',
-              birim_maliyet: item.birim_maliyet || '',
-              renk_bazli: Boolean(item.renk_bazli),
-              aciklama: item.aciklama || ''
-            }))
-          : [{ ...emptyProcess }]
-      });
-    } catch (err) {
-      setMessage(err.message);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleLogout = () => {
@@ -302,7 +220,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
     }
   };
 
-  const pageTitle = mode === 'mamul' ? 'Mamül ekle' : 'Mamül kartı';
+  const pageTitle = mode === 'mamul' ? 'Excel mamül kartları' : 'Mamül kartı';
   const resolveMamulMatch = (rawValue) => {
     const term = normalizeSearchValue(rawValue);
     if (!term) return null;
@@ -346,7 +264,6 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
             const match = resolveMamulMatch(term);
             if (match) {
               setMessage('');
-              loadMamulIntoForm(match.id);
               showMamulDetail(match.id);
               return;
             }
@@ -358,7 +275,6 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
             const match = resolveMamulMatch(detectedValue);
             if (match) {
               setMessage('');
-              loadMamulIntoForm(match.id);
               showMamulDetail(match.id);
             } else {
               setMessage('QR ile eşleşen mamül bulunamadı.');
@@ -369,7 +285,6 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
           onResultSelect={(item) => {
             setSearchTerm(item.article_code || item.article_no || item.mamul_adi || '');
             setMessage('');
-            loadMamulIntoForm(item.id);
             showMamulDetail(item.id);
           }}
           getResultPrimary={(item) => item.mamul_adi}
@@ -377,34 +292,9 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
           emptyResultsText="Bu aramaya uygun mamül bulunamadı."
         />
 
-        <section className="app-panel p-5">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-[color:var(--app-text)]">Mamül kartı editörü</h2>
-            </div>
-            <button
-              type="button"
-              className="app-btn-primary"
-              onClick={() => {
-                if (showEditor) {
-                  resetEditor();
-                  return;
-                }
-                setSelectedMamulId(null);
-                setSelectedMamulDetail(null);
-                setForm(createEmptyForm());
-                setMessage('');
-                setShowEditor(true);
-              }}
-            >
-              {showEditor ? 'Formu kapat' : 'Yeni mamül ekle'}
-            </button>
-          </div>
-        </section>
-
         <div className="space-y-6">
           <div className="space-y-6">
-          {showEditor ? (
+          {false ? (
           <form onSubmit={submitForm} className="app-collapse-panel space-y-6">
             <section className="app-panel p-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
@@ -550,23 +440,11 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
           </div>
 
           <div className="space-y-6">
-            <section className="app-panel p-6">
-              <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Hızlı özet</h2>
-              <div className="mt-5 app-data-table">
-                <div className="app-data-row"><div className="app-data-key">Tür</div><div className="app-data-value">{types.find((item) => String(item.id) === String(form.mamulTuruId))?.ad || '-'}</div></div>
-                <div className="app-data-row"><div className="app-data-key">Koleksiyon</div><div className="app-data-value">{form.koleksiyonAdi || '-'}</div></div>
-                <div className="app-data-row"><div className="app-data-key">Renk</div><div className="app-data-value">{selectedColor?.ad || '-'}</div></div>
-                <div className="app-data-row"><div className="app-data-key">Yayın durumu</div><div className="app-data-value">{form.yayinDurumu || '-'}</div></div>
-                <div className="app-data-row"><div className="app-data-key">Varyant hazırlığı</div><div className="app-data-value">Hazır</div></div>
-              </div>
-            </section>
-
+            {selectedMamulDetail ? (
             <section className="app-panel p-6">
               <div className="flex items-center justify-between gap-4">
-                <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Mamül detay görünümü</h2>
-                {selectedMamulDetail ? (
-                  <button type="button" onClick={() => setSelectedMamulDetail(null)} className="app-btn-secondary">Temizle</button>
-                ) : null}
+                <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Mamül detayı</h2>
+                <button type="button" onClick={() => setSelectedMamulDetail(null)} className="app-btn-secondary">Listeye geri dön</button>
               </div>
 
               {!selectedMamulDetail ? (
@@ -584,8 +462,11 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                     <div className="app-data-row"><div className="app-data-key">Koleksiyon</div><div className="app-data-value">{selectedMamulDetail.koleksiyon_adi || '-'}</div></div>
                     <div className="app-data-row"><div className="app-data-key">Kompozisyon</div><div className="app-data-value">{selectedMamulDetail.kompozisyon_ozeti || '-'}</div></div>
                     <div className="app-data-row"><div className="app-data-key">Ölçü</div><div className="app-data-value">{selectedMamulDetail.en || '-'} EN / {selectedMamulDetail.gramaj || '-'} GR</div></div>
+                    <div className="app-data-row"><div className="app-data-key">1 kg maliyet</div><div className="app-data-value">{Number(selectedMamulDetail.bir_kg_maliyet || 0).toFixed(2)}</div></div>
                     <div className="app-data-row"><div className="app-data-key">1 kg satış</div><div className="app-data-value">{Number(selectedMamulDetail.bir_kg_satis_fiyati || 0).toFixed(2)}</div></div>
                     <div className="app-data-row"><div className="app-data-key">Durum</div><div className="app-data-value">{selectedMamulDetail.yayin_durumu || '-'}</div></div>
+                    <div className="app-data-row"><div className="app-data-key">Excel dosyası</div><div className="app-data-value">{selectedMamulDetail.excel_kaynak_dosyasi || '-'}</div></div>
+                    <div className="app-data-row"><div className="app-data-key">Excel satırı</div><div className="app-data-value">{selectedMamulDetail.excel_satir_no || '-'}</div></div>
                   </div>
 
                   <div className="app-soft-panel p-4">
@@ -612,7 +493,9 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                 </div>
               )}
             </section>
+            ) : null}
 
+            {!selectedMamulDetail ? (
             <section className="app-panel p-6">
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Kayıtlı mamüller</h2>
@@ -626,7 +509,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                     <div>Tür / Renk</div>
                     <div>1 kg satış</div>
                     <div>Durum</div>
-                    <div>İşlemler</div>
+                    <div>Görünüm</div>
                   </div>
                   {filteredMamulList.map((item) => (
                     <div key={item.id} className="app-table-row app-mamul-table">
@@ -636,8 +519,6 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                       <div className="text-sm font-semibold text-[color:var(--app-success)]">{Number(item.bir_kg_satis_fiyati || 0).toFixed(2)}</div>
                       <div className="text-sm text-[color:var(--app-text-muted)]">{item.yayin_durumu || (item.aktif ? 'yayinda' : 'taslak')}</div>
                       <div className="flex flex-wrap gap-2">
-                        <button type="button" onClick={() => loadMamulIntoForm(item.id)} className="app-btn-secondary">Düzenle</button>
-                        <button type="button" onClick={() => duplicateMamul(item.id)} className="app-btn-secondary">Kopyala</button>
                         <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary">Detay gör</button>
                         <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary">Public gör</a>
                       </div>
@@ -649,6 +530,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                 ) : null}
               </div>
             </section>
+            ) : null}
           </div>
         </div>
       </div>

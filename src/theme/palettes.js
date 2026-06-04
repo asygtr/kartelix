@@ -1,20 +1,20 @@
 export const palettes = {
   atelier: {
     id: 'atelier',
-    name: 'Atelier Stone',
-    description: 'Sakin, premium ve tekstil showroom hissi veren ana palet.',
+    name: 'Atelier Noir',
+    description: 'Koyu mürekkep, bakır ve kumaş lifi hissi veren premium showroom paleti.',
     colors: {
-      '--app-bg': '#f5f1ea',
-      '--app-surface': '#fffdfa',
-      '--app-surface-soft': '#ece5da',
-      '--app-surface-strong': '#18181b',
-      '--app-border': '#d8cfc1',
-      '--app-text': '#1f2937',
-      '--app-text-muted': '#6b7280',
-      '--app-primary': '#8a5a44',
-      '--app-primary-strong': '#6e4533',
-      '--app-accent': '#c48a5a',
-      '--app-success': '#2f6b5d'
+      '--app-bg': '#f3efe7',
+      '--app-surface': '#fffdf8',
+      '--app-surface-soft': '#e8ded0',
+      '--app-surface-strong': '#111719',
+      '--app-border': '#d7c5ad',
+      '--app-text': '#172023',
+      '--app-text-muted': '#667178',
+      '--app-primary': '#0f4c4f',
+      '--app-primary-strong': '#0a3336',
+      '--app-accent': '#b9793a',
+      '--app-success': '#27735f'
     }
   },
   midnight: {

@@ -5,17 +5,17 @@
 @tailwind utilities;
 
 :root {
-  --app-bg: #f5f1ea;
-  --app-surface: #fffdfa;
-  --app-surface-soft: #ece5da;
-  --app-surface-strong: #18181b;
-  --app-border: #d8cfc1;
-  --app-text: #1f2937;
-  --app-text-muted: #6b7280;
-  --app-primary: #8a5a44;
-  --app-primary-strong: #6e4533;
-  --app-accent: #c48a5a;
-  --app-success: #2f6b5d;
+  --app-bg: #f3efe7;
+  --app-surface: #fffdf8;
+  --app-surface-soft: #e8ded0;
+  --app-surface-strong: #111719;
+  --app-border: #d7c5ad;
+  --app-text: #172023;
+  --app-text-muted: #667178;
+  --app-primary: #0f4c4f;
+  --app-primary-strong: #0a3336;
+  --app-accent: #b9793a;
+  --app-success: #27735f;
   --app-bg-image: none;
 }
 
@@ -1765,5 +1765,357 @@ code {
   .qr {
     width: 40mm;
     height: 40mm;
+  }
+}
+
+/* Premium textile theme refresh */
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+body {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(185, 121, 58, 0.18), transparent 32rem),
+    radial-gradient(circle at 88% 12%, rgba(15, 76, 79, 0.16), transparent 34rem),
+    linear-gradient(135deg, rgba(255, 253, 248, 0.84), rgba(232, 222, 208, 0.78)),
+    var(--app-bg);
+  background-attachment: fixed;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::before {
+  background-image:
+    repeating-linear-gradient(90deg, rgba(23, 32, 35, 0.045) 0 1px, transparent 1px 17px),
+    repeating-linear-gradient(0deg, rgba(185, 121, 58, 0.055) 0 1px, transparent 1px 19px);
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.72), transparent 78%);
+  opacity: 0.62;
+  animation: appWeaveDrift 18s linear infinite;
+}
+
+body::after {
+  height: 44vh;
+  background: linear-gradient(105deg, transparent 18%, rgba(255, 255, 255, 0.28) 44%, transparent 70%);
+  opacity: 0;
+  transform: translateX(-82%);
+  animation: appLightSweep 9s ease-in-out infinite;
+}
+
+.app-page {
+  animation: appPageSettle 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.app-container {
+  padding-top: 1rem;
+}
+
+.app-panel,
+.app-card,
+.app-soft-panel,
+.public-related-card,
+.public-story-card,
+.app-stat,
+.app-table-row,
+.app-table-head {
+  border-radius: 8px;
+}
+
+.app-panel,
+.app-card,
+.app-soft-panel,
+.public-related-card,
+.public-story-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(145deg, rgba(255, 253, 248, 0.96), rgba(246, 239, 229, 0.86)),
+    var(--app-surface);
+  border-color: rgba(185, 121, 58, 0.26);
+  box-shadow:
+    0 22px 52px rgba(17, 23, 25, 0.11),
+    0 1px 0 rgba(255, 255, 255, 0.78) inset;
+}
+
+.app-panel::before,
+.app-card::before,
+.app-soft-panel::before,
+.public-related-card::before,
+.public-story-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(115deg, transparent 0%, rgba(185, 121, 58, 0.14) 42%, transparent 72%),
+    repeating-linear-gradient(90deg, rgba(15, 76, 79, 0.035) 0 1px, transparent 1px 11px);
+  opacity: 0.36;
+  transform: translateX(-28%);
+  transition: opacity 420ms ease, transform 620ms ease;
+}
+
+.app-panel:hover,
+.app-card:hover,
+.app-soft-panel:hover,
+.public-related-card:hover,
+.public-story-card:hover {
+  border-color: rgba(185, 121, 58, 0.48);
+  box-shadow:
+    0 28px 68px rgba(17, 23, 25, 0.15),
+    0 1px 0 rgba(255, 255, 255, 0.86) inset;
+}
+
+.app-panel:hover::before,
+.app-card:hover::before,
+.app-soft-panel:hover::before,
+.public-related-card:hover::before,
+.public-story-card:hover::before {
+  opacity: 0.68;
+  transform: translateX(24%);
+}
+
+.app-nav-shell {
+  background: rgba(255, 253, 248, 0.8);
+  border-bottom-color: rgba(185, 121, 58, 0.25);
+  box-shadow: 0 18px 48px rgba(17, 23, 25, 0.1);
+  backdrop-filter: blur(18px) saturate(1.18);
+}
+
+.app-nav-brand-name {
+  color: var(--app-primary-strong);
+  letter-spacing: 0.12em;
+}
+
+.app-nav-link {
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.62);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.app-nav-link:hover {
+  transform: translateY(-1px);
+  border-color: rgba(185, 121, 58, 0.36);
+  background: rgba(255, 253, 248, 0.9);
+  box-shadow: 0 10px 26px rgba(17, 23, 25, 0.08);
+}
+
+.app-nav-link.is-active {
+  background: linear-gradient(135deg, var(--app-primary-strong), var(--app-primary) 55%, var(--app-accent));
+  box-shadow: 0 12px 30px rgba(15, 76, 79, 0.24);
+}
+
+.app-nav-icon-button,
+.app-nav-toggle,
+.app-mobile-nav-item {
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, color 180ms ease;
+}
+
+.app-nav-icon-button:hover,
+.app-nav-toggle:hover,
+.app-mobile-nav-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 26px rgba(17, 23, 25, 0.1);
+}
+
+.app-btn-primary,
+.app-btn-secondary,
+.app-btn-danger {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  letter-spacing: 0.01em;
+  box-shadow: 0 16px 34px rgba(17, 23, 25, 0.14);
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+
+.app-btn-primary::after,
+.app-btn-secondary::after,
+.app-btn-danger::after {
+  content: "";
+  position: absolute;
+  inset: -45% auto -45% -56%;
+  width: 46%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.42), transparent);
+  transform: skewX(-18deg);
+  transition: transform 520ms ease;
+}
+
+.app-btn-primary:hover,
+.app-btn-secondary:hover,
+.app-btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 42px rgba(17, 23, 25, 0.18);
+  filter: saturate(1.08);
+}
+
+.app-btn-primary:hover::after,
+.app-btn-secondary:hover::after,
+.app-btn-danger:hover::after {
+  transform: translateX(360%) skewX(-18deg);
+}
+
+.app-btn-primary {
+  background: linear-gradient(135deg, var(--app-primary-strong), var(--app-primary) 56%, var(--app-accent));
+}
+
+.app-btn-secondary {
+  background: linear-gradient(135deg, rgba(255, 253, 248, 0.94), rgba(232, 222, 208, 0.86));
+  border-color: rgba(185, 121, 58, 0.34);
+  color: var(--app-primary-strong);
+}
+
+.app-input,
+.app-textarea,
+.app-select {
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.86);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.72) inset,
+    0 10px 24px rgba(17, 23, 25, 0.04);
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.app-input:hover,
+.app-textarea:hover,
+.app-select:hover {
+  border-color: rgba(185, 121, 58, 0.42);
+  background: rgba(255, 253, 248, 0.98);
+}
+
+.app-input:focus,
+.app-textarea:focus,
+.app-select:focus {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 3px rgba(15, 76, 79, 0.13),
+    0 14px 30px rgba(17, 23, 25, 0.08);
+}
+
+.app-chip {
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.78);
+  border: 1px solid rgba(185, 121, 58, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.app-stat {
+  background: linear-gradient(135deg, rgba(255, 253, 248, 0.92), rgba(232, 222, 208, 0.78));
+  border: 1px solid rgba(185, 121, 58, 0.24);
+  box-shadow: inset 3px 0 0 var(--app-accent), 0 14px 34px rgba(17, 23, 25, 0.08);
+}
+
+.app-table-head {
+  background: linear-gradient(135deg, rgba(17, 23, 25, 0.92), rgba(15, 76, 79, 0.88));
+  color: rgba(255, 253, 248, 0.92);
+}
+
+.app-table-row {
+  transition: transform 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.app-table-row:hover {
+  transform: translateX(3px);
+  background: rgba(255, 253, 248, 0.9);
+  box-shadow: inset 3px 0 0 var(--app-accent);
+}
+
+.app-card,
+.app-panel,
+.app-soft-panel,
+.app-table-row,
+.public-related-card,
+.public-story-card,
+.app-stat {
+  animation: appRevealUp 440ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.public-related-card,
+.public-story-card {
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.public-related-card:hover,
+.public-story-card:hover {
+  transform: translateY(-2px);
+}
+
+.app-mobile-bottom-nav {
+  box-shadow: 0 -18px 42px rgba(17, 23, 25, 0.14);
+  backdrop-filter: blur(16px) saturate(1.12);
+}
+
+.app-mobile-nav-item.is-active {
+  color: var(--app-primary-strong);
+  background: linear-gradient(135deg, rgba(15, 76, 79, 0.1), rgba(185, 121, 58, 0.14));
+}
+
+@keyframes appWeaveDrift {
+  from {
+    background-position: 0 0, 0 0;
+  }
+
+  to {
+    background-position: 240px 0, 0 180px;
+  }
+}
+
+@keyframes appLightSweep {
+  0%,
+  38% {
+    opacity: 0;
+    transform: translateX(-82%);
+  }
+
+  52% {
+    opacity: 0.72;
+  }
+
+  72%,
+  100% {
+    opacity: 0;
+    transform: translateX(82%);
+  }
+}
+
+@keyframes appPageSettle {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes appRevealUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }

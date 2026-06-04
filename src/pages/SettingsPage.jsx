@@ -7,11 +7,8 @@ import LabelDesignerPanel from '../components/LabelDesignerPanel';
 import { clearSession } from '../utils/auth';
 
 const tabs = [
-  { id: 'types', label: 'Ürün Grupları' },
-  { id: 'colors', label: 'Renkler' },
-  { id: 'yarns', label: 'İplik Tanımı' },
-  { id: 'processes', label: 'Proses' },
-  { id: 'excel', label: 'Excel Kaynakları' },
+  { id: 'excel', label: 'Excel Senkron' },
+  { id: 'email', label: 'Sipariş E-posta' },
   { id: 'theme', label: 'Marka Varlıkları' },
   { id: 'labels', label: 'Etiket Tasarımcısı' },
   { id: 'system', label: 'Operasyon' }
@@ -21,16 +18,20 @@ const initialTypeForm = { ad: '', kodPrefix: '', aciklama: '' };
 const initialColorForm = { ad: '', kod: '' };
 const initialYarnForm = { ad: '', kod: '', birim: 'kg', birimFiyat: '' };
 const initialProcessForm = { ad: '', tip: '', birimMaliyet: '', renkBazli: false };
-const initialExcelForm = { kaynakTipi: 'mamul_turleri', dosyaAdi: '', uzanti: '.xlsx', sheetAdi: '', aktif: true };
-const excelSourceOptions = [
-  { value: 'mamul_turleri', label: 'Ürün Grupları' },
-  { value: 'renkler', label: 'Renkler' },
-  { value: 'iplikler', label: 'İplikler' },
-  { value: 'prosesler', label: 'Prosesler' },
-  { value: 'mamuller', label: 'Mamuller' },
-  { value: 'mamul_iplikleri', label: 'Mamül İplikleri' },
-  { value: 'mamul_prosesleri', label: 'Mamül Prosesleri' }
-];
+const initialEmailForm = {
+  enabled: false,
+  smtpHost: 'smtp.gmail.com',
+  smtpPort: '587',
+  smtpSecure: false,
+  senderName: 'Kartelix Siparis',
+  senderEmail: '',
+  smtpUser: '',
+  smtpPassword: '',
+  recipientEmails: '',
+  testRecipient: '',
+  replyTo: '',
+  lastAuthError: ''
+};
 
 const CloseIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
@@ -56,7 +57,7 @@ const SettingsPage = () => {
     setAppBackground
   } = useTheme();
 
-  const [activeTab, setActiveTab] = useState('types');
+  const [activeTab, setActiveTab] = useState('excel');
   const [systemStats, setSystemStats] = useState({});
   const [backupStatus, setBackupStatus] = useState('');
   const [loading, setLoading] = useState(false);
@@ -68,16 +69,15 @@ const SettingsPage = () => {
   const [colorForm, setColorForm] = useState(initialColorForm);
   const [yarnForm, setYarnForm] = useState(initialYarnForm);
   const [processForm, setProcessForm] = useState(initialProcessForm);
-  const [excelForm, setExcelForm] = useState(initialExcelForm);
   const [editingTypeId, setEditingTypeId] = useState(null);
   const [editingColorId, setEditingColorId] = useState(null);
   const [editingYarnId, setEditingYarnId] = useState(null);
   const [editingProcessId, setEditingProcessId] = useState(null);
-  const [excelSources, setExcelSources] = useState([]);
-  const [editingExcelId, setEditingExcelId] = useState(null);
   const [excelPollMs, setExcelPollMs] = useState('60000');
   const [excelStatus, setExcelStatus] = useState('');
   const [excelSyncStatus, setExcelSyncStatus] = useState(null);
+  const [emailForm, setEmailForm] = useState(initialEmailForm);
+  const [emailStatus, setEmailStatus] = useState('');
   const [themeStatus, setThemeStatus] = useState('');
   const [brandingForm, setBrandingForm] = useState({ appLogo: '/nevres.png', appBackground: '/showroom-bg.png' });
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -115,23 +115,34 @@ const SettingsPage = () => {
   };
 
   const loadExcelSettings = async () => {
-    const [settingsResponse, statusResponse] = await Promise.all([
-      fetch('/api/admin/excel-settings'),
-      fetch('/api/excel-sync/status')
-    ]);
-
-    const [settingsResult, statusResult] = await Promise.all([
-      settingsResponse.json(),
-      statusResponse.json()
-    ]);
+    const settingsResponse = await fetch('/api/admin/excel-settings');
+    const settingsResult = await settingsResponse.json();
 
     if (settingsResult.success) {
-      setExcelSources(settingsResult.data.sources || []);
       setExcelPollMs(String(settingsResult.data.pollMs || 60000));
     }
 
-    if (statusResult.success) {
-      setExcelSyncStatus(statusResult.data);
+    setExcelSyncStatus({
+      lastRunAt: '-',
+      directory: '-',
+      lastError: 'Durum bilgisi bu ekranda gösterilmiyor',
+      urgeLastResult: null,
+      latestSnapshots: []
+    });
+  };
+
+  const loadOrderEmailSettings = async () => {
+    const response = await fetch('/api/admin/order-email-settings');
+    const result = await response.json();
+
+    if (response.ok && result.success) {
+      setEmailForm((prev) => ({
+        ...prev,
+        ...result.data,
+        smtpPort: String(result.data.smtpPort || 587),
+        smtpPassword: '',
+        testRecipient: prev.testRecipient || result.data.recipientEmails || ''
+      }));
     }
   };
 
@@ -139,6 +150,7 @@ const SettingsPage = () => {
     loadSystemStats();
     loadDefinitions();
     loadExcelSettings();
+    loadOrderEmailSettings();
   }, []);
 
   useEffect(() => {
@@ -193,11 +205,6 @@ const SettingsPage = () => {
   const resetProcessForm = () => {
     setProcessForm(initialProcessForm);
     setEditingProcessId(null);
-  };
-
-  const resetExcelForm = () => {
-    setExcelForm(initialExcelForm);
-    setEditingExcelId(null);
   };
 
   const handleBackup = async () => {
@@ -283,6 +290,57 @@ const SettingsPage = () => {
     setExcelStatus('Excel senkronizasyonu tamamlandı.');
     setExcelSyncStatus(result.data);
     await loadDefinitions();
+  };
+
+  const saveOrderEmailSettings = async () => {
+    const response = await fetch('/api/admin/order-email-settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        enabled: emailForm.enabled,
+        smtpHost: emailForm.smtpHost,
+        smtpPort: Number(emailForm.smtpPort || 587),
+        smtpSecure: Boolean(emailForm.smtpSecure),
+        senderName: emailForm.senderName,
+        senderEmail: emailForm.senderEmail,
+        smtpUser: emailForm.smtpUser,
+        smtpPassword: emailForm.smtpPassword,
+        recipientEmails: emailForm.recipientEmails,
+        testRecipient: emailForm.testRecipient,
+        replyTo: emailForm.replyTo
+      })
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'E-posta ayarları kaydedilemedi');
+    }
+
+    setEmailForm((prev) => ({
+      ...prev,
+      ...result.data,
+      smtpPort: String(result.data.smtpPort || 587),
+      smtpPassword: ''
+    }));
+    setEmailStatus('E-posta ayarları kaydedildi.');
+  };
+
+  const sendTestOrderEmail = async () => {
+    const response = await fetch('/api/admin/order-email-settings/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ testRecipient: emailForm.testRecipient })
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      const prefix = response.status ? `(${response.status}) ` : '';
+      const codeSuffix = result.code ? ` [${result.code}]` : '';
+      const stageSuffix = result.stage ? ` {${result.stage}}` : '';
+      const responseSuffix = result.response ? ` - ${result.response}` : '';
+      throw new Error(`${prefix}${result.error || 'Test e-postası gönderilemedi'}${codeSuffix}${stageSuffix}${responseSuffix}`);
+    }
+
+    const accepted = result.data?.accepted?.join(', ') || emailForm.testRecipient || '-';
+    setEmailStatus(`Test e-postası gönderildi: ${accepted}`);
   };
 
   const renderDefinitionList = (items, activeId, onSelect, renderText) => (
@@ -511,63 +569,17 @@ const SettingsPage = () => {
       )
     },
     excel: {
-      title: 'Excel kaynakları',
-      description: 'Paylaşılan klasördeki dosyaları burada tanımlayın. Sistem bu kayıtlara göre dosyaları belirli aralıklarla okuyup veritabanına yazar.',
+      title: 'Excel senkronizasyonu',
+      description: 'Mamül, ürün grubu, renk, iplik, proses ve fiyat verileri yalnızca xls klasöründeki ÜRGE Excel dosyalarından okunur.',
       form: (
         <div className="space-y-4">
-          <form
-            onSubmit={async (event) => {
-              event.preventDefault();
-              const payload = {
-                kaynakTipi: excelForm.kaynakTipi,
-                dosyaAdi: excelForm.dosyaAdi,
-                uzanti: excelForm.uzanti,
-                sheetAdi: excelForm.sheetAdi,
-                aktif: excelForm.aktif
-              };
-
-              if (editingExcelId) {
-                await updateDefinition(`/api/admin/excel-sources/${editingExcelId}`, payload, async () => {
-                  resetExcelForm();
-                  await loadExcelSettings();
-                });
-                return;
-              }
-
-              await createDefinition('/api/admin/excel-sources', payload, async () => {
-                resetExcelForm();
-                await loadExcelSettings();
-              });
-            }}
-            className="space-y-3"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-sm font-semibold text-[color:var(--app-text)]">
-                {editingExcelId ? 'Excel kaynağını düzenle' : 'Yeni Excel kaynağı ekle'}
-              </div>
-              {editingExcelId ? <button type="button" onClick={resetExcelForm} className="app-btn-secondary">İptal</button> : null}
+          <div className="app-soft-panel p-4 space-y-3">
+            <div className="text-sm font-semibold text-[color:var(--app-text)]">Excel tek kaynak</div>
+            <div className="text-sm text-slate-600">
+              Uygulama manuel tanım kabul etmez. Dosyalar otomatik olarak xls klasöründen okunur; article, ürün adı,
+              iplik yüzdeleri, iplik fiyatları, prosesler ve 1 kg fiyat hesapları Excel'den gelir.
             </div>
-            <select className="app-input" value={excelForm.kaynakTipi} onChange={(e) => setExcelForm((prev) => ({ ...prev, kaynakTipi: e.target.value }))}>
-              {excelSourceOptions.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr,140px]">
-              <input className="app-input" placeholder="Dosya adı (uzantısız)" value={excelForm.dosyaAdi} onChange={(e) => setExcelForm((prev) => ({ ...prev, dosyaAdi: e.target.value }))} />
-              <select className="app-input" value={excelForm.uzanti} onChange={(e) => setExcelForm((prev) => ({ ...prev, uzanti: e.target.value }))}>
-                <option value=".xlsx">.xlsx</option>
-                <option value=".xls">.xls</option>
-              </select>
-            </div>
-            <input className="app-input" placeholder="Sheet adı (boşsa ilk sheet okunur)" value={excelForm.sheetAdi} onChange={(e) => setExcelForm((prev) => ({ ...prev, sheetAdi: e.target.value }))} />
-            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3">
-              <input type="checkbox" checked={excelForm.aktif} onChange={(e) => setExcelForm((prev) => ({ ...prev, aktif: e.target.checked }))} />
-              Kaynak aktif
-            </label>
-            <button type="submit" className="app-btn-primary">
-              {editingExcelId ? 'Excel kaynağını güncelle' : 'Excel kaynağı ekle'}
-            </button>
-          </form>
+          </div>
 
           <div className="app-soft-panel p-4 space-y-3">
             <div className="text-sm font-semibold text-[color:var(--app-text)]">Okuma sıklığı</div>
@@ -625,51 +637,25 @@ const SettingsPage = () => {
       ),
       list: (
         <div className="mt-4 space-y-3 max-h-[560px] overflow-y-auto pr-1">
-          {excelSources.length === 0 ? (
-            <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-500">Henüz Excel kaynağı tanımlanmadı.</div>
-          ) : (
-            excelSources.map((item) => (
-              <div key={item.id} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingExcelId(item.id);
-                    setExcelForm({
-                      kaynakTipi: item.kaynak_tipi,
-                      dosyaAdi: item.dosya_adi,
-                      uzanti: item.uzanti || '.xlsx',
-                      sheetAdi: item.sheet_adi || '',
-                      aktif: Boolean(item.aktif)
-                    });
-                  }}
-                  className="w-full text-left"
-                >
-                  <div className="font-semibold text-[color:var(--app-text)]">
-                    {excelSourceOptions.find((option) => option.value === item.kaynak_tipi)?.label || item.kaynak_tipi}
-                  </div>
-                  <div className="mt-1 text-slate-600">
-                    {item.dosya_adi}{item.uzanti}{item.sheet_adi ? ` / sheet: ${item.sheet_adi}` : ''}
-                  </div>
-                  <div className="mt-1 text-xs uppercase tracking-[0.24em] text-slate-400">
-                    {item.aktif ? 'Aktif' : 'Pasif'}
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await fetch(`/api/admin/excel-sources/${item.id}`, { method: 'DELETE' });
-                    if (editingExcelId === item.id) {
-                      resetExcelForm();
-                    }
-                    await loadExcelSettings();
-                  }}
-                  className="mt-3 text-xs font-semibold uppercase tracking-[0.24em] text-rose-600"
-                >
-                  Kaydı sil
-                </button>
+          {excelSyncStatus?.urgeLastResult ? (
+            <div className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
+              <div className="font-semibold text-[color:var(--app-text)]">Son ÜRGE okuması</div>
+              <div className="mt-1 text-slate-600">
+                Aktarılan satır: {excelSyncStatus.urgeLastResult.importedRows || 0} / Atlanan satır: {excelSyncStatus.urgeLastResult.skippedRows || 0}
               </div>
-            ))
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-500">Henüz ÜRGE Excel okuma sonucu yok.</div>
           )}
+
+          {excelSyncStatus?.urgeLastResult?.files?.map((item) => (
+            <div key={`urge-${item.fileName}`} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
+              <div className="font-semibold text-[color:var(--app-text)]">{item.fileName}</div>
+              <div className="mt-1 text-slate-600">
+                Prefix: {item.typePrefix || '-'} / Aktarılan: {item.importedRows || 0} / Atlanan: {item.skippedRows || 0}
+              </div>
+            </div>
+          ))}
 
           {excelSyncStatus?.latestSnapshots?.length ? (
             excelSyncStatus.latestSnapshots.map((snapshot) => (
@@ -684,6 +670,161 @@ const SettingsPage = () => {
               </div>
             ))
           ) : null}
+        </div>
+      )
+    },
+    email: {
+      title: 'Sipariş e-postası',
+      description: 'Sipariş maili için Gmail SMTP ve alıcı listesi.',
+      form: (
+        <div className="space-y-4">
+          <div className="app-soft-panel p-4">
+            <label className="flex items-center justify-between gap-4">
+              <span className="text-sm font-semibold text-[color:var(--app-text)]">Otomatik sipariş e-postası</span>
+              <input
+                type="checkbox"
+                checked={emailForm.enabled}
+                onChange={(event) => setEmailForm((prev) => ({ ...prev, enabled: event.target.checked }))}
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <label className="block">
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">SMTP sunucusu</div>
+              <input
+                className="app-input"
+                value={emailForm.smtpHost}
+                onChange={(event) => setEmailForm((prev) => ({ ...prev, smtpHost: event.target.value }))}
+                placeholder="smtp.gmail.com"
+              />
+            </label>
+            <label className="block">
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">SMTP port</div>
+              <input
+                className="app-input"
+                value={emailForm.smtpPort}
+                onChange={(event) => setEmailForm((prev) => ({ ...prev, smtpPort: event.target.value }))}
+                placeholder="587"
+              />
+            </label>
+            <label className="block">
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Güvenlik</div>
+              <select
+                className="app-select"
+                value={emailForm.smtpSecure ? 'ssl' : 'starttls'}
+                onChange={(event) => setEmailForm((prev) => ({ ...prev, smtpSecure: event.target.value === 'ssl' }))}
+              >
+                <option value="starttls">STARTTLS / 587</option>
+                <option value="ssl">SSL / 465</option>
+              </select>
+            </label>
+            <label className="block">
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Gönderici adı</div>
+              <input
+                className="app-input"
+                value={emailForm.senderName}
+                onChange={(event) => setEmailForm((prev) => ({ ...prev, senderName: event.target.value }))}
+                placeholder="Kartelix Siparis"
+              />
+            </label>
+            <label className="block">
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Gönderici e-posta</div>
+              <input
+                className="app-input"
+                value={emailForm.senderEmail}
+                onChange={(event) => setEmailForm((prev) => ({ ...prev, senderEmail: event.target.value }))}
+                placeholder="adres@gmail.com"
+              />
+            </label>
+            <label className="block">
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">SMTP kullanıcı</div>
+              <input
+                className="app-input"
+                value={emailForm.smtpUser}
+                onChange={(event) => setEmailForm((prev) => ({ ...prev, smtpUser: event.target.value }))}
+                placeholder="adres@gmail.com"
+              />
+            </label>
+            <label className="block lg:col-span-2">
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">SMTP parola / uygulama parolası</div>
+              <input
+                type="password"
+                className="app-input"
+                value={emailForm.smtpPassword}
+                onChange={(event) => setEmailForm((prev) => ({ ...prev, smtpPassword: event.target.value }))}
+                placeholder={emailForm.smtpPassword ? '' : 'Uygulama parolası'}
+              />
+            </label>
+            <label className="block lg:col-span-2">
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Siparişi alan e-posta adresleri</div>
+              <textarea
+                className="app-input min-h-[96px]"
+                value={emailForm.recipientEmails}
+                onChange={(event) => setEmailForm((prev) => ({ ...prev, recipientEmails: event.target.value }))}
+                placeholder="siparis@firma.com; ikinci@firma.com"
+              />
+            </label>
+            <label className="block lg:col-span-2">
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Yanıt adresi</div>
+              <input
+                className="app-input"
+                value={emailForm.replyTo}
+                onChange={(event) => setEmailForm((prev) => ({ ...prev, replyTo: event.target.value }))}
+                placeholder="Boşsa gönderici kullanılır"
+              />
+            </label>
+            <label className="block lg:col-span-2">
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Test alıcısı</div>
+              <input
+                className="app-input"
+                value={emailForm.testRecipient}
+                onChange={(event) => setEmailForm((prev) => ({ ...prev, testRecipient: event.target.value }))}
+                placeholder="test@firma.com"
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-[1fr,auto]">
+            <button type="button" className="app-btn-primary" onClick={saveOrderEmailSettings}>
+              Kaydet
+            </button>
+            <button
+              type="button"
+              className="app-btn-secondary"
+              onClick={async () => {
+                try {
+                  await saveOrderEmailSettings();
+                  setEmailStatus('Test e-postası gönderiliyor...');
+                  await sendTestOrderEmail();
+                } catch (err) {
+                  setEmailStatus(err.message);
+                }
+              }}
+            >
+              Test gönder
+            </button>
+          </div>
+
+          <div className="app-soft-panel p-4 text-sm">
+            Gmail için 2 adımlı doğrulama açıp uygulama parolası kullanman gerekir.
+          </div>
+
+          {emailStatus ? <div className="app-soft-panel px-4 py-3 text-sm">{emailStatus}</div> : null}
+        </div>
+      ),
+      list: (
+        <div className="mt-4 space-y-3 max-h-[560px] overflow-y-auto pr-1">
+          {[
+            `Durum: ${emailForm.enabled ? 'Aktif' : 'Pasif'}`,
+            `SMTP: ${emailForm.smtpHost || '-'}:${emailForm.smtpPort || '-'}`,
+            `Gönderici: ${emailForm.senderEmail || emailForm.smtpUser || '-'}`,
+            `Alıcılar: ${emailForm.recipientEmails || '-'}`
+          ].map((item, index) => (
+            <div key={`email-${index}`} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
+              {item}
+            </div>
+          ))}
         </div>
       )
     },
@@ -871,7 +1012,6 @@ const SettingsPage = () => {
               <div>
                 <div className="app-chip">{tabs.find((tab) => tab.id === activeTab)?.label}</div>
                 <h1 className="mt-4 text-3xl font-semibold text-[color:var(--app-text)]">{current.title}</h1>
-                <p className="mt-3 max-w-3xl text-sm leading-7 text-[color:var(--app-text-muted)]">{current.description}</p>
               </div>
               <div className="app-page-hero-actions" />
             </div>
@@ -892,7 +1032,9 @@ const SettingsPage = () => {
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold text-slate-900">{activeTab === 'excel' ? 'Kayıtlar ve son senkronlar' : 'Mevcut tanımlar'}</h3>
+                <h3 className="text-lg font-semibold text-slate-900">
+                  {activeTab === 'excel' ? 'Kayıtlar ve son senkronlar' : activeTab === 'email' ? 'Bağlantı özeti' : 'Mevcut tanımlar'}
+                </h3>
                 {current.list}
               </div>
             </div>

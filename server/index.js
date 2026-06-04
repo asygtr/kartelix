@@ -3,6 +3,8 @@ const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 const { startExcelSync, SOURCE_ORDER } = require('./excelSync');
 
 const app = express();
@@ -918,6 +920,475 @@ const mapSiparisKalemi = (row) => ({
   tutar: Number(row.tutar || 0)
 });
 
+const GRAPH_SCOPES = [
+  'openid',
+  'profile',
+  'email',
+  'offline_access',
+  'https://graph.microsoft.com/User.Read',
+  'https://graph.microsoft.com/Mail.Send'
+];
+
+const defaultOrderEmailSettings = {
+  enabled: false,
+  smtpHost: 'smtp.gmail.com',
+  smtpPort: 587,
+  smtpSecure: false,
+  senderName: 'Kartelix Siparis',
+  senderEmail: '',
+  smtpUser: '',
+  smtpPassword: '',
+  recipientEmails: '',
+  testRecipient: '',
+  replyTo: '',
+  lastAuthError: ''
+};
+
+const dbGetAsync = (sql, params = []) => new Promise((resolve, reject) => {
+  db.get(sql, params, (err, row) => (err ? reject(err) : resolve(row || null)));
+});
+
+const dbAllAsync = (sql, params = []) => new Promise((resolve, reject) => {
+  db.all(sql, params, (err, rows) => (err ? reject(err) : resolve(rows || [])));
+});
+
+const dbRunAsync = (sql, params = []) => new Promise((resolve, reject) => {
+  db.run(sql, params, function(err) {
+    if (err) reject(err);
+    else resolve(this);
+  });
+});
+
+const parseJsonValue = (value, fallback) => {
+  try {
+    return value ? JSON.parse(value) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const parseEmailList = (value) =>
+  String(value || '')
+    .split(/[;,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const isFiniteTimestamp = (value) => Number.isFinite(Number(value)) && Number(value) > 0;
+
+const sanitizeOrderEmailSettings = (settings) => ({
+  ...settings,
+  enabled: Boolean(settings.enabled),
+  smtpHost: String(settings.smtpHost || defaultOrderEmailSettings.smtpHost).trim(),
+  smtpPort: Number(settings.smtpPort || defaultOrderEmailSettings.smtpPort),
+  smtpSecure: Boolean(settings.smtpSecure),
+  senderName: String(settings.senderName || defaultOrderEmailSettings.senderName).trim(),
+  senderEmail: String(settings.senderEmail || '').trim(),
+  smtpUser: String(settings.smtpUser || '').trim(),
+  smtpPassword: '',
+  recipientEmails: String(settings.recipientEmails || '').trim(),
+  testRecipient: String(settings.testRecipient || '').trim(),
+  replyTo: String(settings.replyTo || '').trim(),
+  lastAuthError: String(settings.lastAuthError || '').trim()
+});
+
+const classifyEmailError = (err) => {
+  const code = String(err?.code || '').toUpperCase();
+  const responseCode = Number(err?.responseCode || 0);
+  const responseText = String(err?.response || err?.body || err?.message || '').trim();
+
+  if (code === 'EAUTH' || responseCode === 401 || responseCode === 403 || responseCode === 535 || responseCode === 534 || responseText.toLowerCase().includes('app password') || responseText.toLowerCase().includes('username and password not accepted')) {
+    return { status: 401, message: 'Gmail kimlik doğrulaması başarısız. Uygulama parolası veya kullanıcı bilgileri kontrol edilmeli.', code: code || 'AUTH' };
+  }
+
+  if (code === 'ENOTFOUND' || code === 'ETIMEDOUT' || code === 'ECONNECTION' || code === 'ECONNREFUSED') {
+    return { status: 502, message: 'Gmail SMTP sunucusuna bağlanılamadı. Host veya port kontrol edilmeli.', code: code || 'NETWORK' };
+  }
+
+  return {
+    status: responseCode >= 400 ? 502 : 500,
+    message: responseText || err?.message || 'Gmail SMTP işlemi başarısız oldu',
+    code: code || `HTTP_${responseCode || 500}`
+  };
+};
+
+async function loadOrderEmailSettings(includeSecrets = false) {
+  const row = await dbGetAsync(`SELECT deger FROM ui_ayarlari WHERE anahtar = 'order_email_settings'`, []);
+  const parsed = parseJsonValue(row?.deger, {});
+  const merged = {
+    enabled: Boolean(parsed.enabled),
+    smtpHost: String(parsed.smtpHost || defaultOrderEmailSettings.smtpHost).trim() || defaultOrderEmailSettings.smtpHost,
+    smtpPort: Number(parsed.smtpPort || defaultOrderEmailSettings.smtpPort),
+    smtpSecure: Boolean(parsed.smtpSecure),
+    senderName: String(parsed.senderName || defaultOrderEmailSettings.senderName).trim(),
+    senderEmail: String(parsed.senderEmail || '').trim(),
+    smtpUser: String(parsed.smtpUser || '').trim(),
+    smtpPassword: String(parsed.smtpPassword || '').trim(),
+    recipientEmails: String(parsed.recipientEmails || '').trim(),
+    testRecipient: String(parsed.testRecipient || '').trim(),
+    replyTo: String(parsed.replyTo || '').trim(),
+    lastAuthError: String(parsed.lastAuthError || '').trim()
+  };
+
+  return includeSecrets ? merged : sanitizeOrderEmailSettings(merged);
+}
+
+async function saveOrderEmailSettings(incomingSettings) {
+  const existing = await loadOrderEmailSettings(true);
+  const next = {
+    enabled: Boolean(incomingSettings.enabled),
+    smtpHost: String(incomingSettings.smtpHost || existing.smtpHost || defaultOrderEmailSettings.smtpHost).trim() || defaultOrderEmailSettings.smtpHost,
+    smtpPort: Number(incomingSettings.smtpPort || existing.smtpPort || defaultOrderEmailSettings.smtpPort),
+    smtpSecure: Boolean(incomingSettings.smtpSecure),
+    senderName: String(incomingSettings.senderName || existing.senderName || defaultOrderEmailSettings.senderName).trim(),
+    senderEmail: String(incomingSettings.senderEmail || existing.senderEmail || '').trim(),
+    smtpUser: String(incomingSettings.smtpUser || existing.smtpUser || '').trim(),
+    smtpPassword: String(incomingSettings.smtpPassword || existing.smtpPassword || '').trim(),
+    recipientEmails: String(incomingSettings.recipientEmails || existing.recipientEmails || '').trim(),
+    testRecipient: String(incomingSettings.testRecipient || existing.testRecipient || '').trim(),
+    replyTo: String(incomingSettings.replyTo || existing.replyTo || '').trim(),
+    lastAuthError: ''
+  };
+
+  await dbRunAsync(
+    `INSERT INTO ui_ayarlari (anahtar, deger)
+     VALUES ('order_email_settings', ?)
+     ON CONFLICT(anahtar) DO UPDATE SET deger = excluded.deger, updated_at = CURRENT_TIMESTAMP`,
+    [JSON.stringify(next)]
+  );
+
+  return sanitizeOrderEmailSettings(next);
+}
+
+const resolveOrderEmailSender = (settings) =>
+  String(settings.senderEmail || settings.smtpUser || '').trim();
+
+function createOrderEmailTransport(settings) {
+  const host = String(settings.smtpHost || 'smtp.gmail.com').trim() || 'smtp.gmail.com';
+  const port = Number(settings.smtpPort || 587);
+  const secure = Boolean(settings.smtpSecure);
+  const user = String(settings.smtpUser || settings.senderEmail || '').trim();
+  const pass = String(settings.smtpPassword || '').trim();
+
+  if (!user) {
+    const error = new Error('SMTP kullanıcı veya gönderici e-posta boş');
+    error.code = 'ESETTINGS';
+    error.responseCode = 400;
+    throw error;
+  }
+  if (!pass) {
+    const error = new Error('SMTP parola / uygulama parolası boş');
+    error.code = 'ESETTINGS';
+    error.responseCode = 400;
+    throw error;
+  }
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: {
+      user,
+      pass
+    },
+    requireTLS: !secure && port === 587
+  });
+}
+
+const generatePkceCodeVerifier = () => crypto.randomBytes(32).toString('base64url');
+const sha256Base64Url = (value) => crypto.createHash('sha256').update(value).digest('base64url');
+
+const buildGraphAuthorizeUrl = ({ tenantId, clientId, redirectUri, state, codeChallenge }) => {
+  const authorizeUrl = new URL(`https://login.microsoftonline.com/${encodeURIComponent(tenantId)}/oauth2/v2.0/authorize`);
+  authorizeUrl.searchParams.set('client_id', clientId);
+  authorizeUrl.searchParams.set('response_type', 'code');
+  authorizeUrl.searchParams.set('redirect_uri', redirectUri);
+  authorizeUrl.searchParams.set('response_mode', 'query');
+  authorizeUrl.searchParams.set('scope', GRAPH_SCOPES.join(' '));
+  authorizeUrl.searchParams.set('state', state);
+  authorizeUrl.searchParams.set('code_challenge', codeChallenge);
+  authorizeUrl.searchParams.set('code_challenge_method', 'S256');
+  authorizeUrl.searchParams.set('prompt', 'consent');
+  return authorizeUrl.toString();
+};
+
+async function postGraphTokenForm(tenantId, params) {
+  const response = await fetch(`https://login.microsoftonline.com/${encodeURIComponent(tenantId)}/oauth2/v2.0/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams(params).toString()
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(payload.error_description || payload.error || 'Microsoft token işlemi başarısız oldu');
+    error.code = String(payload.error || '').toUpperCase() || 'TOKEN_ERROR';
+    error.responseCode = response.status;
+    error.response = payload.error_description || payload.error || '';
+    throw error;
+  }
+
+  return payload;
+}
+
+async function exchangeGraphAuthorizationCode({ tenantId, clientId, redirectUri, code, codeVerifier }) {
+  return postGraphTokenForm(tenantId, {
+    client_id: clientId,
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: redirectUri,
+    code_verifier: codeVerifier,
+    scope: GRAPH_SCOPES.join(' ')
+  });
+}
+
+async function refreshGraphAccessToken({ tenantId, clientId, refreshToken }) {
+  return postGraphTokenForm(tenantId, {
+    client_id: clientId,
+    grant_type: 'refresh_token',
+    refresh_token: refreshToken,
+    scope: GRAPH_SCOPES.join(' ')
+  });
+}
+
+async function fetchGraphMe(accessToken) {
+  const response = await fetch('https://graph.microsoft.com/v1.0/me?$select=id,displayName,mail,userPrincipalName', {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(payload.error?.message || 'Microsoft profil bilgisi alınamadı');
+    error.code = String(payload.error?.code || '').toUpperCase() || 'GRAPH_ME_ERROR';
+    error.responseCode = response.status;
+    error.response = payload.error?.message || '';
+    throw error;
+  }
+
+  return payload;
+}
+
+async function connectOrderEmailAccount({ tenantId, clientId, redirectUri, code, codeVerifier }) {
+  const tokenPayload = await exchangeGraphAuthorizationCode({
+    tenantId,
+    clientId,
+    redirectUri,
+    code,
+    codeVerifier
+  });
+
+  const profile = await fetchGraphMe(tokenPayload.access_token);
+  const existing = await loadOrderEmailSettings(true);
+  const nextSettings = {
+    ...existing,
+    tenantId,
+    clientId,
+    redirectUri,
+    connectedEmail: String(profile.mail || profile.userPrincipalName || '').trim(),
+    connectedName: String(profile.displayName || '').trim(),
+    accessToken: String(tokenPayload.access_token || '').trim(),
+    refreshToken: String(tokenPayload.refresh_token || existing.refreshToken || '').trim(),
+    accessTokenExpiresAt: Date.now() + (Number(tokenPayload.expires_in || 3600) * 1000),
+    lastAuthAt: new Date().toISOString(),
+    lastAuthError: ''
+  };
+
+  return persistOrderEmailConnection(nextSettings);
+}
+
+async function persistOrderEmailConnection(nextSettings) {
+  await dbRunAsync(
+    `INSERT INTO ui_ayarlari (anahtar, deger)
+     VALUES ('order_email_settings', ?)
+     ON CONFLICT(anahtar) DO UPDATE SET deger = excluded.deger, updated_at = CURRENT_TIMESTAMP`,
+    [JSON.stringify(nextSettings)]
+  );
+  return sanitizeOrderEmailSettings(nextSettings);
+}
+
+async function disconnectOrderEmailConnection() {
+  const existing = await loadOrderEmailSettings(true);
+  const nextSettings = {
+    ...existing,
+    accessToken: '',
+    refreshToken: '',
+    accessTokenExpiresAt: 0,
+    connectedEmail: '',
+    connectedName: '',
+    lastAuthAt: '',
+    lastAuthError: 'Bağlantı kesildi'
+  };
+
+  await dbRunAsync(
+    `INSERT INTO ui_ayarlari (anahtar, deger)
+     VALUES ('order_email_settings', ?)
+     ON CONFLICT(anahtar) DO UPDATE SET deger = excluded.deger, updated_at = CURRENT_TIMESTAMP`,
+    [JSON.stringify(nextSettings)]
+  );
+
+  return sanitizeOrderEmailSettings(nextSettings);
+}
+
+async function ensureGraphAccessToken(settings) {
+  if (settings.accessToken && isFiniteTimestamp(settings.accessTokenExpiresAt) && Date.now() < (Number(settings.accessTokenExpiresAt) - 60_000)) {
+    return { accessToken: settings.accessToken, settings };
+  }
+
+  if (!settings.refreshToken) {
+    const error = new Error('Microsoft hesabı bağlanmamış');
+    error.code = 'NOT_CONNECTED';
+    error.responseCode = 400;
+    throw error;
+  }
+
+  const refreshed = await refreshGraphAccessToken({
+    tenantId: settings.tenantId || 'consumers',
+    clientId: settings.clientId,
+    refreshToken: settings.refreshToken
+  });
+
+  const nextSettings = {
+    ...settings,
+    accessToken: String(refreshed.access_token || '').trim(),
+    refreshToken: String(refreshed.refresh_token || settings.refreshToken || '').trim(),
+    accessTokenExpiresAt: Date.now() + (Number(refreshed.expires_in || 3600) * 1000),
+    lastAuthError: ''
+  };
+
+  await persistOrderEmailConnection(nextSettings);
+  return { accessToken: nextSettings.accessToken, settings: nextSettings };
+}
+
+function buildOrderEmailContent(order, items = []) {
+  const title = `Kartelix Siparis #${order.id}`;
+  const lines = items.map((item) =>
+    `${item.article_code || item.article_no} - ${item.mamul_adi} - ${Number(item.miktar_kg || 0).toFixed(2)} kg`
+  );
+  const text = [
+    title,
+    '',
+    `Firma: ${order.firma_adi || order.musteri_adi || '-'}`,
+    `Ilgili kisi: ${order.ilgili_kisi || '-'}`,
+    `Telefon: ${order.telefon || '-'}`,
+    `E-posta: ${order.email || '-'}`,
+    `Fuar: ${order.fuar_adi || '-'}`,
+    `Personel: ${order.personel_username || '-'}`,
+    `Durum: ${order.durum || '-'}`,
+    `Toplam: ${Number(order.toplam_tutar || 0).toFixed(2)} ${order.para_birimi || 'TRY'}`,
+    '',
+    'Kalemler:',
+    ...(lines.length ? lines : ['-']),
+    '',
+    order.aciklama ? `Not: ${order.aciklama}` : ''
+  ].filter((line, index, array) => line || array[index - 1] !== '').join('\n');
+
+  const itemRows = items.length
+    ? items.map((item) => `
+        <tr>
+          <td>${item.article_code || item.article_no || '-'}</td>
+          <td>${item.mamul_adi || '-'}</td>
+          <td>${item.renk || '-'}</td>
+          <td style="text-align:right">${Number(item.miktar_kg || 0).toFixed(2)} kg</td>
+          <td style="text-align:right">${Number(item.tutar || 0).toFixed(2)} ${order.para_birimi || 'TRY'}</td>
+        </tr>
+      `).join('')
+    : '<tr><td colspan="5">-</td></tr>';
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;color:#172023;line-height:1.5">
+      <h2>${title}</h2>
+      <p><strong>Firma:</strong> ${order.firma_adi || order.musteri_adi || '-'}</p>
+      <p><strong>Ilgili kisi:</strong> ${order.ilgili_kisi || '-'}<br>
+      <strong>Telefon:</strong> ${order.telefon || '-'}<br>
+      <strong>E-posta:</strong> ${order.email || '-'}<br>
+      <strong>Fuar:</strong> ${order.fuar_adi || '-'}<br>
+      <strong>Personel:</strong> ${order.personel_username || '-'}</p>
+      <table cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%;border:1px solid #d7c5ad">
+        <thead>
+          <tr style="background:#f3efe7">
+            <th align="left">Article</th>
+            <th align="left">Mamül</th>
+            <th align="left">Renk</th>
+            <th align="right">Miktar</th>
+            <th align="right">Tutar</th>
+          </tr>
+        </thead>
+        <tbody>${itemRows}</tbody>
+      </table>
+      <p><strong>Toplam:</strong> ${Number(order.toplam_tutar || 0).toFixed(2)} ${order.para_birimi || 'TRY'}</p>
+      ${order.aciklama ? `<p><strong>Not:</strong> ${order.aciklama}</p>` : ''}
+    </div>
+  `;
+
+  return { subject: `${title} - ${order.firma_adi || order.musteri_adi || '-'}`, text, html };
+}
+
+async function loadOrderForEmail(siparisId) {
+  const order = await dbGetAsync(`SELECT * FROM kartelix_orders WHERE id = ?`, [siparisId]);
+  if (!order) throw new Error('Siparis bulunamadi');
+  const items = await dbAllAsync(
+    `SELECT * FROM kartelix_order_items WHERE siparis_id = ? ORDER BY id ASC`,
+    [siparisId]
+  );
+  return { order, items: items.map(mapSiparisKalemi) };
+}
+
+async function sendSmtpMail({ settings, recipients, subject, html, text }) {
+  const transporter = createOrderEmailTransport(settings);
+  const fromEmail = resolveOrderEmailSender(settings);
+  if (!fromEmail) {
+    const error = new Error('Gönderici e-posta veya SMTP kullanıcı alanı boş');
+    error.code = 'ESETTINGS';
+    error.responseCode = 400;
+    throw error;
+  }
+
+  const info = await transporter.sendMail({
+    from: `"${settings.senderName || 'Kartelix'}" <${fromEmail}>`,
+    to: recipients.join(', '),
+    replyTo: settings.replyTo || fromEmail,
+    subject,
+    text,
+    html
+  });
+
+  return {
+    accepted: info.accepted || recipients,
+    rejected: info.rejected || [],
+    messageId: info.messageId || ''
+  };
+}
+
+async function sendOrderEmailNotification(siparisId, overrideRecipients = '') {
+  const settings = await loadOrderEmailSettings(true);
+  if (!settings.enabled && !overrideRecipients) {
+    return { skipped: true, message: 'E-posta bildirimi pasif' };
+  }
+
+  const recipients = parseEmailList(overrideRecipients || settings.recipientEmails);
+  if (!recipients.length) {
+    return { skipped: true, message: 'Sipariş alıcı e-postası tanımlı değil' };
+  }
+
+  if (!settings.smtpHost || !(settings.smtpUser || settings.senderEmail) || !settings.smtpPassword) {
+    return { skipped: true, message: 'Gmail SMTP ayarları eksik' };
+  }
+
+  const { order, items } = await loadOrderForEmail(siparisId);
+  const content = buildOrderEmailContent(order, items);
+  const result = await sendSmtpMail({
+    settings,
+    recipients,
+    subject: content.subject,
+    html: content.html,
+    text: content.text
+  });
+
+  return {
+    skipped: false,
+    message: 'E-posta gönderildi',
+    ...result
+  };
+}
+
 const mapMamulDetail = (mamul, iplikler, prosesler) => ({
   ...mapMamulCard(mamul),
   iplikler: iplikler.map((item) => ({
@@ -1106,6 +1577,35 @@ const errorHandler = (err, req, res, next) => {
     message: 'İşlem sırasında bir hata oluştu' 
   });
 };
+
+const excelOwnedMutationGuard = (req, res, next) => {
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    return next();
+  }
+
+  const excelOwnedPaths = [
+    '/api/admin/mamul-turleri',
+    '/api/admin/renkler',
+    '/api/admin/iplikler',
+    '/api/admin/prosesler',
+    '/api/admin/mamuller',
+    '/api/admin/excel-sources'
+  ];
+
+  const isExcelOwned = excelOwnedPaths.some((routePath) => req.path === routePath || req.path.startsWith(`${routePath}/`));
+  const isAllowedOperation = req.path === '/api/admin/excel-sync/run' || req.path === '/api/admin/excel-settings/poll';
+
+  if (isExcelOwned && !isAllowedOperation) {
+    return res.status(403).json({
+      success: false,
+      error: 'Bu veri Excel kaynaklidir. Uygulama arayuzunden manuel kayit veya guncelleme yapilamaz.'
+    });
+  }
+
+  return next();
+};
+
+app.use(excelOwnedMutationGuard);
 
 // --- MEVCUT API ROTLARI ---
 
@@ -1539,6 +2039,74 @@ app.put('/api/admin/theme-settings', (req, res, next) => {
       );
     });
   });
+});
+
+app.get('/api/admin/order-email-settings', async (req, res, next) => {
+  try {
+    const settings = await loadOrderEmailSettings(false);
+    res.json({ success: true, data: settings });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.put('/api/admin/order-email-settings', async (req, res, next) => {
+  try {
+    const settings = await saveOrderEmailSettings(req.body || {});
+    res.json({ success: true, data: settings });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message || 'E-posta ayarları kaydedilemedi' });
+  }
+});
+
+app.post('/api/admin/order-email-settings/test', async (req, res) => {
+  try {
+    const settings = await loadOrderEmailSettings(true);
+    const testRecipient = String(req.body?.testRecipient || '').trim();
+    const recipients = parseEmailList(testRecipient || settings.recipientEmails);
+
+    if (!recipients.length) {
+      return res.status(400).json({ success: false, error: 'Test alıcı e-postası zorunludur' });
+    }
+    if (!settings.smtpHost || !(settings.smtpUser || settings.senderEmail) || !settings.smtpPassword) {
+      return res.status(400).json({ success: false, error: 'Gmail SMTP ayarları eksik' });
+    }
+
+    const content = {
+      subject: 'Kartelix Gmail test',
+      text: 'Kartelix sipariş e-posta ayarları başarıyla test edildi.',
+      html: '<div style="font-family:Arial,sans-serif">Kartelix sipariş e-posta ayarları başarıyla test edildi.</div>'
+    };
+
+    const info = await sendSmtpMail({
+      settings,
+      recipients,
+      subject: content.subject,
+      text: content.text,
+      html: content.html
+    });
+
+    res.json({
+      success: true,
+      data: {
+        messageId: info.messageId || '',
+        accepted: info.accepted || recipients,
+        rejected: info.rejected || []
+      }
+    });
+  } catch (err) {
+    console.error('SMTP email test error:', err);
+    const emailError = classifyEmailError(err);
+    res.status(emailError.status).json({
+      success: false,
+      error: emailError.message,
+      code: err?.code || '',
+      responseCode: err?.responseCode || 0,
+      stage: err?.stage || '',
+      command: err?.command || '',
+      response: String(err?.response || '').trim()
+    });
+  }
 });
 
 app.get('/api/admin/excel-settings', async (req, res, next) => {
@@ -2195,30 +2763,57 @@ app.get('/api/public/mamuller/:slug', (req, res, next) => {
         (relatedErr, relatedRows) => {
           if (relatedErr) return next(relatedErr);
 
-          res.json({
-            success: true,
-            data: {
-              id: mamul.id,
-              mamul_adi: mamul.mamul_adi,
-              article_no: mamul.article_no,
-              article_code: mamul.article_code,
-              mamul_turu_adi: mamul.mamul_turu_adi,
-              koleksiyon_adi: mamul.koleksiyon_adi || '',
-              yayin_durumu: mamul.yayin_durumu || 'yayinda',
-              renk: mamul.renk,
-              kompozisyon_ozeti: mamul.kompozisyon_ozeti,
-              en: mamul.en,
-              gramaj: mamul.gramaj,
-              aciklama: mamul.aciklama,
-              qr_slug: mamul.qr_slug,
-              tanitim_basligi: mamul.tanitim_basligi,
-              tanitim_hikayesi: mamul.tanitim_hikayesi,
-              materyal_notlari: mamul.materyal_notlari,
-              gorsel_url: mamul.gorsel_url,
-              vurgu_etiketi: mamul.vurgu_etiketi,
-              benzer_urunler: relatedRows
+          db.all(
+            `SELECT id, iplik_adi, oran_yuzde, sira_no
+             FROM mamul_iplik_detaylari
+             WHERE mamul_id = ?
+             ORDER BY sira_no ASC, id ASC`,
+            [mamul.id],
+            (yarnErr, yarnRows) => {
+              if (yarnErr) return next(yarnErr);
+
+              db.all(
+                `SELECT id, proses_adi, proses_tipi, aciklama, sira_no
+                 FROM mamul_proses_detaylari
+                 WHERE mamul_id = ?
+                 ORDER BY sira_no ASC, id ASC`,
+                [mamul.id],
+                (processErr, processRows) => {
+                  if (processErr) return next(processErr);
+
+                  res.json({
+                    success: true,
+                    data: {
+                      id: mamul.id,
+                      mamul_adi: mamul.mamul_adi,
+                      article_no: mamul.article_no,
+                      article_code: mamul.article_code,
+                      mamul_turu_adi: mamul.mamul_turu_adi,
+                      koleksiyon_adi: mamul.koleksiyon_adi || '',
+                      yayin_durumu: mamul.yayin_durumu || 'yayinda',
+                      renk: mamul.renk,
+                      kompozisyon_ozeti: mamul.kompozisyon_ozeti,
+                      en: mamul.en,
+                      gramaj: mamul.gramaj,
+                      aciklama: mamul.aciklama,
+                      qr_slug: mamul.qr_slug,
+                      tanitim_basligi: mamul.tanitim_basligi,
+                      tanitim_hikayesi: mamul.tanitim_hikayesi,
+                      materyal_notlari: mamul.materyal_notlari,
+                      gorsel_url: mamul.gorsel_url,
+                      vurgu_etiketi: mamul.vurgu_etiketi,
+                      iplikler: yarnRows.map((item) => ({
+                        ...item,
+                        oran_yuzde: Number(item.oran_yuzde || 0)
+                      })),
+                      prosesler: processRows,
+                      benzer_urunler: relatedRows
+                    }
+                  });
+                }
+              );
             }
-          });
+          );
         }
       );
     }
@@ -2545,14 +3140,32 @@ app.post('/api/orders', (req, res, next) => {
                         return next(commitErr);
                       }
 
-                      res.status(201).json({
-                        success: true,
-                        data: {
-                          siparisId,
-                          toplamTutar,
-                          kalemSayisi: enrichedItems.length
-                        }
-                      });
+                      sendOrderEmailNotification(siparisId)
+                        .then((emailStatus) => {
+                          res.status(201).json({
+                            success: true,
+                            data: {
+                              siparisId,
+                              toplamTutar,
+                              kalemSayisi: enrichedItems.length,
+                              emailStatus
+                            }
+                          });
+                        })
+                        .catch((emailErr) => {
+                          res.status(201).json({
+                            success: true,
+                            data: {
+                              siparisId,
+                              toplamTutar,
+                              kalemSayisi: enrichedItems.length,
+                              emailStatus: {
+                                skipped: false,
+                                error: emailErr.message || 'E-posta gönderilemedi'
+                              }
+                            }
+                          });
+                        });
                     });
                   }
                 }
@@ -3363,21 +3976,22 @@ app.get('/api/kartela-kodu-kontrol/:kod', (req, res, next) => {
 });
 // --- EMAIL GÖNDERME API ROTU ---
 
-app.post('/api/siparis-email-gonder', (req, res, next) => {
+app.post('/api/siparis-email-gonder', async (req, res) => {
   const { siparisId, email } = req.body;
-  
-  // Burada email gönderme servisi entegre edilecek
-  // Şimdilik simüle ediyoruz
-  
-  console.log(`📧 Email gönderiliyor: Sipariş #${siparisId} -> ${email}`);
-  
-  // Simüle edilmiş başarılı response
-  setTimeout(() => {
+
+  try {
+    const result = await sendOrderEmailNotification(siparisId, email);
     res.json({
       success: true,
-      message: 'Email başarıyla gönderildi'
+      message: result.message || 'Email başarıyla gönderildi',
+      data: result
     });
-  }, 1000);
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Email gönderilemedi'
+    });
+  }
 });
 
 app.get('/api/stats', (req, res, next) => {
@@ -3554,7 +4168,7 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 // Excel klasor senkronizasyonu (ayarlar ekranindaki kaynak tanimlarina gore dosya okur)
-const excelInboxDir = process.env.EXCEL_INBOX_DIR || path.join(__dirname, '..', 'excel');
+const excelInboxDir = process.env.EXCEL_INBOX_DIR || path.join(__dirname, '..', 'xls');
 const excelPollMs = Number(process.env.EXCEL_POLL_MS || 60_000);
 const excelPreviewLimit = Number(process.env.EXCEL_PREVIEW_LIMIT || 50);
 const excelSync = startExcelSync({

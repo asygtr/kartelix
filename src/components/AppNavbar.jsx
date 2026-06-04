@@ -10,15 +10,12 @@ const navSets = {
     { to: '/admin', label: 'Yönetim' },
     { to: '/admin/mamuller', label: 'Mamül Kartı' },
     { to: '/mamul/labels', label: 'Etiket Bas' },
-    { to: '/mamul/showcase', label: 'Ürün Tanıtımı' },
     { to: '/staff/orders/new', label: 'Siparişler' },
     { to: '/admin/reports', label: 'Raporlar' }
   ],
   mamul: [
     { to: '/mamul', label: 'Mamül Merkezi' },
-    { to: '/mamul/create', label: 'Mamül Ekle' },
-    { to: '/mamul/labels', label: 'Etiket Bas' },
-    { to: '/mamul/showcase', label: 'Ürün Tanıtımı' }
+    { to: '/mamul/labels', label: 'Etiket Bas' }
   ],
   staff: [
     { to: '/staff/orders/new', label: 'Sipariş Oluştur' }
@@ -93,8 +90,7 @@ const AppNavbar = ({ title, action, onLogout }) => {
   const session = getSession();
   const role = session?.yetki || 'guest';
   const primaryLinks = navSets[role] || navSets.guest;
-  const showSettings = role === 'admin';
-  const [menuOpen, setMenuOpen] = useState(false);
+  const showSettings = role === 'admin' && location.pathname !== '/admin/settings';
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
@@ -102,10 +98,6 @@ const AppNavbar = ({ title, action, onLogout }) => {
   const [searchResult, setSearchResult] = useState(null);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [canUseMobileQr] = useState(() => isMobileCameraDevice());
-
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [location.pathname]);
 
   useEffect(() => {
     if (searchOpen) {
@@ -149,7 +141,7 @@ const AppNavbar = ({ title, action, onLogout }) => {
       key: 'mamul',
       label: 'Mamül',
       icon: <FabricIcon />,
-      to: role === 'admin' ? '/admin/mamuller' : role === 'mamul' ? '/mamul/create' : null
+      to: role === 'admin' ? '/admin/mamuller' : role === 'mamul' ? '/mamul' : null
     });
 
     if (role === 'admin') {
@@ -242,35 +234,8 @@ const AppNavbar = ({ title, action, onLogout }) => {
             </button>
           ) : null}
           {action ? <div className="app-nav-utility">{action}</div> : null}
-          <button
-            type="button"
-            className="app-nav-toggle"
-            aria-label="Menüyü aç"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((prev) => !prev)}
-          >
-            <span />
-            <span />
-            <span />
-          </button>
         </div>
       </div>
-
-      {primaryLinks.length && menuOpen ? (
-        <nav className="app-nav-primary-wrap is-open" aria-label="Ana gezinme">
-          <div className="app-nav-links">
-            {primaryLinks.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className={`app-nav-link ${isActiveLink(location.pathname, link.to) ? 'is-active' : ''}`}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-        </nav>
-      ) : null}
     </header>
     ) : null}
     {!searchOpen && role !== 'guest' ? (
@@ -406,12 +371,6 @@ const AppNavbar = ({ title, action, onLogout }) => {
                 </div>
               ) : null}
 
-              {role === 'staff' ? (
-                <div className="app-soft-panel mt-4 p-4 text-sm text-[color:var(--app-text-muted)]">
-                  Bu görünüm ürünün ne olduğunu hızlıca doğrulamak içindir. Fiyatlar yalnızca yönetici aramasında görünür.
-                </div>
-              ) : null}
-
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <a href={`/u/${searchResult.qr_slug}`} className="app-btn-secondary text-center" onClick={() => setSearchOpen(false)}>
                   Ürün bilgisi
@@ -422,7 +381,7 @@ const AppNavbar = ({ title, action, onLogout }) => {
                     className="app-btn-secondary"
                     onClick={() => {
                       setSearchOpen(false);
-                      navigate(role === 'admin' ? '/admin/mamuller' : '/mamul/create');
+                      navigate(role === 'admin' ? '/admin/mamuller' : '/mamul');
                     }}
                   >
                     Mamüle git

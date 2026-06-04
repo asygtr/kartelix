@@ -13,6 +13,7 @@
     "cors": "^2.8.5",
     "file-saver": "^2.0.5",
     "html5-qrcode": "^2.3.8",
+    "nodemailer": "^8.0.10",
     "pdfkit": "^0.17.2",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.0",
