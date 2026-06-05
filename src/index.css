@@ -1654,7 +1654,7 @@ code {
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 991px) {
   body {
     background-attachment: scroll, scroll, scroll, scroll;
   }

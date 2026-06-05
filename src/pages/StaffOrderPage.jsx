@@ -877,100 +877,101 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
               </form>
             ) : null}
 
-            {(panelMode === 'edit' || panelMode === 'delete' || !panelMode) ? (
-            <section className="app-panel p-6">
-              <div className="flex items-center justify-between gap-4">
-                <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Son siparişler</h2>
-                <button type="button" onClick={loadOrders} className="text-sm text-emerald-700 hover:text-emerald-900">Yenile</button>
-              </div>
-
-              <div className="mt-5 space-y-3">
-                {recentOrders.length === 0 ? (
-                  <div className="app-soft-panel px-4 py-6 text-sm text-[color:var(--app-text-muted)]">Henüz kayıtlı sipariş yok.</div>
-                ) : null}
-
-                {recentOrders.map((order) => (
-                  <button
-                    key={order.id}
-                    type="button"
-                    onClick={() => loadOrderDetail(order.id)}
-                    className="w-full rounded-2xl border border-slate-200 p-4 text-left transition hover:border-emerald-300"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="font-semibold text-slate-900">#{order.id} {order.firma_adi || order.musteri_adi}</div>
-                        <div className="mt-1 text-sm text-slate-600">{order.kalem_sayisi} mamül / {order.personel_username || '-'}</div>
-                        <div className="mt-1 text-sm text-slate-500">{order.fuar_adi || 'Kaynak belirtilmedi'}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">{order.durum || 'kaydedildi'}</div>
-                        <div className="mt-3 font-semibold text-slate-900">{Number(order.toplam_tutar || 0).toFixed(2)}</div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              {orders.length > recentLimit ? (
-                <div className="mt-4">
-                  <button type="button" onClick={() => setOrderFilterExpanded((prev) => !prev)} className="app-btn-secondary">
-                    {orderFilterExpanded ? 'Daha az göster' : 'Daha fazla göster'}
-                  </button>
-                </div>
-              ) : null}
-
-              {selectedOrderDetail ? (
-                <div className="app-soft-panel mt-5 p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.3em] text-[color:var(--app-text-muted)]">Sipariş detayı</div>
-                      <div className="mt-2 text-lg font-semibold text-[color:var(--app-text)]">#{selectedOrderDetail.id} {selectedOrderDetail.firma_adi || selectedOrderDetail.musteri_adi}</div>
-                    </div>
-                    <button type="button" onClick={() => setSelectedOrderDetail(null)} className="app-btn-secondary">Kapat</button>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <button type="button" onClick={() => loadOrderIntoEditor(selectedOrderDetail)} className="app-btn-primary">Siparişi düzenle</button>
-                    <button type="button" onClick={() => deleteOrder(selectedOrderDetail.id)} className="app-btn-danger">Siparişi sil</button>
-                  </div>
-
-                  <div className="mt-4 grid gap-3 md:grid-cols-2 text-sm text-[color:var(--app-text-muted)]">
-                    <div>Müşteri: <span className="font-semibold text-[color:var(--app-text)]">{selectedOrderDetail.musteri_adi || '-'}</span></div>
-                    <div>Firma: <span className="font-semibold text-[color:var(--app-text)]">{selectedOrderDetail.firma_adi || '-'}</span></div>
-                    <div>İlgili kişi: <span className="font-semibold text-[color:var(--app-text)]">{selectedOrderDetail.ilgili_kisi || '-'}</span></div>
-                    <div>Telefon: <span className="font-semibold text-[color:var(--app-text)]">{selectedOrderDetail.telefon || '-'}</span></div>
-                    <div>E-posta: <span className="font-semibold text-[color:var(--app-text)]">{selectedOrderDetail.email || '-'}</span></div>
-                    <div>Fuar: <span className="font-semibold text-[color:var(--app-text)]">{selectedOrderDetail.fuar_adi || '-'}</span></div>
-                    <div>Toplam: <span className="font-semibold text-[color:var(--app-text)]">{Number(selectedOrderDetail.toplam_tutar || 0).toFixed(2)}</span></div>
-                    <div>Kartvizit OCR: <span className="font-semibold text-[color:var(--app-text)]">{selectedOrderDetail.kartvizit_ocr_durumu || '-'}</span></div>
-                  </div>
-
-                  {selectedOrderDetail.kartvizit_gorsel ? (
-                    <div className="mt-4 overflow-hidden rounded-2xl border border-[color:var(--app-border)] bg-white/50">
-                      <img src={selectedOrderDetail.kartvizit_gorsel} alt="Kartvizit" className="max-h-56 w-full object-cover" />
-                    </div>
-                  ) : null}
-
-                  <div className="mt-4 space-y-3">
-                    {selectedOrderDetail.items?.map((item) => (
-                      <div key={item.id} className="rounded-2xl border border-[color:var(--app-border)] bg-white/50 px-4 py-3 text-sm">
-                        <div className="font-semibold text-[color:var(--app-text)]">{item.mamul_adi}</div>
-                        <div className="mt-1 text-[color:var(--app-text-muted)]">{item.article_code} / {item.article_no}</div>
-                        <div className="mt-2 text-[color:var(--app-text-muted)]">
-                          {Number(item.miktar_kg || 0).toFixed(2)} kg x {Number(item.birim_fiyat || 0).toFixed(2)} = {Number(item.tutar || 0).toFixed(2)}
-                        </div>
-                      </div>
-                    ))}
-                    {!selectedOrderDetail.items?.length ? (
-                      <div className="text-sm text-[color:var(--app-text-muted)]">Bu siparişte henüz kalem görünmüyor.</div>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
-            </section>
-            ) : null}
           </div>
         </div>
+
+        {(panelMode === 'edit' || panelMode === 'delete' || !panelMode) ? (
+          <section className="app-panel p-6">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Son siparişler</h2>
+              <button type="button" onClick={loadOrders} className="text-sm text-emerald-700 hover:text-emerald-900">Yenile</button>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {recentOrders.length === 0 ? (
+                <div className="app-soft-panel px-4 py-6 text-sm text-[color:var(--app-text-muted)]">Henüz kayıtlı sipariş yok.</div>
+              ) : null}
+
+              {recentOrders.map((order) => (
+                <button
+                  key={order.id}
+                  type="button"
+                  onClick={() => loadOrderDetail(order.id)}
+                  className="w-full rounded-2xl border border-slate-200 p-4 text-left transition hover:border-emerald-300"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="font-semibold text-slate-900">#{order.id} {order.firma_adi || order.musteri_adi}</div>
+                      <div className="mt-1 text-sm text-slate-600">{order.kalem_sayisi} mamül / {order.personel_username || '-'}</div>
+                      <div className="mt-1 text-sm text-slate-500">{order.fuar_adi || 'Kaynak belirtilmedi'}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">{order.durum || 'kaydedildi'}</div>
+                      <div className="mt-3 font-semibold text-slate-900">{Number(order.toplam_tutar || 0).toFixed(2)}</div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {orders.length > recentLimit ? (
+              <div className="mt-4">
+                <button type="button" onClick={() => setOrderFilterExpanded((prev) => !prev)} className="app-btn-secondary">
+                  {orderFilterExpanded ? 'Daha az göster' : 'Daha fazla göster'}
+                </button>
+              </div>
+            ) : null}
+
+            {selectedOrderDetail ? (
+              <div className="app-soft-panel mt-5 p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.3em] text-[color:var(--app-text-muted)]">Sipariş detayı</div>
+                    <div className="mt-2 text-lg font-semibold text-[color:var(--app-text)]">#{selectedOrderDetail.id} {selectedOrderDetail.firma_adi || selectedOrderDetail.musteri_adi}</div>
+                  </div>
+                  <button type="button" onClick={() => setSelectedOrderDetail(null)} className="app-btn-secondary">Kapat</button>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <button type="button" onClick={() => loadOrderIntoEditor(selectedOrderDetail)} className="app-btn-primary">Siparişi düzenle</button>
+                  <button type="button" onClick={() => deleteOrder(selectedOrderDetail.id)} className="app-btn-danger">Siparişi sil</button>
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-2 text-sm text-[color:var(--app-text-muted)]">
+                  <div>Müşteri: <span className="font-semibold text-[color:var(--app-text)]">{selectedOrderDetail.musteri_adi || '-'}</span></div>
+                  <div>Firma: <span className="font-semibold text-[color:var(--app-text)]">{selectedOrderDetail.firma_adi || '-'}</span></div>
+                  <div>İlgili kişi: <span className="font-semibold text-[color:var(--app-text)]">{selectedOrderDetail.ilgili_kisi || '-'}</span></div>
+                  <div>Telefon: <span className="font-semibold text-[color:var(--app-text)]">{selectedOrderDetail.telefon || '-'}</span></div>
+                  <div>E-posta: <span className="font-semibold text-[color:var(--app-text)]">{selectedOrderDetail.email || '-'}</span></div>
+                  <div>Fuar: <span className="font-semibold text-[color:var(--app-text)]">{selectedOrderDetail.fuar_adi || '-'}</span></div>
+                  <div>Toplam: <span className="font-semibold text-[color:var(--app-text)]">{Number(selectedOrderDetail.toplam_tutar || 0).toFixed(2)}</span></div>
+                  <div>Kartvizit OCR: <span className="font-semibold text-[color:var(--app-text)]">{selectedOrderDetail.kartvizit_ocr_durumu || '-'}</span></div>
+                </div>
+
+                {selectedOrderDetail.kartvizit_gorsel ? (
+                  <div className="mt-4 overflow-hidden rounded-2xl border border-[color:var(--app-border)] bg-white/50">
+                    <img src={selectedOrderDetail.kartvizit_gorsel} alt="Kartvizit" className="max-h-56 w-full object-cover" />
+                  </div>
+                ) : null}
+
+                <div className="mt-4 space-y-3">
+                  {selectedOrderDetail.items?.map((item) => (
+                    <div key={item.id} className="rounded-2xl border border-[color:var(--app-border)] bg-white/50 px-4 py-3 text-sm">
+                      <div className="font-semibold text-[color:var(--app-text)]">{item.mamul_adi}</div>
+                      <div className="mt-1 text-[color:var(--app-text-muted)]">{item.article_code} / {item.article_no}</div>
+                      <div className="mt-2 text-[color:var(--app-text-muted)]">
+                        {Number(item.miktar_kg || 0).toFixed(2)} kg x {Number(item.birim_fiyat || 0).toFixed(2)} = {Number(item.tutar || 0).toFixed(2)}
+                      </div>
+                    </div>
+                  ))}
+                  {!selectedOrderDetail.items?.length ? (
+                    <div className="text-sm text-[color:var(--app-text-muted)]">Bu siparişte henüz kalem görünmüyor.</div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
       </div>
     </div>
   );
