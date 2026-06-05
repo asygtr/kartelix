@@ -20,16 +20,20 @@
 }
 
 html, body, #root {
+  height: 100%;
   min-height: 100%;
+  min-height: 100dvh;
 }
 
 html {
-  overflow-y: scroll;
+  overflow: hidden;
   scrollbar-gutter: stable;
 }
 
 body {
   margin: 0;
+  min-height: 100dvh;
+  overflow: hidden;
   font-family: 'Manrope', sans-serif;
   background:
     linear-gradient(180deg, rgba(248, 245, 239, 0.64), rgba(248, 245, 239, 0.52)),
@@ -53,9 +57,13 @@ code {
 }
 
 .app-page {
-  min-height: 100vh;
-  padding: 0 0 1.25rem;
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 5.2rem 0 6rem;
   box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
 }
 
 .app-container {
@@ -120,14 +128,11 @@ code {
   border-radius: 0;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
   backdrop-filter: none;
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 40;
-}
-
-.app-mobile-bottom-nav,
-.app-mobile-search-sheet {
-  display: none;
+  left: 0;
+  right: 0;
+  z-index: 1000;
 }
 
 .app-nav-top {
@@ -465,7 +470,7 @@ code {
   display: none;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: 100dvh;
   background: rgba(7, 12, 20, 0.92);
   backdrop-filter: none;
   padding: 1.25rem;
@@ -504,17 +509,18 @@ code {
   bottom: 0;
   width: 100%;
   max-width: 100vw;
-  z-index: 60;
-  display: flex;
+  z-index: 9999;
+  display: none;
   align-items: stretch;
   justify-content: space-between;
   gap: 0.38rem;
-  padding: 0.66rem 0.55rem calc(0.72rem + env(safe-area-inset-bottom, 0px));
+  padding: 0.45rem 0.45rem calc(0.45rem + env(safe-area-inset-bottom, 0px));
   background: color-mix(in srgb, var(--app-surface) 98%, white 2%);
   border-top: 1px solid color-mix(in srgb, var(--app-border) 68%, white 32%);
   box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.14);
   backdrop-filter: none;
 }
+
 
 .app-mobile-nav-item {
   min-width: 0;
@@ -529,11 +535,11 @@ code {
   align-items: center;
   justify-content: flex-start;
   gap: 0.34rem;
-  padding: 0.56rem 0.12rem 0.48rem;
-  border-radius: 1.15rem;
+  padding: 0.42rem 0.08rem 0.34rem;
+  border-radius: 1rem;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
   transition: 160ms ease;
-  min-height: 4.35rem;
+  min-height: 3.85rem;
 }
 
 .app-mobile-nav-item.is-active {
@@ -563,7 +569,7 @@ code {
 }
 
 .app-mobile-nav-label {
-  font-size: 0.69rem;
+  font-size: 0.64rem;
   line-height: 1.12;
   font-weight: 800;
   letter-spacing: 0.01em;
@@ -595,7 +601,7 @@ code {
   top: 0;
   right: 0;
   width: min(100vw, 32rem);
-  height: 100vh;
+  height: 100dvh;
   padding: 1.4rem 1.15rem 1.75rem;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--app-surface) 92%, transparent 8%), color-mix(in srgb, var(--app-surface-soft) 28%, white 72%));
@@ -1670,8 +1676,18 @@ code {
   }
 
   .app-page {
-    min-height: calc(100dvh - env(safe-area-inset-bottom, 0px));
-    padding-bottom: calc(6.8rem + env(safe-area-inset-bottom, 0px));
+    min-height: 100dvh;
+    padding-top: calc(5.4rem + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(5.4rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .app-nav-shell {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9998;
+    width: 100vw;
   }
 
   .app-nav-top {
@@ -1736,18 +1752,16 @@ code {
   }
 
   .app-mobile-bottom-nav {
-    display: flex !important;
-    position: fixed !important;
+    display: flex;
+    position: fixed;
+    bottom: 0;
     left: 0;
     right: 0;
-    bottom: 0;
-    width: 100%;
-    max-width: 100vw;
     z-index: 9999;
   }
 
   .app-mobile-search-sheet {
-    display: flex !important;
+    display: flex;
     align-items: center;
     justify-content: center;
   }
@@ -2068,6 +2082,8 @@ body::after {
 .app-mobile-bottom-nav {
   box-shadow: 0 -18px 42px rgba(17, 23, 25, 0.14);
   backdrop-filter: blur(16px) saturate(1.12);
+  animation: none;
+  transform: none;
 }
 
 .app-mobile-nav-item.is-active {
@@ -2106,12 +2122,10 @@ body::after {
 @keyframes appPageSettle {
   from {
     opacity: 0;
-    transform: translateY(8px);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 

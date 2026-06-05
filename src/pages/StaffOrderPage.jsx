@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { clearSession, getSession } from '../utils/auth';
-import AppNavbar from '../components/AppNavbar';
+import { getSession } from '../utils/auth';
 import PageSearchBar from '../components/PageSearchBar';
 
 const emptyCustomerForm = {
@@ -516,18 +515,14 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
   };
 
   const handleLogout = () => {
-    clearSession();
     window.location.href = '/';
   };
 
   const canContinueToDetails = selectedItems.length > 0;
 
   return (
-    <div className="app-page">
-      <div className="app-container space-y-6">
-        <AppNavbar eyebrow={areaLabel} title={title} onLogout={handleLogout} />
-
-        {message ? (
+    <>
+      {message ? (
           <div className="app-panel px-4 py-3 text-sm text-[color:var(--app-text)]">{message}</div>
         ) : null}
 
@@ -972,8 +967,7 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
             ) : null}
           </section>
         ) : null}
-      </div>
-    </div>
+    </>
   );
 };
 

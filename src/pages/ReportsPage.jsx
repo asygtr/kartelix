@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import AppNavbar from '../components/AppNavbar';
-import { clearSession } from '../utils/auth';
 
 const ReportsPage = () => {
   const [report, setReport] = useState(null);
@@ -28,20 +26,9 @@ const ReportsPage = () => {
     loadReport();
   }, []);
 
-  const handleLogout = () => {
-    clearSession();
-    window.location.href = '/';
-  };
-
   return (
-    <div className="app-page">
-      <div className="app-container space-y-6">
-        <AppNavbar
-          title="Raporlar"
-          onLogout={handleLogout}
-        />
-
-        {message ? <div className="app-panel p-4 text-sm">{message}</div> : null}
+    <>
+      {message ? <div className="app-panel p-4 text-sm">{message}</div> : null}
         {loading && !report ? <div className="app-panel p-4 text-sm">Rapor verisi yükleniyor...</div> : null}
 
         {report ? (
@@ -98,8 +85,7 @@ const ReportsPage = () => {
             </div>
           </>
         ) : null}
-      </div>
-    </div>
+    </>
   );
 };
 

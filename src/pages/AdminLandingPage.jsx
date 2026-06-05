@@ -1,7 +1,5 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { clearSession } from '../utils/auth';
-import AppNavbar from '../components/AppNavbar';
 
 const cards = [
   {
@@ -65,30 +63,16 @@ const iconMap = {
 };
 
 const AdminLandingPage = () => {
-  const handleLogout = () => {
-    clearSession();
-    window.location.href = '/';
-  };
-
   return (
-    <div className="app-page">
-      <div className="app-container space-y-6">
-        <AppNavbar
-          title="Yönetim"
-          onLogout={handleLogout}
-        />
-
-        <div className="app-card-grid md:grid-cols-2 xl:grid-cols-3">
-          {cards.map((card) => (
-            <Link key={card.to} to={card.to} className="app-card app-quick-card">
-              <div className="app-quick-card-icon">{iconMap[card.icon]}</div>
-              <div className="app-quick-card-copy">
-                <h3 className="text-xl font-semibold text-[color:var(--app-text)]">{card.title}</h3>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
+    <div className="app-card-grid md:grid-cols-2 xl:grid-cols-3">
+      {cards.map((card) => (
+        <Link key={card.to} to={card.to} className="app-card app-quick-card">
+          <div className="app-quick-card-icon">{iconMap[card.icon]}</div>
+          <div className="app-quick-card-copy">
+            <h3 className="text-xl font-semibold text-[color:var(--app-text)]">{card.title}</h3>
+          </div>
+        </Link>
+      ))}
     </div>
   );
 };

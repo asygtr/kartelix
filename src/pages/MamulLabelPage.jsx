@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import AppNavbar from '../components/AppNavbar';
 import MamulEtiketModal from '../components/MamulEtiketModal';
-import { clearSession } from '../utils/auth';
 import PageSearchBar from '../components/PageSearchBar';
 import { getActiveLabelTemplateId, listLabelTemplates, loadLabelTemplate, printLabels } from '../utils/labelTemplate';
 
@@ -41,11 +39,6 @@ const MamulLabelPage = () => {
 
   const hasSearchContext = Boolean(normalizeSearchValue(searchTerm)) || Boolean(selectedRecord);
 
-  const handleLogout = () => {
-    clearSession();
-    window.location.href = '/';
-  };
-
   const toggleSelected = (id) => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
   };
@@ -69,14 +62,8 @@ const MamulLabelPage = () => {
   };
 
   return (
-    <div className="app-page">
-      <div className="app-container space-y-6">
-        <AppNavbar
-          title="Etiket"
-          onLogout={handleLogout}
-        />
-
-        <PageSearchBar
+    <>
+      <PageSearchBar
           value={searchTerm}
           onChange={setSearchTerm}
           placeholder="Article no, article code, mamül adı veya renk ara"
@@ -171,10 +158,8 @@ const MamulLabelPage = () => {
             ) : null}
           </section>
         ) : null}
-      </div>
-
       <MamulEtiketModal mamul={selectedRecord} templateId={selectedTemplateId} onClose={() => setSelectedRecord(null)} />
-    </div>
+    </>
   );
 };
 

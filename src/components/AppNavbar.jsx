@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../theme/ThemeProvider';
 import { getSession } from '../utils/auth';
 import QrCameraModal from './QrCameraModal';
+import MobileBottomNav from './MobileBottomNav';
 import { isMobileCameraDevice } from '../utils/qr';
 
 const navSets = {
@@ -29,22 +30,6 @@ const isActiveLink = (pathname, target) => {
     return pathname === target;
   }
   return pathname === target || pathname.startsWith(`${target}/`);
-};
-
-const isMobileNavActive = (pathname, item, searchOpen) => {
-  if (item.action) {
-    return searchOpen;
-  }
-
-  if (!item.to) {
-    return false;
-  }
-
-  if (item.key === 'home') {
-    return pathname === item.to;
-  }
-
-  return isActiveLink(pathname, item.to);
 };
 
 const HomeIcon = () => (
@@ -238,44 +223,12 @@ const AppNavbar = ({ title, action, onLogout }) => {
       </div>
     </header>
     ) : null}
-    {!searchOpen && role !== 'guest' ? (
-      <nav className="app-mobile-bottom-nav" aria-label="Mobil alt gezinme">
-        {mobileNavItems.map((item) => {
-          const isDisabled = !item.to && !item.action;
-          const isActive = isMobileNavActive(location.pathname, item, searchOpen);
-
-          if (item.action) {
-            return (
-              <button
-                key={item.key}
-                type="button"
-                className={`app-mobile-nav-item ${isActive ? 'is-active' : ''}`}
-                onClick={item.action}
-              >
-                <span className="app-mobile-nav-icon">{item.icon}</span>
-                <span className="app-mobile-nav-label">{item.label}</span>
-              </button>
-            );
-          }
-
-          if (isDisabled) {
-            return (
-              <button key={item.key} type="button" className="app-mobile-nav-item is-disabled" disabled>
-                <span className="app-mobile-nav-icon">{item.icon}</span>
-                <span className="app-mobile-nav-label">{item.label}</span>
-              </button>
-            );
-          }
-
-          return (
-            <Link key={item.key} to={item.to} className={`app-mobile-nav-item ${isActive ? 'is-active' : ''}`}>
-              <span className="app-mobile-nav-icon">{item.icon}</span>
-              <span className="app-mobile-nav-label">{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-    ) : null}
+    <MobileBottomNav
+      items={mobileNavItems}
+      location={location}
+      searchOpen={searchOpen}
+      onSearchClick={() => setSearchOpen(true)}
+    />
 
     {searchOpen ? (
       <div className="app-mobile-search-sheet" onClick={(event) => {

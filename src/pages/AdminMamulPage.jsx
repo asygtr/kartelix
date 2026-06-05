@@ -1,6 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { clearSession } from '../utils/auth';
-import AppNavbar from '../components/AppNavbar';
 import PageSearchBar from '../components/PageSearchBar';
 
 const emptyYarn = { iplik_tanim_id: '', iplik_adi: '', oran_yuzde: '', birim_fiyat: '' };
@@ -197,11 +195,6 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
     setShowEditor(false);
   };
 
-  const handleLogout = () => {
-    clearSession();
-    window.location.href = '/';
-  };
-
   const showMamulDetail = async (mamulId) => {
     try {
       setLoading(true);
@@ -243,20 +236,14 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
   }, [mamulList, searchTerm]);
 
   return (
-    <div className="app-page">
-      <div className="app-container space-y-6">
-        <AppNavbar
-          title={pageTitle}
-          onLogout={handleLogout}
-        />
+    <>
+      {message ? (
+        <div className="app-panel px-4 py-3 text-sm text-[color:var(--app-text)]">
+          {message}
+        </div>
+      ) : null}
 
-        {message ? (
-          <div className="app-panel px-4 py-3 text-sm text-[color:var(--app-text)]">
-            {message}
-          </div>
-        ) : null}
-
-        <PageSearchBar
+      <PageSearchBar
           value={searchTerm}
           onChange={setSearchTerm}
           placeholder="Kayıtlı mamül ara"
@@ -293,7 +280,6 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
         />
 
         <div className="space-y-6">
-          <div className="space-y-6">
           {false ? (
           <form onSubmit={submitForm} className="app-collapse-panel space-y-6">
             <section className="app-panel p-6">
@@ -531,10 +517,8 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
               </div>
             </section>
             ) : null}
-          </div>
-        </div>
-      </div>
     </div>
+    </>
   );
 };
 
