@@ -465,6 +465,7 @@ code {
   display: none;
   align-items: center;
   justify-content: center;
+  min-height: 100vh;
   background: rgba(7, 12, 20, 0.92);
   backdrop-filter: none;
   padding: 1.25rem;
@@ -475,7 +476,7 @@ code {
   width: min(100%, 32rem);
   max-height: min(78dvh, 40rem);
   overflow-y: auto;
-  margin: 0;
+  margin: auto;
   padding: 1.1rem 1rem 1.15rem;
   border-radius: 1.6rem;
   background: #fffdfa;
@@ -501,8 +502,10 @@ code {
   left: 0;
   right: 0;
   bottom: 0;
+  width: 100%;
+  max-width: 100vw;
   z-index: 60;
-  display: none;
+  display: flex;
   align-items: stretch;
   justify-content: space-between;
   gap: 0.38rem;
@@ -1733,11 +1736,26 @@ code {
   }
 
   .app-mobile-bottom-nav {
-    display: flex;
+    display: flex !important;
+    position: fixed !important;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 100vw;
+    z-index: 9999;
   }
 
   .app-mobile-search-sheet {
-    display: flex;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (min-width: 992px) {
+  .app-mobile-bottom-nav {
+    display: none !important;
   }
 }
 
