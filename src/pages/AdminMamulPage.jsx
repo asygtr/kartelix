@@ -487,30 +487,55 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                 <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Kayıtlı mamüller</h2>
                 <span className="text-sm text-[color:var(--app-text-muted)]">{mamulList.length} kayıt</span>
               </div>
-              <div className="mt-5 overflow-x-auto rounded-xl border border-[color:var(--app-border)]">
-                <div className="min-w-[980px]">
-                  <div className="app-table-head app-mamul-table">
-                    <div>Mamül</div>
-                    <div>Article</div>
-                    <div>Tür / Renk</div>
-                    <div>1 kg satış</div>
-                    <div>Durum</div>
-                    <div>Görünüm</div>
+              <div className="mt-5 app-mamul-list-shell">
+                <div className="app-table-head app-mamul-table hidden md:grid">
+                  <div>Mamül</div>
+                  <div>Article</div>
+                  <div>Tür / Renk</div>
+                  <div>1 kg satış</div>
+                  <div>Durum</div>
+                  <div>Görünüm</div>
+                </div>
+                {filteredMamulList.map((item) => (
+                  <div key={item.id} className="app-table-row app-mamul-table hidden md:grid">
+                    <div className="font-semibold text-[color:var(--app-text)]">{item.mamul_adi}</div>
+                    <div className="text-sm text-[color:var(--app-text-muted)]">{item.article_code} / {item.article_no}</div>
+                    <div className="text-sm text-[color:var(--app-text-muted)]">{item.mamul_turu_adi}{item.renk ? ` · ${item.renk}` : ''}</div>
+                    <div className="text-sm font-semibold text-[color:var(--app-success)]">{Number(item.bir_kg_satis_fiyati || 0).toFixed(2)}</div>
+                    <div className="text-sm text-[color:var(--app-text-muted)]">{item.yayin_durumu || (item.aktif ? 'yayinda' : 'taslak')}</div>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary">Detay gör</button>
+                      <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary">Public gör</a>
+                    </div>
                   </div>
-                  {filteredMamulList.map((item) => (
-                    <div key={item.id} className="app-table-row app-mamul-table">
-                      <div className="font-semibold text-[color:var(--app-text)]">{item.mamul_adi}</div>
-                      <div className="text-sm text-[color:var(--app-text-muted)]">{item.article_code} / {item.article_no}</div>
-                      <div className="text-sm text-[color:var(--app-text-muted)]">{item.mamul_turu_adi}{item.renk ? ` · ${item.renk}` : ''}</div>
-                      <div className="text-sm font-semibold text-[color:var(--app-success)]">{Number(item.bir_kg_satis_fiyati || 0).toFixed(2)}</div>
-                      <div className="text-sm text-[color:var(--app-text-muted)]">{item.yayin_durumu || (item.aktif ? 'yayinda' : 'taslak')}</div>
-                      <div className="flex flex-wrap gap-2">
-                        <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary">Detay gör</button>
-                        <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary">Public gör</a>
+                ))}
+                {filteredMamulList.map((item) => (
+                  <div key={`mobile-${item.id}`} className="app-mamul-card md:hidden">
+                    <div className="app-mamul-primary">{item.mamul_adi}</div>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <div>
+                        <div className="app-mamul-secondary-label">Article</div>
+                        <div className="text-sm">{item.article_code} / {item.article_no}</div>
+                      </div>
+                      <div>
+                        <div className="app-mamul-secondary-label">Satış</div>
+                        <div className="text-sm font-semibold text-[color:var(--app-success)]">{Number(item.bir_kg_satis_fiyati || 0).toFixed(2)}</div>
+                      </div>
+                      <div>
+                        <div className="app-mamul-secondary-label">Tür</div>
+                        <div className="text-sm">{item.mamul_turu_adi}</div>
+                      </div>
+                      <div>
+                        <div className="app-mamul-secondary-label">Renk</div>
+                        <div className="text-sm">{item.renk || '-'}</div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="app-mamul-actions">
+                      <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary flex-1">Detay gör</button>
+                      <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary flex-1 text-center">Public gör</a>
+                    </div>
+                  </div>
+                ))}
                 {filteredMamulList.length === 0 ? (
                   <div className="app-soft-panel m-3 px-4 py-4 text-sm text-[color:var(--app-text-muted)]">Henüz mamül kaydı yok.</div>
                 ) : null}

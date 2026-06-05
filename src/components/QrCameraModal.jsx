@@ -53,13 +53,13 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
 
     const startScanner = async () => {
       if (!mobileOnly) {
-        setStatus('QR okutma bu uygulamada sadece mobil cihazin yerlesik arka kamerasiyla kullanilir.');
+        setStatus('QR okutma bu uygulamada sadece mobil cihazın yerleşik arka kamerasıyla kullanılır.');
         setShowFallback(false);
         return;
       }
 
       if (!canUseLiveCamera) {
-        setStatus('Canli kamera akisi bu baglantida acilamadi. Asagidaki butonla arka kamerayi acip QR fotografi cekebilirsiniz.');
+        setStatus('Canlı kamera akışı bu bağlantıda açılamadı. Aşağıdaki butonla arka kamerayı açıp QR fotoğrafı çekebilirsiniz.');
         setShowFallback(true);
         return;
       }
@@ -93,7 +93,7 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
         );
 
         if (mounted) {
-          setStatus('QR kodu arka kameraya hizalayin.');
+          setStatus('QR kodu arka kameraya hizalayın.');
           setShowFallback(true);
         }
       } catch (error) {
@@ -126,7 +126,7 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
     if (!file) return;
 
     try {
-      setStatus('QR gorseli okunuyor...');
+      setStatus('QR görseli okunuyor...');
       const scanner = html5QrRef.current || new Html5Qrcode(scannerId, {
         formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
       });
@@ -155,8 +155,8 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
             type="button"
             onClick={onClose}
             className="app-nav-icon-button"
-            aria-label="Kamerayi kapat"
-            title="Kamerayi kapat"
+aria-label="Kamerayı kapat"
+             title="Kamerayı kapat"
           >
             <CloseIcon />
           </button>
@@ -181,10 +181,10 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
             onClick={() => fileInputRef.current?.click()}
             className="app-btn-secondary w-full sm:w-auto"
           >
-            QR gorseli sec
+            QR görseli seç
           </button>
           <p className="text-center text-xs leading-6 text-[color:var(--app-text-muted)]">
-            Canli okumada zorlaniyorsa QR kodu daha yakin cekip gorsel olarak secin.
+            Canlı okumada zorlanıyorsa QR kodu daha yakın çekip görsel olarak seçin.
           </p>
         </div>
         ) : null}

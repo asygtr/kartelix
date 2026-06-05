@@ -28,7 +28,7 @@ const LoginScreen = () => {
       const result = await response.json();
 
       if (!result.success) {
-        throw new Error(result.message || 'Giris basarisiz');
+        throw new Error(result.message || 'Giriş başarısız');
       }
 
       saveSession(result.data.user);

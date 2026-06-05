@@ -1302,6 +1302,91 @@ code {
   grid-template-columns: minmax(180px, 1.3fr) minmax(150px, 1fr) minmax(160px, 1fr) 110px 110px minmax(280px, 1.5fr);
 }
 
+@media (max-width: 991px) {
+  .app-mamul-table.app-table-head,
+  .app-mamul-table.app-table-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem 1rem;
+    padding: 1rem;
+  }
+
+  .app-mamul-table.app-table-head > div,
+  .app-mamul-table.app-table-row > div {
+    padding: 0;
+    font-size: 0.85rem;
+  }
+
+  .app-mamul-table .app-mamul-primary {
+    grid-column: 1 / -1;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--app-text);
+    margin-bottom: 0.25rem;
+  }
+
+  .app-mamul-table .app-mamul-secondary-label {
+    font-size: 0.68rem;
+    color: var(--app-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 700;
+  }
+
+  .app-mamul-table .app-mamul-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+}
+
+.app-mamul-list-shell {
+  border: 1px solid color-mix(in srgb, var(--app-border) 72%, white 28%);
+  border-radius: 0.8rem;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--app-surface) 84%, white 16%);
+}
+
+.app-mamul-card {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--app-border) 50%, white 50%);
+  background: color-mix(in srgb, var(--app-surface) 88%, white 12%);
+}
+
+.app-mamul-card:last-child {
+  border-bottom: 0;
+}
+
+@media (max-width: 991px) {
+  body {
+    background-attachment: scroll;
+  }
+
+  .app-panel,
+  .app-soft-panel,
+  .app-stat,
+  .app-table-row,
+  .app-table-head,
+  .app-card {
+    backdrop-filter: none;
+  }
+
+  .app-page {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-data-table,
+  .app-mamul-list-shell {
+    border: 1px solid color-mix(in srgb, var(--app-border) 72%, white 28%);
+    border-radius: 0.8rem;
+    overflow: hidden;
+  }
+}
+
 .app-table-head {
   background: color-mix(in srgb, var(--app-surface-soft) 64%, white 36%);
   border-bottom: 1px solid color-mix(in srgb, var(--app-border) 72%, white 28%);
@@ -1833,16 +1918,24 @@ body::before {
   animation: appWeaveDrift 18s linear infinite;
 }
 
-body::after {
-  height: 44vh;
-  background: linear-gradient(105deg, transparent 18%, rgba(255, 255, 255, 0.28) 44%, transparent 70%);
-  opacity: 0;
-  transform: translateX(-82%);
-  animation: appLightSweep 9s ease-in-out infinite;
+@media (max-width: 991px) {
+  body::before {
+    animation: none;
+  }
+
+  body::after {
+    display: none;
+  }
 }
 
 .app-page {
   animation: appPageSettle 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@media (max-width: 991px) {
+  .app-page {
+    animation: none;
+  }
 }
 
 .app-container {

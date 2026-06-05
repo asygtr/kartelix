@@ -23,6 +23,11 @@ const EtiketGoruntule = ({ siparis, firma, onClose, onEdit, onDelete }) => {
 
   if (!siparis) return null;
 
+  const formatNumber = (value) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num.toFixed(2).replace(/\.00$/, '') : value;
+  };
+
   const toUpperClean = (text) =>
     text
       ?.toString()
@@ -46,7 +51,7 @@ const EtiketGoruntule = ({ siparis, firma, onClose, onEdit, onDelete }) => {
           en: 'EN',
           gramaj: 'GRAMAJ',
           tip: 'TIP',
-          firma: 'FIRMA'
+          firma: 'FİRMA'
         }
       : {
           tarih: 'DATE',
@@ -193,23 +198,23 @@ const EtiketGoruntule = ({ siparis, firma, onClose, onEdit, onDelete }) => {
               <div class="label">${labels.tarih}:</div>
               <div class="value">${toUpperClean(siparis.tarih || '-')}</div>
               
-              <div class="label">${labels.adet}:</div>
-              <div class="value">${toUpperClean((siparis.adet || '-')?.toString())}</div>
-              
-              <div class="label">${labels.mamul}:</div>
-              <div class="value">${toUpperClean(siparis.mamul || '-')}</div>
-              
-              <div class="label">${labels.kod}:</div>
-              <div class="value">${toUpperClean(siparis.articleNo || '-')}</div>
-              
-              <div class="label">${labels.kompozisyon}:</div>
-              <div class="value">${toUpperClean(siparis.kompozisyon || '-')}</div>
-              
-              <div class="label">${labels.en}:</div>
-              <div class="value">${toUpperClean((siparis.en || '-')?.toString())} CM</div>
-              
-              <div class="label">${labels.gramaj}:</div>
-              <div class="value">${toUpperClean((siparis.gramaj || '-')?.toString())} GR/M²</div>
+<div class="label">${labels.adet}:</div>
+               <div class="value">${formatNumber(siparis.adet || 0)}</div>
+               
+               <div class="label">${labels.mamul}:</div>
+               <div class="value">${toUpperClean(siparis.mamul || '-')}</div>
+               
+               <div class="label">${labels.kod}:</div>
+               <div class="value">${toUpperClean(siparis.articleNo || '-')}</div>
+               
+               <div class="label">${labels.kompozisyon}:</div>
+               <div class="value">${toUpperClean(siparis.kompozisyon || '-')}</div>
+               
+               <div class="label">${labels.en}:</div>
+               <div class="value">${formatNumber(siparis.en || 0)} CM</div>
+               
+               <div class="label">${labels.gramaj}:</div>
+               <div class="value">${formatNumber(siparis.gramaj || 0)} GR/M²</div>
               
               <div class="label">${labels.tip}:</div>
               <div class="value">${toUpperClean(siparis.tip || '-')}</div>
@@ -235,9 +240,9 @@ const EtiketGoruntule = ({ siparis, firma, onClose, onEdit, onDelete }) => {
         </div>
         
         <!-- Footer -->
-        <div class="footer">
-          NEVRES TEKSTIL SAN. TIC. A.Ş. - www.karboy.com
-        </div>
+<div class="footer">
+           NEVRES TEKSTİL SAN. TİC. A.Ş. - www.karboy.com
+         </div>
         
         <script>
           window.onload = function() {
@@ -334,7 +339,7 @@ const EtiketGoruntule = ({ siparis, firma, onClose, onEdit, onDelete }) => {
               
               {/* Footer */}
               <div className="footer text-center text-[9px] font-bold text-gray-700 mt-1">
-                NEVRES TEKSTIL SAN. TIC. A.Ş. - www.karboy.com
+NEVRES TEKSTİL SAN. TİC. A.Ş. - www.karboy.com
               </div>
             </div>
           </div>

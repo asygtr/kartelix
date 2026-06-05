@@ -127,7 +127,7 @@ const PageSearchBar = ({
 
       {scannerOpen && canUseQr ? (
         <QrCameraModal
-          title="QR ile urun ara"
+          title="QR ile ürün ara"
           onClose={() => setScannerOpen(false)}
           onDetected={(detectedValue) => {
             setScannerOpen(false);

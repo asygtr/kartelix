@@ -29,68 +29,54 @@ const SiparisOlustur = () => {
     firmalariGetir();
   }, []);
 
-  // Mamul arama
 const handleMamulAra = async (term) => {
-  console.log('🔍 Kartela arama terimi:', term);
-  
-  if (term.length < 2) {
-    setMamulSonuclari([]);
-    return;
-  }
-
-  try {
-    const response = await fetch(`/api/siparis-kartela-ara?term=${encodeURIComponent(term)}`);
-    console.log('📡 Kartela API Response status:', response.status);
-    
-    const result = await response.json();
-    console.log('📦 Kartela API Response data:', result);
-    
-    if (result.success) {
-      setMamulSonuclari(result.data.kartelalar || []);
-      console.log('✅ Bulunan kartelalar:', result.data.kartelalar);
-    } else {
-      console.error('❌ Kartela API Error:', result.error);
+    if (term.length < 2) {
       setMamulSonuclari([]);
+      return;
     }
-  } catch (error) {
-    console.error('❌ Kartela arama hatası:', error);
-    setMamulSonuclari([]);
-  }
-};
 
-const handleQRScan = () => {
-  // QR scanner açılacak - geçici olarak alert
-  alert('QR Scanner açılacak - bu özellik implemente edilecek');
-}
-// Manuel kartela eklemeyi güncelleyelim
-const handleManuelEkle = async () => {
-  if (manuelKod.trim()) {
     try {
-      const response = await fetch(`/api/siparis-kartela/${manuelKod.trim()}`);
+      const response = await fetch(`/api/siparis-kartela-ara?term=${encodeURIComponent(term)}`);
       const result = await response.json();
-      
+
       if (result.success) {
-        const kartela = result.data;
-        const yeniKartela = {
-          id: Date.now(),
-          kod: kartela.kod,
-          mamul_adi: kartela.mamul_adi,
-          tip: kartela.tip,
-          article_no: kartela.article_no
-        };
-        setKartelalar([...kartelalar, yeniKartela]);
-        setManuelKod('');
-        setMamulSonuclari([]);
-        alert(`✅ ${kartela.mamul_adi} eklendi!`);
+        setMamulSonuclari(result.data.kartelalar || []);
       } else {
-        alert('❌ Bu kodla eşleşen kartela bulunamadı');
+        setMamulSonuclari([]);
       }
     } catch (error) {
-      console.error('Kartela getirme hatası:', error);
-      alert('Kartela bilgisi alınamadı');
+      setMamulSonuclari([]);
     }
-  }
-};
+  };
+
+  const handleQRScan = () => {
+    // QR scanner henüz aktif değil
+  };
+
+  const handleManuelEkle = async () => {
+    if (manuelKod.trim()) {
+      try {
+        const response = await fetch(`/api/siparis-kartela/${manuelKod.trim()}`);
+        const result = await response.json();
+
+        if (result.success) {
+          const kartela = result.data;
+          const yeniKartela = {
+            id: Date.now(),
+            kod: kartela.kod,
+            mamul_adi: kartela.mamul_adi,
+            tip: kartela.tip,
+            article_no: kartela.article_no
+          };
+          setKartelalar([...kartelalar, yeniKartela]);
+          setManuelKod('');
+          setMamulSonuclari([]);
+        }
+      } catch (error) {
+        setManuelKod('');
+      }
+    }
+  };
 
   const handleMamulSec = (mamul) => {
     const yeniKartela = {
@@ -109,16 +95,20 @@ const handleManuelEkle = async () => {
     setKartelalar(kartelalar.filter(k => k.id !== id));
   };
 
+const [message, setMessage] = useState({ type: '', text: '' });
+
   const handleSiparisTamamla = async () => {
     if (!musteriAdi.trim() && !seciliFirma) {
-      alert('Müşteri adı veya firma seçimi zorunludur');
+      setMessage({ type: 'error', text: 'Müşteri adı veya firma seçimi gerekli' });
       return;
     }
 
     if (kartelalar.length === 0) {
-      alert('En az bir kartela ekleyin');
+      setMessage({ type: 'error', text: 'En az bir kartela ekleyin' });
       return;
     }
+
+    setMessage({ type: '', text: '' });
 
     try {
       const siparisData = {
@@ -141,8 +131,7 @@ const handleManuelEkle = async () => {
       const result = await response.json();
 
       if (result.success) {
-        alert('Sipariş başarıyla oluşturuldu!');
-        // Formu temizle
+        setMessage({ type: 'success', text: 'Sipariş kaydı oluşturuldu' });
         setMusteriAdi('');
         setIlgiliKisi('');
         setTelefon('');
@@ -151,26 +140,31 @@ const handleManuelEkle = async () => {
         setSeciliFirma('');
         setMamulArama('');
       } else {
-        alert('Sipariş oluşturulamadı: ' + (result.message || 'Hata'));
+        setMessage({ type: 'error', text: result.message || 'Kayıt oluşturulamadı' });
       }
     } catch (error) {
-      console.error('Sipariş oluşturma hatası:', error);
-      alert('Sipariş oluşturulurken hata oluştu');
+      setMessage({ type: 'error', text: 'İşlem sırasında hata oluştu' });
     }
   };
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Yeni Sipariş Oluştur</h2>
-      
-      {/* Müşteri Bilgileri */}
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">Yeni Sipariş</h2>
+
+      {message.text ? (
+        <div className={"app-panel px-4 py-3 text-sm mb-4 " + (message.type === 'error' ? 'text-red-600' : 'text-green-600')}>
+          {message.text}
+        </div>
+      ) : null}
+
+      {/* Müşteri / Firma Bilgileri */}
       <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
         <h3 className="text-lg font-semibold mb-4">Müşteri Bilgileri</h3>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Firma Seçin veya Yeni Müşteri Girin
+              Firma Seçimi
             </label>
             <select
               value={seciliFirma}
@@ -285,7 +279,7 @@ const handleManuelEkle = async () => {
             onClick={handleQRScan}
             className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-medium flex items-center justify-center gap-2"
           >
-            📷 Kamera ile QR Oku
+            QR Oku
           </button>
           
           <div className="flex-1 flex gap-2">
@@ -301,7 +295,7 @@ const handleManuelEkle = async () => {
               onClick={handleManuelEkle}
               className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition font-medium"
             >
-              ⌨️ Ekle
+              Ekle
             </button>
           </div>
         </div>
@@ -309,7 +303,7 @@ const handleManuelEkle = async () => {
         {/* Eklenen Kartelalar Listesi */}
         <div className="border border-gray-200 rounded-lg">
           <h4 className="font-semibold p-3 bg-gray-50 border-b">
-            Eklenen Kartelalar ({kartelalar.length})
+            Sipariş Kalemleri ({kartelalar.length})
           </h4>
           
           {kartelalar.length === 0 ? (
@@ -332,7 +326,7 @@ const handleManuelEkle = async () => {
                     onClick={() => handleKartelaSil(kartela.id)}
                     className="text-red-500 hover:text-red-700 p-2 ml-2"
                   >
-                    🗑️
+                    Sil
                   </button>
                 </div>
               ))}
@@ -348,7 +342,7 @@ const handleManuelEkle = async () => {
           disabled={(!musteriAdi.trim() && !seciliFirma) || kartelalar.length === 0}
           className="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
-          ✅ Siparişi Tamamla
+          Kaydet
         </button>
       </div>
     </div>

@@ -24,10 +24,10 @@ const SalesChart = () => {
       en: 'EN',
       gramaj: 'GRAMAJ',
       tip: 'TIP',
-      firma: 'FIRMA',
+      firma: 'FİRMA',
       tara: 'TARA',
       tolerans: 'EN: +/- 2 CM | GRAMAJ: +/- %5',
-      footer: 'NEVRES TEKSTIL SAN. TIC. A.Ş. - www.karboy.com'
+      footer: 'NEVRES TEKSTİL SAN. TİC. A.Ş. - www.karboy.com'
     },
     en: {
       tarih: 'DATE',
@@ -102,6 +102,12 @@ const SalesChart = () => {
     setSeciliSiparisler([]);
   };
 
+  // 🔹 Sayı formatlama
+  const formatNumber = (value) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num.toFixed(2).replace(/\.00$/, '') : value;
+  };
+
   // 🔹 Metni büyük harf ve temizle
   const toUpperClean = (text) =>
     text
@@ -126,14 +132,14 @@ const SalesChart = () => {
           <div class="bilgiler">
             <div class="firma-adi">${toUpperClean(firmaAdi)}</div>
             <div class="bilgi-grid">
-              <div class="label">${etiket.tarih}:</div><div class="value">${toUpperClean(siparis.tarih || '-')}</div>
-              <div class="label">${etiket.adet}:</div><div class="value">${toUpperClean((siparis.adet || '-')?.toString())}</div>
-              <div class="label">${etiket.mamul}:</div><div class="value">${toUpperClean(siparis.mamul || '-')}</div>
-              <div class="label">${etiket.kod}:</div><div class="value">${toUpperClean(siparis.articleNo || '-')}</div>
-              <div class="label">${etiket.kompozisyon}:</div><div class="value">${toUpperClean(siparis.kompozisyon || '-')}</div>
-              <div class="label">${etiket.en}:</div><div class="value">${toUpperClean((siparis.en || '-')?.toString())} CM</div>
-              <div class="label">${etiket.gramaj}:</div><div class="value">${toUpperClean((siparis.gramaj || '-')?.toString())} GR/M²</div>
-              <div class="label">${etiket.tip}:</div><div class="value">${toUpperClean(siparis.tip || '-')}</div>
+<div class="label">${etiket.tarih}:</div><div class="value">${toUpperClean(siparis.tarih || '-')}</div>
+               <div class="label">${etiket.adet}:</div><div class="value">${formatNumber(siparis.adet || 0)}</div>
+               <div class="label">${etiket.mamul}:</div><div class="value">${toUpperClean(siparis.mamul || '-')}</div>
+               <div class="label">${etiket.kod}:</div><div class="value">${toUpperClean(siparis.articleNo || '-')}</div>
+               <div class="label">${etiket.kompozisyon}:</div><div class="value">${toUpperClean(siparis.kompozisyon || '-')}</div>
+               <div class="label">${etiket.en}:</div><div class="value">${formatNumber(siparis.en || 0)} CM</div>
+               <div class="label">${etiket.gramaj}:</div><div class="value">${formatNumber(siparis.gramaj || 0)} GR/M²</div>
+               <div class="label">${etiket.tip}:</div><div class="value">${toUpperClean(siparis.tip || '-')}</div>
               <div class="tolerans-not">${etiket.tolerans}</div>
             </div>
           </div>

@@ -33,7 +33,7 @@ const PublicMamulPage = () => {
         const result = await response.json();
 
         if (!response.ok || !result.success) {
-          throw new Error(result.error || 'Mamul bulunamadi');
+          throw new Error(result.error || 'Mamül bulunamadı');
         }
 
         setMamul(result.data);

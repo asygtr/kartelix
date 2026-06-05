@@ -997,8 +997,8 @@ const SettingsPage = () => {
               type="button"
               onClick={() => setDrawerOpen(true)}
               className="app-nav-icon-button"
-              aria-label="Ayar bolumlerini ac"
-              title="Ayar bolumlerini ac"
+aria-label="Ayar bölümlerini aç"
+               title="Ayar bölümlerini aç"
             >
               <MenuIcon />
             </button>

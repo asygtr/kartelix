@@ -373,7 +373,7 @@ const AppNavbar = ({ title, action, onLogout }) => {
 
     {scannerOpen && canUseMobileQr ? (
       <QrCameraModal
-        title="QR ile urun ac"
+        title="QR ile ürün aç"
         onClose={() => setScannerOpen(false)}
         onDetected={(value) => {
           setScannerOpen(false);
