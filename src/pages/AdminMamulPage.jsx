@@ -176,7 +176,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
 
       setMessage(isEditing
         ? `Mamül güncellendi. Article Code: ${result.data.articleCode}`
-        : `Mamül kaydedildi. Article Code: ${result.data.articleCode}`);
+        : `Mamül kaydedildi. Makale No: ${result.data.articleCode}`);
       setSelectedMamulId(null);
       setForm(createEmptyForm());
       setShowEditor(false);
@@ -295,11 +295,11 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                   ) : null}
                   <div className="grid grid-cols-2 gap-3">
                   <div className="app-stat">
-                    <div className="app-stat-label">Article No</div>
-                    <div className="text-lg font-bold mt-2">{form.articleNoPreview || '-'}</div>
-                  </div>
-                  <div className="app-stat">
-                    <div className="app-stat-label">Article Code</div>
+<div className="app-stat-label">Kayıt No</div>
+                     <div className="text-lg font-bold mt-2">{form.articleNoPreview || '-'}</div>
+                   </div>
+                   <div className="app-stat">
+                     <div className="app-stat-label">Kayıt Kodu</div>
                     <div className="text-lg font-bold mt-2">{form.articleCodePreview || '-'}</div>
                   </div>
                 </div>
@@ -490,22 +490,20 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
               <div className="mt-5 app-mamul-list-shell">
                 <div className="app-table-head app-mamul-table hidden md:grid">
                   <div>Mamül</div>
-                  <div>Article</div>
+                  <div>Kayıt No</div>
                   <div>Tür / Renk</div>
                   <div>1 kg satış</div>
-                  <div>Durum</div>
-                  <div>Görünüm</div>
+                  <div>İşlem</div>
                 </div>
                 {filteredMamulList.map((item) => (
-                  <div key={item.id} className="app-table-row app-mamul-table hidden md:grid">
+<div key={item.id} className="app-table-row app-mamul-table hidden md:grid">
                     <div className="font-semibold text-[color:var(--app-text)]">{item.mamul_adi}</div>
                     <div className="text-sm text-[color:var(--app-text-muted)]">{item.article_code} / {item.article_no}</div>
                     <div className="text-sm text-[color:var(--app-text-muted)]">{item.mamul_turu_adi}{item.renk ? ` · ${item.renk}` : ''}</div>
                     <div className="text-sm font-semibold text-[color:var(--app-success)]">{Number(item.bir_kg_satis_fiyati || 0).toFixed(2)}</div>
-                    <div className="text-sm text-[color:var(--app-text-muted)]">{item.yayin_durumu || (item.aktif ? 'yayinda' : 'taslak')}</div>
-                    <div className="flex flex-wrap gap-2">
-                      <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary">Detay gör</button>
-                      <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary">Public gör</a>
+                    <div className="app-mamul-actions-pc">
+                      <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary btn-sm">Detay</button>
+                      <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary btn-sm">Görüntüle</a>
                     </div>
                   </div>
                 ))}
@@ -514,7 +512,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                     <div className="app-mamul-primary">{item.mamul_adi}</div>
                     <div className="grid grid-cols-2 gap-2 mt-2">
                       <div>
-                        <div className="app-mamul-secondary-label">Article</div>
+                        <div className="app-mamul-secondary-label">Kayıt No</div>
                         <div className="text-sm">{item.article_code} / {item.article_no}</div>
                       </div>
                       <div>
@@ -530,10 +528,10 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                         <div className="text-sm">{item.renk || '-'}</div>
                       </div>
                     </div>
-                    <div className="app-mamul-actions">
-                      <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary flex-1">Detay gör</button>
-                      <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary flex-1 text-center">Public gör</a>
-                    </div>
+<div className="app-mamul-actions flex gap-2">
+                       <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary px-3 py-1 text-sm flex-1">Detay</button>
+                       <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary px-3 py-1 text-sm flex-1 text-center">Görüntüle</a>
+                     </div>
                   </div>
                 ))}
                 {filteredMamulList.length === 0 ? (

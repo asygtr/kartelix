@@ -466,7 +466,7 @@ const SalesChart = () => {
           type="text"
           value={aramaTerimi}
           onChange={e => setAramaTerimi(e.target.value)}
-          placeholder="🔍 Article No, Mamül, Firma veya Kompozisyon ile ara..."
+          placeholder="Kayıt No, Mamül, Firma veya Kompozisyon ile ara..."
           className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </div>
