@@ -1,18 +1,49 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import LabelPreviewCard from './LabelPreviewCard';
 import {
-  createLabelTemplate,
   defaultLabelTemplate,
-  deleteLabelTemplate,
-  getActiveLabelTemplateId,
   labelFieldCatalog,
-  listLabelTemplates,
-  loadLabelTemplate,
   mergeLabelTemplate,
-  printLabels,
-  renameLabelTemplate,
-  saveLabelTemplate
+  printLabels
 } from '../utils/labelTemplate';
+
+const fetchActiveTemplate = async () => {
+  try {
+    const response = await fetch('/api/admin/label-templates/active');
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success && result.data) {
+        return { id: result.data.id, ...result.data };
+      }
+    }
+  } catch {}
+  return null;
+};
+
+const fetchTemplates = async () => {
+  try {
+    const response = await fetch('/api/admin/label-templates');
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success) return result.data || [];
+    }
+  } catch {}
+  return [];
+};
+
+const saveTemplateToServer = async (templateId, name, template, setActive) => {
+  try {
+    const response = await fetch('/api/admin/label-templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ templateId, name, template, setActive })
+    });
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch {}
+  return null;
+};
 
 const NumericControl = ({ label, value, onChange, min = 0, max = 100, step = 0.5 }) => (
   <label className="app-label-control">
@@ -53,53 +84,86 @@ const previewRecord = {
 };
 
 const LabelDesignerPanel = () => {
-  const [templates, setTemplates] = useState(() => listLabelTemplates());
-  const [activeTemplateId, setActiveTemplateId] = useState(() => getActiveLabelTemplateId());
-  const [template, setTemplate] = useState(() => loadLabelTemplate(getActiveLabelTemplateId()));
-  const [status, setStatus] = useState('');
-  const [previewLang, setPreviewLang] = useState(loadLabelTemplate().previewLang || 'tr');
+   const [templates, setTemplates] = useState([]);
+   const [activeTemplateId, setActiveTemplateId] = useState('default-template');
+   const [template, setTemplate] = useState(defaultLabelTemplate);
+   const [status, setStatus] = useState('');
+   const [previewLang, setPreviewLang] = useState('tr');
+   const [loading, setLoading] = useState(true);
 
-  const updateTemplate = (patch) => {
-    setTemplate((prev) => mergeLabelTemplate({ ...prev, ...patch }));
-  };
+   useEffect(() => {
+     const loadData = async () => {
+       setLoading(true);
+       const [serverTemplates, activeTemplate] = await Promise.all([
+         fetchTemplates(),
+         fetchActiveTemplate()
+       ]);
+       
+       setTemplates(serverTemplates.length ? serverTemplates : [{ id: 'default-template', template_id: 'default-template', name: 'Standart Etiket', is_active: 1 }]);
+       
+       if (activeTemplate) {
+         setActiveTemplateId(activeTemplate.id);
+         setTemplate(mergeLabelTemplate(activeTemplate));
+       }
+       setLoading(false);
+     };
+     loadData();
+   }, []);
 
-  const refreshTemplateLibrary = (nextActiveTemplateId = activeTemplateId) => {
-    setTemplates(listLabelTemplates());
-    setActiveTemplateId(nextActiveTemplateId);
-    setTemplate(loadLabelTemplate(nextActiveTemplateId));
-  };
+   const updateTemplate = (patch) => {
+     setTemplate((prev) => mergeLabelTemplate({ ...prev, ...patch }));
+   };
 
-  const toggleField = (fieldId) => {
-    setTemplate((prev) => {
-      const hiddenFields = prev.hiddenFields.includes(fieldId)
-        ? prev.hiddenFields.filter((item) => item !== fieldId)
-        : [...prev.hiddenFields, fieldId];
+   const refreshTemplateLibrary = async (nextActiveTemplateId = activeTemplateId) => {
+     const serverTemplates = await fetchTemplates();
+     const activeTemplate = await fetchActiveTemplate();
+     
+     setTemplates(serverTemplates.length ? serverTemplates : [{ id: 'default-template', template_id: 'default-template', name: 'Standart Etiket', is_active: 1 }]);
+     if (activeTemplate) {
+       setActiveTemplateId(activeTemplate.id);
+       setTemplate(mergeLabelTemplate(activeTemplate));
+     }
+   };
 
-      return mergeLabelTemplate({ ...prev, hiddenFields });
-    });
-  };
+   const toggleField = (fieldId) => {
+     setTemplate((prev) => {
+       const hiddenFields = prev.hiddenFields.includes(fieldId)
+         ? prev.hiddenFields.filter((item) => item !== fieldId)
+         : [...prev.hiddenFields, fieldId];
 
-  const moveField = (fieldId, direction) => {
-    setTemplate((prev) => {
-      const currentIndex = prev.fieldOrder.indexOf(fieldId);
-      const targetIndex = currentIndex + direction;
-      if (currentIndex < 0 || targetIndex < 0 || targetIndex >= prev.fieldOrder.length) {
-        return prev;
-      }
+       return mergeLabelTemplate({ ...prev, hiddenFields });
+     });
+   };
 
-      const nextOrder = [...prev.fieldOrder];
-      const [field] = nextOrder.splice(currentIndex, 1);
-      nextOrder.splice(targetIndex, 0, field);
-      return mergeLabelTemplate({ ...prev, fieldOrder: nextOrder });
-    });
-  };
+   const moveField = (fieldId, direction) => {
+     setTemplate((prev) => {
+       const currentIndex = prev.fieldOrder.indexOf(fieldId);
+       const targetIndex = currentIndex + direction;
+       if (currentIndex < 0 || targetIndex < 0 || targetIndex >= prev.fieldOrder.length) {
+         return prev;
+       }
 
-  const updateCareIcon = (iconId, patch) => {
-    setTemplate((prev) => mergeLabelTemplate({
-      ...prev,
-      careIcons: prev.careIcons.map((icon) => (icon.id === iconId ? { ...icon, ...patch } : icon))
-    }));
-  };
+       const nextOrder = [...prev.fieldOrder];
+       const [field] = nextOrder.splice(currentIndex, 1);
+       nextOrder.splice(targetIndex, 0, field);
+       return mergeLabelTemplate({ ...prev, fieldOrder: nextOrder });
+     });
+   };
+
+   const updateCareIcon = (iconId, patch) => {
+     setTemplate((prev) => mergeLabelTemplate({
+       ...prev,
+       careIcons: prev.careIcons.map((icon) => (icon.id === iconId ? { ...icon, ...patch } : icon))
+     }));
+   };
+
+   const saveTemplate = async (patch) => {
+     const nextTemplate = mergeLabelTemplate({ ...template, ...patch });
+     const result = await saveTemplateToServer(activeTemplateId, templates.find(t => t.template_id === activeTemplateId)?.name || 'Şablon', nextTemplate, false);
+     if (result?.success) {
+       setStatus('Etiket tasarımı kaydedildi.');
+     }
+   };
 
   const visibleCount = template.fieldOrder.filter((fieldId) => !template.hiddenFields.includes(fieldId)).length;
 
@@ -259,15 +323,19 @@ const LabelDesignerPanel = () => {
                 <h3 className="mt-2 text-lg font-semibold text-[color:var(--app-text)]">Örnek kart</h3>
               </div>
               <div className="flex flex-col gap-2">
-                <select
-                  className="app-select min-w-[220px]"
-                  value={activeTemplateId}
-                  onChange={(event) => refreshTemplateLibrary(event.target.value)}
-                >
-                  {templates.map((item) => (
-                    <option key={item.id} value={item.id}>{item.name}</option>
-                  ))}
-                </select>
+<select
+                   className="app-select min-w-[220px]"
+                   value={activeTemplateId}
+                   onChange={(event) => {
+                     const selectedId = event.target.value;
+                     const found = templates.find((t) => t.template_id === selectedId);
+                     if (found) refreshTemplateLibrary(found.template_id);
+                   }}
+                 >
+                   {templates.map((item) => (
+                     <option key={item.template_id || item.id} value={item.template_id || item.id}>{item.name}</option>
+                   ))}
+                 </select>
                 <select
                   className="app-select min-w-[220px]"
                   value={previewLang}
@@ -290,72 +358,77 @@ const LabelDesignerPanel = () => {
               </button>
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-3">
-              <button
-                type="button"
-                className="app-btn-secondary"
-                onClick={() => {
-                  saveLabelTemplate({ ...template, previewLang }, { templateId: activeTemplateId });
-                  refreshTemplateLibrary(activeTemplateId);
-                  setStatus('Etiket tasarımı kaydedildi.');
-                }}
-              >
-                Tasarımı kaydet
-              </button>
-              <button
-                type="button"
-                className="app-btn-secondary"
-                onClick={() => {
-                  const name = window.prompt('Yeni şablon adı', `Şablon ${templates.length + 1}`);
-                  if (!name) return;
-                  const state = createLabelTemplate(name, template);
-                  refreshTemplateLibrary(state.activeTemplateId);
-                  setStatus(`Yeni şablon oluşturuldu: ${name}`);
-                }}
-              >
-                Yeni şablon
-              </button>
-              <button
-                type="button"
-                className="app-btn-secondary"
-                onClick={() => {
-                  const current = templates.find((item) => item.id === activeTemplateId);
-                  const name = window.prompt('Şablon adını güncelle', current?.name || '');
-                  if (!name) return;
-                  renameLabelTemplate(activeTemplateId, name);
-                  refreshTemplateLibrary(activeTemplateId);
-                  setStatus('Şablon adı güncellendi.');
-                }}
-              >
-                Yeniden adlandır
-              </button>
-              <button
-                type="button"
-                className="app-btn-secondary"
-                onClick={() => {
-                  setTemplate(defaultLabelTemplate);
-                  setPreviewLang(defaultLabelTemplate.previewLang);
-                  setStatus('Varsayılan tasarım yüklendi.');
-                }}
-              >
-                Varsayılana dön
-              </button>
-              <button
-                type="button"
-                className="app-btn-danger"
-                onClick={() => {
-                  const current = templates.find((item) => item.id === activeTemplateId);
-                  if (!current || templates.length <= 1) return;
-                  if (!window.confirm(`"${current.name}" şablonunu silmek istiyor musunuz?`)) return;
-                  const state = deleteLabelTemplate(activeTemplateId);
-                  refreshTemplateLibrary(state.activeTemplateId);
-                  setStatus('Şablon silindi.');
-                }}
-                disabled={templates.length <= 1}
-              >
-                Şablonu sil
-              </button>
-            </div>
+<div className="mt-5 flex flex-wrap gap-3">
+               <button
+                 type="button"
+                 className="app-btn-secondary"
+                 onClick={async () => {
+                   await saveTemplate(template);
+                 }}
+               >
+                 Tasarımı kaydet
+               </button>
+               <button
+                 type="button"
+                 className="app-btn-secondary"
+                 onClick={async () => {
+                   const name = window.prompt('Yeni şablon adı', `Şablon ${templates.length + 1}`);
+                   if (!name) return;
+                   const newId = `template-${Date.now()}`;
+                   const result = await saveTemplateToServer(newId, name, template, true);
+                   if (result?.success) {
+                     refreshTemplateLibrary(newId);
+                     setStatus(`Yeni şablon oluşturuldu: ${name}`);
+                   }
+                 }}
+               >
+                 Yeni şablon
+               </button>
+               <button
+                 type="button"
+                 className="app-btn-secondary"
+                 onClick={() => {
+                   const current = templates.find((item) => item.template_id === activeTemplateId);
+                   const name = window.prompt('Şablon adını güncelle', current?.name || '');
+                   if (!name) return;
+                   saveTemplateToServer(activeTemplateId, name, template, false);
+                   refreshTemplateLibrary(activeTemplateId);
+                   setStatus('Şablon adı güncellendi.');
+                 }}
+               >
+                 Yeniden adlandır
+               </button>
+               <button
+                 type="button"
+                 className="app-btn-secondary"
+                 onClick={() => {
+                   setTemplate(defaultLabelTemplate);
+                   setPreviewLang(defaultLabelTemplate.previewLang);
+                   setStatus('Varsayılan tasarım yüklendi.');
+                 }}
+               >
+                 Varsayılana dön
+               </button>
+               <button
+                 type="button"
+                 className="app-btn-danger"
+                 onClick={async () => {
+                   const current = templates.find((item) => item.template_id === activeTemplateId);
+                   if (!current || templates.length <= 1) return;
+                   if (!window.confirm(`"${current.name}" şablonunu silmek istiyor musunuz?`)) return;
+                   const result = await fetch(`/api/admin/label-templates/${activeTemplateId}`, { method: 'DELETE' });
+                   if (result.ok) {
+                     const nextTemplates = templates.filter((item) => item.template_id !== activeTemplateId);
+                     const nextActiveId = nextTemplates[0]?.template_id || 'default-template';
+                     refreshTemplateLibrary(nextActiveId);
+                     setStatus('Şablon silindi.');
+                   }
+                 }}
+                 disabled={templates.length <= 1}
+               >
+                 Şablonu sil
+               </button>
+             </div>
           </section>
         </div>
       </div>

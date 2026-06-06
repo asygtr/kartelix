@@ -267,12 +267,22 @@ const initDatabase = () => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    db.run(`CREATE TABLE IF NOT EXISTS ui_ayarlari (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      anahtar TEXT UNIQUE NOT NULL,
-      deger TEXT,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
+db.run(`CREATE TABLE IF NOT EXISTS ui_ayarlari (
+       id INTEGER PRIMARY KEY AUTOINCREMENT,
+       anahtar TEXT UNIQUE NOT NULL,
+       deger TEXT,
+       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+     )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS label_templates (
+       id INTEGER PRIMARY KEY AUTOINCREMENT,
+       template_id TEXT UNIQUE NOT NULL,
+       name TEXT NOT NULL,
+       template_json TEXT NOT NULL,
+       is_active INTEGER DEFAULT 0,
+       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+     )`);
 
     db.run(`CREATE TABLE IF NOT EXISTS excel_kaynaklari (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -3629,6 +3639,158 @@ app.delete('/api/siparis/:id', (req, res, next) => {
       });
     });
   });
+});
+
+// --- ETİKET ŞABLONLARI API ROTLARI ---
+
+// Aktif etiket şablonunu getir
+app.get('/api/admin/label-templates/active', async (req, res, next) => {
+  try {
+    const row = await new Promise((resolve, reject) => {
+      db.get(`SELECT * FROM label_templates WHERE is_active = 1 LIMIT 1`, [], (err, row) => {
+        if (err) reject(err);
+        else resolve(row || null);
+      });
+    });
+
+    if (!row) {
+      const defaultTemplate = {
+        brandName: 'KARTELIX',
+        widthMm: 90,
+        heightMm: 60,
+        innerWidthMm: 86,
+        innerHeightMm: 56,
+        paddingMm: 2,
+        pageMarginTopMm: 2,
+        pageMarginRightMm: 2,
+        pageMarginBottomMm: 2,
+        pageMarginLeftMm: 2,
+        railWidthMm: 4,
+        brandPosition: 'left',
+        qrColumnWidthMm: 15,
+        qrSizeMm: 13.75,
+        qrVerticalAlign: 'top',
+        qrOffsetTopMm: 0,
+        labelColumnMm: 10,
+        rowGapMm: 0.45,
+        columnGapMm: 0.45,
+        contentGapMm: 1.2,
+        careGapMm: 0.55,
+        careTopGapMm: 0.7,
+        borderRadiusMm: 0.4,
+        borderWidthMm: 0.35,
+        frameStyle: 'solid',
+        cornerSizeMm: 3.2,
+        borderColor: '#111827',
+        accentColor: '#111827',
+        backgroundColor: '#ffffff',
+        scanTextTr: '↗ BENİ TARA',
+        scanTextEn: '↗ SCAN ME',
+        showBrandRail: true,
+        showQr: true,
+        showCareIcons: true,
+        brandLetterSpacing: 0.06,
+        bodyFontPt: 5.2,
+        bodyLineHeight: 1.04,
+        compactFontPt: 4.8,
+        previewLang: 'tr',
+        fieldOrder: ['article_code', 'mamul_adi', 'kompozisyon_ozeti', 'renk', 'en', 'gramaj', 'mamul_turu_adi'],
+        hiddenFields: [],
+        careIcons: [
+          { id: 'wash-30', label: '30', title: '30°C yıkama', enabled: true },
+          { id: 'bleach-no', label: 'X', title: 'Çamaşır suyu yok', enabled: true },
+          { id: 'iron-low', label: 'I', title: 'Düşük ısı ütü', enabled: true },
+          { id: 'dry-no', label: 'D', title: 'Kurutma yok', enabled: true },
+          { id: 'dry-clean', label: 'P', title: 'Kuru temizleme', enabled: true }
+        ]
+      };
+      res.json({ success: true, data: { id: 'default', ...defaultTemplate } });
+    } else {
+      try {
+        const template = JSON.parse(row.template_json);
+        res.json({ success: true, data: { id: row.template_id, name: row.name, ...template } });
+      } catch {
+        res.json({ success: true, data: { id: row.template_id, name: row.name } });
+      }
+    }
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Tüm etiket şablonlarını getir
+app.get('/api/admin/label-templates', async (req, res, next) => {
+  try {
+    const rows = await new Promise((resolve, reject) => {
+      db.all(`SELECT id, template_id, name, is_active FROM label_templates ORDER BY created_at ASC`, [], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Etiket şablonu oluştur/güncelle
+app.post('/api/admin/label-templates', async (req, res, next) => {
+  const { templateId, name, template, setActive } = req.body;
+
+  if (!template) {
+    return res.status(400).json({ error: 'Şablon verisi zorunludur' });
+  }
+
+  const resolvedTemplateId = templateId || `template-${Date.now()}`;
+
+  try {
+    await new Promise((resolve, reject) => {
+      const sql = `
+        INSERT INTO label_templates (template_id, name, template_json, is_active)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(template_id) DO UPDATE SET
+          name = excluded.name,
+          template_json = excluded.template_json,
+          updated_at = CURRENT_TIMESTAMP
+      `;
+      db.run(sql, [resolvedTemplateId, String(name || 'Şablon').trim(), JSON.stringify(template), setActive ? 1 : 0], (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    if (setActive) {
+      await new Promise((resolve, reject) => {
+        db.run(`UPDATE label_templates SET is_active = 0 WHERE template_id != ?`, [resolvedTemplateId], (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    }
+
+    res.json({ success: true, data: { templateId: resolvedTemplateId, name } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Etiket şablonu sil
+app.delete('/api/admin/label-templates/:templateId', async (req, res, next) => {
+  const { templateId } = req.params;
+
+  try {
+    await new Promise((resolve, reject) => {
+      db.run(`DELETE FROM label_templates WHERE template_id = ?`, [templateId], function(err) {
+        if (err) reject(err);
+        else resolve(this.changes);
+      });
+    });
+
+    res.json({ success: true, data: { deleted: true } });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // --- ETİKET AYARLARI API ROTLARI ---
