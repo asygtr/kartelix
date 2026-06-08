@@ -20,6 +20,19 @@ const fetchActiveTemplate = async () => {
   return null;
 };
 
+const fetchTemplateById = async (templateId) => {
+  try {
+    const response = await fetch(`/api/admin/label-templates/${templateId}`);
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success && result.data) {
+        return result.data;
+      }
+    }
+  } catch {}
+  return null;
+};
+
 const fetchTemplates = async () => {
   try {
     const response = await fetch('/api/admin/label-templates');
@@ -157,13 +170,14 @@ const LabelDesignerPanel = () => {
      }));
    };
 
-   const saveTemplate = async (patch) => {
-     const nextTemplate = mergeLabelTemplate({ ...template, ...patch });
-     const result = await saveTemplateToServer(activeTemplateId, templates.find(t => t.template_id === activeTemplateId)?.name || 'Şablon', nextTemplate, false);
-     if (result?.success) {
-       setStatus('Etiket tasarımı kaydedildi.');
-     }
-   };
+const saveTemplate = async (patch) => {
+      const nextTemplate = mergeLabelTemplate({ ...template, ...patch });
+      const templateName = templates.find(t => t.template_id === activeTemplateId)?.name || templates.find(t => t.id === activeTemplateId)?.name || 'Şablon';
+      const result = await saveTemplateToServer(activeTemplateId, templateName, nextTemplate, false);
+      if (result?.success) {
+        setStatus('Etiket tasarımı kaydedildi.');
+      }
+    };
 
   const visibleCount = template.fieldOrder.filter((fieldId) => !template.hiddenFields.includes(fieldId)).length;
 
@@ -324,18 +338,21 @@ const LabelDesignerPanel = () => {
               </div>
               <div className="flex flex-col gap-2">
 <select
-                   className="app-select min-w-[220px]"
-                   value={activeTemplateId}
-                   onChange={(event) => {
-                     const selectedId = event.target.value;
-                     const found = templates.find((t) => t.template_id === selectedId);
-                     if (found) refreshTemplateLibrary(found.template_id);
-                   }}
-                 >
-                   {templates.map((item) => (
-                     <option key={item.template_id || item.id} value={item.template_id || item.id}>{item.name}</option>
-                   ))}
-                 </select>
+                    className="app-select min-w-[220px]"
+                    value={activeTemplateId}
+                    onChange={async (event) => {
+                      const selectedId = event.target.value;
+                      const templateData = await fetchTemplateById(selectedId);
+                      if (templateData) {
+                        await saveTemplateToServer(selectedId, templateData.name, mergeLabelTemplate(templateData), true);
+                      }
+                      await refreshTemplateLibrary(selectedId);
+                    }}
+                  >
+                    {templates.map((item) => (
+                      <option key={item.template_id || item.id} value={item.template_id || item.id}>{item.name}</option>
+                    ))}
+                  </select>
                 <select
                   className="app-select min-w-[220px]"
                   value={previewLang}

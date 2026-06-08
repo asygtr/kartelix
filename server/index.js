@@ -3734,6 +3734,30 @@ app.get('/api/admin/label-templates', async (req, res, next) => {
   }
 });
 
+// Belirli bir etiket şablonunu getir
+app.get('/api/admin/label-templates/:templateId', async (req, res, next) => {
+  const { templateId } = req.params;
+  try {
+    const row = await new Promise((resolve, reject) => {
+      db.get(`SELECT * FROM label_templates WHERE template_id = ? LIMIT 1`, [templateId], (err, row) => {
+        if (err) reject(err);
+        else resolve(row || null);
+      });
+    });
+    if (!row) {
+      return res.status(404).json({ success: false, error: 'Şablon bulunamadı' });
+    }
+    try {
+      const template = JSON.parse(row.template_json);
+      res.json({ success: true, data: { ...template, id: row.template_id } });
+    } catch {
+      res.json({ success: true, data: { id: row.template_id, name: row.name } });
+    }
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Etiket şablonu oluştur/güncelle
 app.post('/api/admin/label-templates', async (req, res, next) => {
   const { templateId, name, template, setActive } = req.body;
