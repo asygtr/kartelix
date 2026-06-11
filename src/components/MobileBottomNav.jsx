@@ -20,7 +20,7 @@ const MobileBottomNav = ({ items = [], location, searchOpen, onSearchClick }) =>
   const [hovering, setHovering] = useState(false);
 
   const rawX = useMotionValue(0);
-  const springX = useSpring(rawX, { stiffness: 280, damping: 28, mass: 0.6 });
+  const springX = useSpring(rawX, { stiffness: 300, damping: 30, mass: 0.5 });
 
   if (searchOpen) return null;
 
@@ -35,7 +35,6 @@ const MobileBottomNav = ({ items = [], location, searchOpen, onSearchClick }) =>
     const nav = navRef.current;
     if (!nav) return;
     const rect = nav.getBoundingClientRect();
-    // Spring olmadan direkt yerleştir — giriş anında zıplamayı önle
     rawX.jump(e.clientX - rect.left);
     setHovering(true);
   };
@@ -50,71 +49,71 @@ const MobileBottomNav = ({ items = [], location, searchOpen, onSearchClick }) =>
       onPointerMove={handlePointerMove}
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handlePointerLeave}
-      style={{ position: 'relative', overflow: 'hidden' }}
     >
-      {/* Liquid glass spotlight */}
-      <motion.div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          bottom: 0,
-          width: '4.5rem',
-          x: springX,
-          translateX: '-50%',
-          pointerEvents: 'none',
-          borderRadius: '1.1rem',
-          background:
-            'radial-gradient(ellipse 80% 90% at 50% 50%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 60%, transparent 100%)',
-          backdropFilter: 'blur(6px)',
-          WebkitBackdropFilter: 'blur(6px)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.28), 0 0 0 1px rgba(255,255,255,0.08)',
-          zIndex: 0,
-        }}
-        animate={{ opacity: hovering ? 1 : 0 }}
-        transition={{ duration: 0.18 }}
-      />
+      {/* Liquid glass spotlight — overflow:hidden olmayan bir wrapper ile */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        borderRadius: 'inherit',
+        overflow: 'hidden',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }}>
+        <motion.div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            width: '5rem',
+            x: springX,
+            translateX: '-50%',
+            borderRadius: '1.1rem',
+            background:
+              'radial-gradient(ellipse 80% 100% at 50% 50%, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0.08) 55%, transparent 100%)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.32)',
+          }}
+          animate={{ opacity: hovering ? 1 : 0 }}
+          transition={{ duration: 0.16 }}
+        />
+      </div>
 
       {items.map((item) => {
         const isDisabled = !item.to && !item.action;
         const isActive = isMobileNavActive(location.pathname, item, searchOpen);
+        const cls = `app-mobile-nav-item${isActive ? ' is-active' : ''}`;
+        const itemStyle = { position: 'relative', zIndex: 1 };
 
-        const content = (
+        const inner = (
           <>
-            <span className="app-mobile-nav-icon" style={{ position: 'relative', zIndex: 1 }}>{item.icon}</span>
-            <span className="app-mobile-nav-label" style={{ position: 'relative', zIndex: 1 }}>{item.label}</span>
+            <span className="app-mobile-nav-icon">{item.icon}</span>
+            <span className="app-mobile-nav-label">{item.label}</span>
           </>
         );
 
-        const sharedClass = `app-mobile-nav-item${isActive ? ' is-active' : ''}`;
-        const sharedStyle = { position: 'relative', zIndex: 1 };
-
         if (item.action) {
           return (
-            <button
-              key={item.key}
-              type="button"
-              className={sharedClass}
-              style={sharedStyle}
-              onClick={() => onSearchClick?.(item)}
-            >
-              {content}
+            <button key={item.key} type="button" className={cls} style={itemStyle}
+              onClick={() => onSearchClick?.(item)}>
+              {inner}
             </button>
           );
         }
 
         if (isDisabled) {
           return (
-            <button key={item.key} type="button" className="app-mobile-nav-item is-disabled" style={sharedStyle} disabled>
-              {content}
+            <button key={item.key} type="button" className="app-mobile-nav-item is-disabled"
+              style={itemStyle} disabled>
+              {inner}
             </button>
           );
         }
 
         return (
-          <Link key={item.key} to={item.to} className={sharedClass} style={sharedStyle}>
-            {content}
+          <Link key={item.key} to={item.to} className={cls} style={itemStyle}>
+            {inner}
           </Link>
         );
       })}
