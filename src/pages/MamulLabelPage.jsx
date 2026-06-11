@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import MamulEtiketModal from '../components/MamulEtiketModal';
 import PageSearchBar from '../components/PageSearchBar';
-import { getActiveLabelTemplateId, listLabelTemplates, loadLabelTemplate, printLabels } from '../utils/labelTemplate';
+import { mergeLabelTemplate, printLabels } from '../utils/labelTemplate';
 
 const normalizeSearchValue = (value) => String(value || '').trim().toLowerCase();
 
@@ -11,8 +11,45 @@ const MamulLabelPage = () => {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [templates] = useState(() => listLabelTemplates());
-  const [selectedTemplateId, setSelectedTemplateId] = useState(() => getActiveLabelTemplateId());
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+
+  // Server'dan şablon listesini yükle
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        const [listRes, activeRes] = await Promise.all([
+          fetch('/api/admin/label-templates').then(r => r.json()),
+          fetch('/api/admin/label-templates/active').then(r => r.json()),
+        ]);
+        const list = listRes.success ? (listRes.data || []) : [];
+        setTemplates(list);
+
+        if (activeRes.success && activeRes.data) {
+          const activeId = activeRes.data.id || activeRes.data.template_id || '';
+          setSelectedTemplateId(activeId);
+          setSelectedTemplate(mergeLabelTemplate(activeRes.data));
+        } else if (list.length > 0) {
+          const firstId = list[0].template_id || list[0].id;
+          setSelectedTemplateId(firstId);
+          // detayını çek
+          const detailRes = await fetch(`/api/admin/label-templates/${firstId}`).then(r => r.json());
+          if (detailRes.success) setSelectedTemplate(mergeLabelTemplate(detailRes.data));
+        }
+      } catch {}
+    };
+    loadTemplates();
+  }, []);
+
+  // Şablon seçimi değişince detayını çek
+  const handleTemplateChange = async (id) => {
+    setSelectedTemplateId(id);
+    try {
+      const res = await fetch(`/api/admin/label-templates/${id}`).then(r => r.json());
+      if (res.success) setSelectedTemplate(mergeLabelTemplate(res.data));
+    } catch {}
+  };
 
   const loadRecords = async (term = '') => {
     try {
@@ -45,8 +82,8 @@ const MamulLabelPage = () => {
 
   const printSelected = () => {
     const selectedLabels = records.filter((item) => selectedIds.includes(item.id));
-    if (selectedLabels.length === 0) return;
-    printLabels(selectedLabels, loadLabelTemplate(selectedTemplateId), 'tr');
+    if (selectedLabels.length === 0 || !selectedTemplate) return;
+    printLabels(selectedLabels, selectedTemplate, 'tr');
   };
 
   const resolveRecordMatch = (rawValue) => {
@@ -96,9 +133,9 @@ const MamulLabelPage = () => {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-[color:var(--app-text)]">Kayıtlı mamül etiketleri</h2>
               <div className="flex flex-wrap items-center gap-2">
-                <select className="app-select w-full sm:w-auto" value={selectedTemplateId} onChange={(event) => setSelectedTemplateId(event.target.value)}>
+                <select className="app-select w-full sm:w-auto" value={selectedTemplateId} onChange={(event) => handleTemplateChange(event.target.value)}>
                   {templates.map((item) => (
-                    <option key={item.id} value={item.id}>{item.name}</option>
+                    <option key={item.template_id || item.id} value={item.template_id || item.id}>{item.name}</option>
                   ))}
                 </select>
                 {selectedIds.length > 0 ? (

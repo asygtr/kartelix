@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import QrCameraModal from './QrCameraModal';
 import { isMobileCameraDevice } from '../utils/qr';
 
@@ -125,7 +126,7 @@ const PageSearchBar = ({
         ) : null}
       </form>
 
-      {scannerOpen && canUseQr ? (
+      {scannerOpen && canUseQr ? createPortal(
         <QrCameraModal
           title="QR ile ürün ara"
           onClose={() => setScannerOpen(false)}
@@ -136,7 +137,8 @@ const PageSearchBar = ({
               onQrDetected(detectedValue);
             }
           }}
-        />
+        />,
+        document.body
       ) : null}
     </>
   );
