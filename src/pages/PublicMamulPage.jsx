@@ -62,9 +62,9 @@ const PublicMamulPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Scroll container: bu sayfa app-page içinde değil, kendi sayfası
-  // document.documentElement'i hedef alıyoruz
-  const { scrollY } = useScroll();
+  const pageRef = useRef(null);
+
+  const { scrollY } = useScroll({ container: pageRef });
 
   const heroY       = useTransform(scrollY, [0, 500], [0, -70]);
   const heroOpacity = useTransform(scrollY, [0, 350], [1, 0]);
@@ -124,13 +124,14 @@ const PublicMamulPage = () => {
 
   return (
     /* Bu sayfa app-page dışında — kendi scroll context'i var */
-    <div style={{
+    <div ref={pageRef} style={{
       fontFamily: 'Manrope,sans-serif',
       color: P.text,
       background: P.bg,
-      minHeight: '100dvh',
+      height: '100dvh',
+      overflowY: 'auto',
       overflowX: 'hidden',
-      /* Önemli: overflow-y visible kalmalı ki scroll çalışsın */
+      WebkitOverflowScrolling: 'touch',
       position: 'relative',
     }}>
 
