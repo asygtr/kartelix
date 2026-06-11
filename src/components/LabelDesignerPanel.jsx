@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import LabelPreviewCard from './LabelPreviewCard';
 import {
   defaultLabelTemplate,
@@ -7,55 +7,28 @@ import {
   printLabels
 } from '../utils/labelTemplate';
 
-const fetchActiveTemplate = async () => {
-  try {
-    const response = await fetch('/api/admin/label-templates/active');
-    if (response.ok) {
-      const result = await response.json();
-      if (result.success && result.data) {
-        return { id: result.data.id, ...result.data };
-      }
-    }
-  } catch {}
-  return null;
-};
-
-const fetchTemplateById = async (templateId) => {
-  try {
-    const response = await fetch(`/api/admin/label-templates/${templateId}`);
-    if (response.ok) {
-      const result = await response.json();
-      if (result.success && result.data) {
-        return result.data;
-      }
-    }
-  } catch {}
-  return null;
-};
-
-const fetchTemplates = async () => {
-  try {
-    const response = await fetch('/api/admin/label-templates');
-    if (response.ok) {
-      const result = await response.json();
-      if (result.success) return result.data || [];
-    }
-  } catch {}
-  return [];
-};
-
-const saveTemplateToServer = async (templateId, name, template, setActive) => {
-  try {
-    const response = await fetch('/api/admin/label-templates', {
+const api = {
+  getTemplates: () =>
+    fetch('/api/admin/label-templates').then(r => r.json()).catch(() => ({ success: false, data: [] })),
+  getActive: () =>
+    fetch('/api/admin/label-templates/active').then(r => r.json()).catch(() => ({ success: false })),
+  getById: (id) =>
+    fetch(`/api/admin/label-templates/${id}`).then(r => r.json()).catch(() => ({ success: false })),
+  save: (templateId, name, template, setActive) =>
+    fetch('/api/admin/label-templates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ templateId, name, template, setActive })
-    });
-    if (response.ok) {
-      return await response.json();
-    }
-  } catch {}
-  return null;
+    }).then(r => r.json()).catch(() => null),
+  delete: (templateId) =>
+    fetch(`/api/admin/label-templates/${templateId}`, { method: 'DELETE' }).then(r => r.json()).catch(() => null),
+  exportCsv: () => fetch('/api/admin/label-templates/export'),
+  importCsv: (text) =>
+    fetch('/api/admin/label-templates/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/csv' },
+      body: text
+    }).then(r => r.json()).catch(() => null)
 };
 
 const NumericControl = ({ label, value, onChange, min = 0, max = 100, step = 0.5 }) => (
@@ -64,22 +37,14 @@ const NumericControl = ({ label, value, onChange, min = 0, max = 100, step = 0.5
       <span className="text-sm font-medium text-[color:var(--app-text)]">{label}</span>
       <input
         className="app-input app-label-control-number"
-        type="number"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
+        type="number" min={min} max={max} step={step} value={value}
+        onChange={(e) => onChange(e.target.value)}
       />
     </div>
     <input
       className="app-label-control-range"
-      type="range"
-      min={min}
-      max={max}
-      step={step}
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
+      type="range" min={min} max={max} step={step} value={value}
+      onChange={(e) => onChange(e.target.value)}
     />
   </label>
 );
@@ -97,158 +62,226 @@ const previewRecord = {
 };
 
 const LabelDesignerPanel = () => {
-   const [templates, setTemplates] = useState([]);
-   const [activeTemplateId, setActiveTemplateId] = useState('default-template');
-   const [template, setTemplate] = useState(defaultLabelTemplate);
-   const [status, setStatus] = useState('');
-   const [previewLang, setPreviewLang] = useState('tr');
-   const [loading, setLoading] = useState(true);
+  const [templates, setTemplates] = useState([]);
+  const [activeId, setActiveId] = useState('');
+  const [templateName, setTemplateName] = useState('');
+  const [template, setTemplate] = useState(defaultLabelTemplate);
+  const [previewLang, setPreviewLang] = useState('tr');
+  const [status, setStatus] = useState('');
+  const [saving, setSaving] = useState(false);
+  const fileInputRef = useRef(null);
 
-   useEffect(() => {
-     const loadData = async () => {
-       setLoading(true);
-       const [serverTemplates, activeTemplate] = await Promise.all([
-         fetchTemplates(),
-         fetchActiveTemplate()
-       ]);
-       
-       setTemplates(serverTemplates.length ? serverTemplates : [{ id: 'default-template', template_id: 'default-template', name: 'Standart Etiket', is_active: 1 }]);
-       
-       if (activeTemplate) {
-         setActiveTemplateId(activeTemplate.id);
-         setTemplate(mergeLabelTemplate(activeTemplate));
-       }
-       setLoading(false);
-     };
-     loadData();
-   }, []);
+  // İlk yüklemede şablon listesini ve aktifi getir
+  useEffect(() => {
+    const init = async () => {
+      const [listRes, activeRes] = await Promise.all([api.getTemplates(), api.getActive()]);
+      const list = listRes.success ? (listRes.data || []) : [];
+      setTemplates(list);
 
-   const updateTemplate = (patch) => {
-     setTemplate((prev) => mergeLabelTemplate({ ...prev, ...patch }));
-   };
-
-   const refreshTemplateLibrary = async (nextActiveTemplateId = activeTemplateId) => {
-     const serverTemplates = await fetchTemplates();
-     const activeTemplate = await fetchActiveTemplate();
-     
-     setTemplates(serverTemplates.length ? serverTemplates : [{ id: 'default-template', template_id: 'default-template', name: 'Standart Etiket', is_active: 1 }]);
-     if (activeTemplate) {
-       setActiveTemplateId(activeTemplate.id);
-       setTemplate(mergeLabelTemplate(activeTemplate));
-     }
-   };
-
-   const toggleField = (fieldId) => {
-     setTemplate((prev) => {
-       const hiddenFields = prev.hiddenFields.includes(fieldId)
-         ? prev.hiddenFields.filter((item) => item !== fieldId)
-         : [...prev.hiddenFields, fieldId];
-
-       return mergeLabelTemplate({ ...prev, hiddenFields });
-     });
-   };
-
-   const moveField = (fieldId, direction) => {
-     setTemplate((prev) => {
-       const currentIndex = prev.fieldOrder.indexOf(fieldId);
-       const targetIndex = currentIndex + direction;
-       if (currentIndex < 0 || targetIndex < 0 || targetIndex >= prev.fieldOrder.length) {
-         return prev;
-       }
-
-       const nextOrder = [...prev.fieldOrder];
-       const [field] = nextOrder.splice(currentIndex, 1);
-       nextOrder.splice(targetIndex, 0, field);
-       return mergeLabelTemplate({ ...prev, fieldOrder: nextOrder });
-     });
-   };
-
-   const updateCareIcon = (iconId, patch) => {
-     setTemplate((prev) => mergeLabelTemplate({
-       ...prev,
-       careIcons: prev.careIcons.map((icon) => (icon.id === iconId ? { ...icon, ...patch } : icon))
-     }));
-   };
-
-const saveTemplate = async (patch) => {
-      const nextTemplate = mergeLabelTemplate({ ...template, ...patch });
-      const templateName = templates.find(t => t.template_id === activeTemplateId)?.name || templates.find(t => t.id === activeTemplateId)?.name || 'Şablon';
-      const result = await saveTemplateToServer(activeTemplateId, templateName, nextTemplate, false);
-      if (result?.success) {
-        setStatus('Etiket tasarımı kaydedildi.');
+      if (activeRes.success && activeRes.data) {
+        const active = activeRes.data;
+        const id = active.id || active.template_id || '';
+        const name = list.find(t => (t.template_id || t.id) === id)?.name || active.name || 'Şablon';
+        setActiveId(id);
+        setTemplateName(name);
+        setTemplate(mergeLabelTemplate(active));
+      } else if (list.length > 0) {
+        const first = list[0];
+        const id = first.template_id || first.id;
+        setActiveId(id);
+        setTemplateName(first.name || 'Şablon');
+        const detail = await api.getById(id);
+        if (detail.success) setTemplate(mergeLabelTemplate(detail.data));
       }
     };
+    init();
+  }, []);
 
-  const visibleCount = template.fieldOrder.filter((fieldId) => !template.hiddenFields.includes(fieldId)).length;
+  const updateTemplate = (patch) =>
+    setTemplate(prev => mergeLabelTemplate({ ...prev, ...patch }));
+
+  const toggleField = (fieldId) =>
+    setTemplate(prev => {
+      const hidden = prev.hiddenFields.includes(fieldId)
+        ? prev.hiddenFields.filter(f => f !== fieldId)
+        : [...prev.hiddenFields, fieldId];
+      return mergeLabelTemplate({ ...prev, hiddenFields: hidden });
+    });
+
+  const moveField = (fieldId, dir) =>
+    setTemplate(prev => {
+      const idx = prev.fieldOrder.indexOf(fieldId);
+      const next = idx + dir;
+      if (idx < 0 || next < 0 || next >= prev.fieldOrder.length) return prev;
+      const order = [...prev.fieldOrder];
+      order.splice(next, 0, order.splice(idx, 1)[0]);
+      return mergeLabelTemplate({ ...prev, fieldOrder: order });
+    });
+
+  const updateCareIcon = (iconId, patch) =>
+    setTemplate(prev => mergeLabelTemplate({
+      ...prev,
+      careIcons: prev.careIcons.map(icon => icon.id === iconId ? { ...icon, ...patch } : icon)
+    }));
+
+  // Şablon seçimi değişince içeriği yükle
+  const handleSelectTemplate = async (id) => {
+    const detail = await api.getById(id);
+    if (!detail.success) return;
+    const name = templates.find(t => (t.template_id || t.id) === id)?.name || detail.data?.name || 'Şablon';
+    // Seçilen şablonu aktif yap (server'da)
+    await api.save(id, name, mergeLabelTemplate(detail.data), true);
+    setActiveId(id);
+    setTemplateName(name);
+    setTemplate(mergeLabelTemplate(detail.data));
+    // Liste is_active durumunu güncelle
+    setTemplates(prev => prev.map(t => ({ ...t, is_active: (t.template_id || t.id) === id ? 1 : 0 })));
+  };
+
+  // Mevcut şablonu kaydet
+  const handleSave = async () => {
+    if (!templateName.trim()) { setStatus('Şablon adı boş olamaz.'); return; }
+    setSaving(true);
+    const result = await api.save(activeId, templateName.trim(), template, true);
+    if (result?.success) {
+      setTemplates(prev => prev.map(t =>
+        (t.template_id || t.id) === activeId ? { ...t, name: templateName.trim() } : t
+      ));
+      setStatus('Kaydedildi.');
+    } else {
+      setStatus('Kaydetme başarısız.');
+    }
+    setSaving(false);
+    setTimeout(() => setStatus(''), 2500);
+  };
+
+  // Yeni şablon — mevcut tasarımı kopyalar, isim girmek gerekmez, sonra değiştirilebilir
+  const handleNew = async () => {
+    const name = `Şablon ${templates.length + 1}`;
+    const newId = `template-${Date.now()}`;
+    const result = await api.save(newId, name, template, true);
+    if (result?.success) {
+      const newEntry = { id: newId, template_id: newId, name, is_active: 1 };
+      setTemplates(prev => [...prev.map(t => ({ ...t, is_active: 0 })), newEntry]);
+      setActiveId(newId);
+      setTemplateName(name);
+      setStatus('Yeni şablon oluşturuldu. Adı değiştirip kaydedin.');
+      setTimeout(() => setStatus(''), 3000);
+    }
+  };
+
+  // Şablonu sil
+  const handleDelete = async () => {
+    if (templates.length <= 1) { setStatus('Son şablon silinemez.'); return; }
+    if (!window.confirm(`"${templateName}" şablonunu silmek istiyor musunuz?`)) return;
+    await api.delete(activeId);
+    const remaining = templates.filter(t => (t.template_id || t.id) !== activeId);
+    const nextId = remaining[0]?.template_id || remaining[0]?.id || '';
+    setTemplates(remaining);
+    if (nextId) await handleSelectTemplate(nextId);
+    setStatus('Şablon silindi.');
+    setTimeout(() => setStatus(''), 2500);
+  };
+
+  const handleExport = async () => {
+    const res = await api.exportCsv();
+    if (!res.ok) { setStatus('Dışa aktarma başarısız.'); return; }
+    const csv = await res.text();
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `label-templates-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    setStatus('CSV dışa aktarıldı.');
+    setTimeout(() => setStatus(''), 2500);
+  };
+
+  const handleImport = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const result = await api.importCsv(text);
+    if (result?.success) {
+      const listRes = await api.getTemplates();
+      if (listRes.success) setTemplates(listRes.data || []);
+      setStatus(`${result.data?.importedCount || 0} şablon içe aktarıldı.`);
+    } else {
+      setStatus('İçe aktarma başarısız.');
+    }
+    e.target.value = '';
+    setTimeout(() => setStatus(''), 2500);
+  };
+
+  const visibleCount = template.fieldOrder.filter(f => !template.hiddenFields.includes(f)).length;
 
   return (
     <div className="app-label-designer">
-      {status ? <div className="app-soft-panel px-4 py-3 text-sm text-[color:var(--app-text)]">{status}</div> : null}
+      {status && (
+        <div className="app-soft-panel px-4 py-3 text-sm text-[color:var(--app-text)]">{status}</div>
+      )}
 
       <div className="app-label-designer-grid">
+        {/* Sol sütun — kontroller */}
         <div className="app-label-designer-stack">
           <section className="app-panel p-5 app-reveal-up app-reveal-delay-1">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--app-text-muted)]">Tasarım düzeni</div>
-                <h3 className="mt-2 text-lg font-semibold text-[color:var(--app-text)]">Kart iskeleti</h3>
-              </div>
-            </div>
+            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--app-text-muted)]">Tasarım düzeni</div>
+            <h3 className="mt-2 text-lg font-semibold text-[color:var(--app-text)]">Kart iskeleti</h3>
 
             <div className="mt-4 app-label-compact-grid">
-              <NumericControl label="Sayfa genişliği" value={template.widthMm} min={40} max={140} step={1} onChange={(value) => updateTemplate({ widthMm: value })} />
-              <NumericControl label="Sayfa yüksekliği" value={template.heightMm} min={30} max={120} step={1} onChange={(value) => updateTemplate({ heightMm: value })} />
-              <NumericControl label="Kart genişliği" value={template.innerWidthMm} min={20} max={120} step={0.5} onChange={(value) => updateTemplate({ innerWidthMm: value })} />
-              <NumericControl label="Kart yüksekliği" value={template.innerHeightMm} min={20} max={100} step={0.5} onChange={(value) => updateTemplate({ innerHeightMm: value })} />
+              <NumericControl label="Sayfa genişliği" value={template.widthMm} min={40} max={140} step={1} onChange={v => updateTemplate({ widthMm: v })} />
+              <NumericControl label="Sayfa yüksekliği" value={template.heightMm} min={30} max={120} step={1} onChange={v => updateTemplate({ heightMm: v })} />
+              <NumericControl label="Kart genişliği" value={template.innerWidthMm} min={20} max={120} step={0.5} onChange={v => updateTemplate({ innerWidthMm: v })} />
+              <NumericControl label="Kart yüksekliği" value={template.innerHeightMm} min={20} max={100} step={0.5} onChange={v => updateTemplate({ innerHeightMm: v })} />
               <label className="app-label-control">
                 <div className="app-label-control-head">
                   <span className="text-sm font-medium text-[color:var(--app-text)]">Çerçeve stili</span>
                 </div>
-                <select className="app-select" value={template.frameStyle} onChange={(event) => updateTemplate({ frameStyle: event.target.value })}>
+                <select className="app-select" value={template.frameStyle} onChange={e => updateTemplate({ frameStyle: e.target.value })}>
                   <option value="solid">Düz çizgi</option>
                   <option value="double">Çift çizgi</option>
                   <option value="dashed">Kesik çizgi</option>
                   <option value="corners">Köşe süslemeli</option>
                 </select>
               </label>
-              <NumericControl label="Çerçeve kalınlığı" value={template.borderWidthMm} min={0.2} max={2} step={0.05} onChange={(value) => updateTemplate({ borderWidthMm: value })} />
-              <NumericControl label="Köşe süs boyutu" value={template.cornerSizeMm} min={2} max={10} step={0.2} onChange={(value) => updateTemplate({ cornerSizeMm: value })} />
-              <NumericControl label="Köşe yuvarlama" value={template.borderRadiusMm} min={0} max={6} step={0.1} onChange={(value) => updateTemplate({ borderRadiusMm: value })} />
-              <NumericControl label="Sayfa üst boşluğu" value={template.pageMarginTopMm} min={0} max={20} step={0.5} onChange={(value) => updateTemplate({ pageMarginTopMm: value })} />
-              <NumericControl label="Sayfa sol boşluğu" value={template.pageMarginLeftMm} min={0} max={20} step={0.5} onChange={(value) => updateTemplate({ pageMarginLeftMm: value })} />
-              <NumericControl label="Sayfa sağ boşluğu" value={template.pageMarginRightMm} min={0} max={20} step={0.5} onChange={(value) => updateTemplate({ pageMarginRightMm: value })} />
-              <NumericControl label="Sayfa alt boşluğu" value={template.pageMarginBottomMm} min={0} max={20} step={0.5} onChange={(value) => updateTemplate({ pageMarginBottomMm: value })} />
-              <NumericControl label="Başlık sütunu" value={template.labelColumnMm} min={6} max={30} step={0.5} onChange={(value) => updateTemplate({ labelColumnMm: value })} />
-              <NumericControl label="QR sütunu" value={template.qrColumnWidthMm} min={8} max={30} step={0.5} onChange={(value) => updateTemplate({ qrColumnWidthMm: value })} />
-              <NumericControl label="Marka şeridi" value={template.railWidthMm} min={2} max={16} step={0.5} onChange={(value) => updateTemplate({ railWidthMm: value })} />
-              <NumericControl label="QR boyutu" value={template.qrSizeMm} min={8} max={24} step={0.5} onChange={(value) => updateTemplate({ qrSizeMm: value })} />
-              <NumericControl label="Ana font" value={template.bodyFontPt} min={3} max={12} step={0.1} onChange={(value) => updateTemplate({ bodyFontPt: value })} />
-              <NumericControl label="Kompakt font" value={template.compactFontPt} min={3} max={11} step={0.1} onChange={(value) => updateTemplate({ compactFontPt: value })} />
-              <NumericControl label="Satır aralığı" value={template.rowGapMm} min={0} max={3} step={0.05} onChange={(value) => updateTemplate({ rowGapMm: value })} />
-              <NumericControl label="Kolon aralığı" value={template.columnGapMm} min={0} max={3} step={0.05} onChange={(value) => updateTemplate({ columnGapMm: value })} />
-              <NumericControl label="Blok aralığı" value={template.contentGapMm} min={0} max={6} step={0.05} onChange={(value) => updateTemplate({ contentGapMm: value })} />
+              <NumericControl label="Çerçeve kalınlığı" value={template.borderWidthMm} min={0.2} max={2} step={0.05} onChange={v => updateTemplate({ borderWidthMm: v })} />
+              <NumericControl label="Köşe süs boyutu" value={template.cornerSizeMm} min={2} max={10} step={0.2} onChange={v => updateTemplate({ cornerSizeMm: v })} />
+              <NumericControl label="Köşe yuvarlama" value={template.borderRadiusMm} min={0} max={6} step={0.1} onChange={v => updateTemplate({ borderRadiusMm: v })} />
+              <NumericControl label="Üst boşluk" value={template.pageMarginTopMm} min={0} max={20} step={0.5} onChange={v => updateTemplate({ pageMarginTopMm: v })} />
+              <NumericControl label="Sol boşluk" value={template.pageMarginLeftMm} min={0} max={20} step={0.5} onChange={v => updateTemplate({ pageMarginLeftMm: v })} />
+              <NumericControl label="Sağ boşluk" value={template.pageMarginRightMm} min={0} max={20} step={0.5} onChange={v => updateTemplate({ pageMarginRightMm: v })} />
+              <NumericControl label="Alt boşluk" value={template.pageMarginBottomMm} min={0} max={20} step={0.5} onChange={v => updateTemplate({ pageMarginBottomMm: v })} />
+              <NumericControl label="Başlık sütunu" value={template.labelColumnMm} min={6} max={30} step={0.5} onChange={v => updateTemplate({ labelColumnMm: v })} />
+              <NumericControl label="QR sütunu" value={template.qrColumnWidthMm} min={8} max={30} step={0.5} onChange={v => updateTemplate({ qrColumnWidthMm: v })} />
+              <NumericControl label="Marka şeridi" value={template.railWidthMm} min={2} max={16} step={0.5} onChange={v => updateTemplate({ railWidthMm: v })} />
+              <NumericControl label="QR boyutu" value={template.qrSizeMm} min={8} max={24} step={0.5} onChange={v => updateTemplate({ qrSizeMm: v })} />
+              <NumericControl label="Ana font" value={template.bodyFontPt} min={3} max={12} step={0.1} onChange={v => updateTemplate({ bodyFontPt: v })} />
+              <NumericControl label="Kompakt font" value={template.compactFontPt} min={3} max={11} step={0.1} onChange={v => updateTemplate({ compactFontPt: v })} />
+              <NumericControl label="Satır aralığı" value={template.rowGapMm} min={0} max={3} step={0.05} onChange={v => updateTemplate({ rowGapMm: v })} />
+              <NumericControl label="Kolon aralığı" value={template.columnGapMm} min={0} max={3} step={0.05} onChange={v => updateTemplate({ columnGapMm: v })} />
+              <NumericControl label="Blok aralığı" value={template.contentGapMm} min={0} max={6} step={0.05} onChange={v => updateTemplate({ contentGapMm: v })} />
               <label className="app-label-control">
                 <div className="app-label-control-head">
                   <span className="text-sm font-medium text-[color:var(--app-text)]">QR dikey hizası</span>
                 </div>
-                <select className="app-select" value={template.qrVerticalAlign} onChange={(event) => updateTemplate({ qrVerticalAlign: event.target.value })}>
+                <select className="app-select" value={template.qrVerticalAlign} onChange={e => updateTemplate({ qrVerticalAlign: e.target.value })}>
                   <option value="top">Üst</option>
                   <option value="center">Orta</option>
                   <option value="bottom">Alt</option>
                 </select>
               </label>
-              <NumericControl label="İkon üst boşluğu" value={template.careTopGapMm} min={0} max={6} step={0.05} onChange={(value) => updateTemplate({ careTopGapMm: value })} />
-              <NumericControl label="QR üst offset" value={template.qrOffsetTopMm} min={0} max={20} step={0.5} onChange={(value) => updateTemplate({ qrOffsetTopMm: value })} />
+              <NumericControl label="İkon üst boşluğu" value={template.careTopGapMm} min={0} max={6} step={0.05} onChange={v => updateTemplate({ careTopGapMm: v })} />
+              <NumericControl label="QR üst offset" value={template.qrOffsetTopMm} min={0} max={20} step={0.5} onChange={v => updateTemplate({ qrOffsetTopMm: v })} />
             </div>
 
             <div className="mt-4 app-label-compact-grid">
               <label className="block app-label-compact-span-2">
                 <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Marka metni</div>
-                <input className="app-input" value={template.brandName} onChange={(event) => updateTemplate({ brandName: event.target.value })} />
+                <input className="app-input" value={template.brandName} onChange={e => updateTemplate({ brandName: e.target.value })} />
               </label>
               <label className="block">
                 <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Marka konumu</div>
-                <select className="app-select" value={template.brandPosition} onChange={(event) => updateTemplate({ brandPosition: event.target.value })}>
+                <select className="app-select" value={template.brandPosition} onChange={e => updateTemplate({ brandPosition: e.target.value })}>
                   <option value="left">Sol</option>
                   <option value="right">Sağ</option>
                   <option value="top">Üst</option>
@@ -257,25 +290,25 @@ const saveTemplate = async (patch) => {
               </label>
               <label className="block app-label-compact-span-2">
                 <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">TR tarama notu</div>
-                <input className="app-input" value={template.scanTextTr} onChange={(event) => updateTemplate({ scanTextTr: event.target.value })} />
+                <input className="app-input" value={template.scanTextTr} onChange={e => updateTemplate({ scanTextTr: e.target.value })} />
               </label>
               <label className="block app-label-compact-span-2">
                 <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">EN tarama notu</div>
-                <input className="app-input" value={template.scanTextEn} onChange={(event) => updateTemplate({ scanTextEn: event.target.value })} />
+                <input className="app-input" value={template.scanTextEn} onChange={e => updateTemplate({ scanTextEn: e.target.value })} />
               </label>
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               <label className="app-label-toggle">
-                <input type="checkbox" checked={template.showBrandRail} onChange={(event) => updateTemplate({ showBrandRail: event.target.checked })} />
+                <input type="checkbox" checked={template.showBrandRail} onChange={e => updateTemplate({ showBrandRail: e.target.checked })} />
                 Marka şeridi
               </label>
               <label className="app-label-toggle">
-                <input type="checkbox" checked={template.showQr} onChange={(event) => updateTemplate({ showQr: event.target.checked })} />
+                <input type="checkbox" checked={template.showQr} onChange={e => updateTemplate({ showQr: e.target.checked })} />
                 QR alanı
               </label>
               <label className="app-label-toggle">
-                <input type="checkbox" checked={template.showCareIcons} onChange={(event) => updateTemplate({ showCareIcons: event.target.checked })} />
+                <input type="checkbox" checked={template.showCareIcons} onChange={e => updateTemplate({ showCareIcons: e.target.checked })} />
                 Bakım ikonları
               </label>
             </div>
@@ -289,10 +322,9 @@ const saveTemplate = async (patch) => {
               </div>
               <div className="app-chip">{visibleCount} alan görünür</div>
             </div>
-
             <div className="mt-4 space-y-3">
               {template.fieldOrder.map((fieldId, index) => {
-                const field = labelFieldCatalog.find((item) => item.id === fieldId);
+                const field = labelFieldCatalog.find(f => f.id === fieldId);
                 const hidden = template.hiddenFields.includes(fieldId);
                 return (
                   <div key={fieldId} className="app-label-field-row">
@@ -301,8 +333,8 @@ const saveTemplate = async (patch) => {
                       <span className="truncate text-sm font-semibold text-[color:var(--app-text)]">{field?.labelTr}</span>
                     </label>
                     <div className="flex items-center gap-2">
-                      <button type="button" className="app-btn-secondary" onClick={() => moveField(fieldId, -1)} disabled={index === 0}>Yukarı</button>
-                      <button type="button" className="app-btn-secondary" onClick={() => moveField(fieldId, 1)} disabled={index === template.fieldOrder.length - 1}>Aşağı</button>
+                      <button type="button" className="app-btn-secondary" onClick={() => moveField(fieldId, -1)} disabled={index === 0}>↑</button>
+                      <button type="button" className="app-btn-secondary" onClick={() => moveField(fieldId, 1)} disabled={index === template.fieldOrder.length - 1}>↓</button>
                     </div>
                   </div>
                 );
@@ -313,195 +345,101 @@ const saveTemplate = async (patch) => {
           <section className="app-panel p-5 app-reveal-up app-reveal-delay-4">
             <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--app-text-muted)]">Bakım ikonları</div>
             <h3 className="mt-2 text-lg font-semibold text-[color:var(--app-text)]">İkon seti</h3>
-
             <div className="mt-4 space-y-3">
-              {template.careIcons.map((icon) => (
+              {template.careIcons.map(icon => (
                 <div key={icon.id} className="app-label-care-row">
                   <label className="app-label-toggle">
-                    <input type="checkbox" checked={icon.enabled} onChange={(event) => updateCareIcon(icon.id, { enabled: event.target.checked })} />
+                    <input type="checkbox" checked={icon.enabled} onChange={e => updateCareIcon(icon.id, { enabled: e.target.checked })} />
                     Göster
                   </label>
-                  <input className="app-input" value={icon.label} onChange={(event) => updateCareIcon(icon.id, { label: event.target.value })} placeholder="Kısa ikon" />
-                  <input className="app-input" value={icon.title} onChange={(event) => updateCareIcon(icon.id, { title: event.target.value })} placeholder="Açıklama" />
+                  <input className="app-input" value={icon.label} onChange={e => updateCareIcon(icon.id, { label: e.target.value })} placeholder="Kısa ikon" />
+                  <input className="app-input" value={icon.title} onChange={e => updateCareIcon(icon.id, { title: e.target.value })} placeholder="Açıklama" />
                 </div>
               ))}
             </div>
           </section>
         </div>
 
+        {/* Sağ sütun — önizleme + şablon yönetimi */}
         <div className="app-label-designer-preview-column">
           <section className="app-panel p-5 app-label-preview-panel app-reveal-up app-reveal-delay-2">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--app-text-muted)]">Canlı önizleme</div>
-                <h3 className="mt-2 text-lg font-semibold text-[color:var(--app-text)]">Örnek kart</h3>
-              </div>
-              <div className="flex flex-col gap-2">
-<select
-                    className="app-select min-w-[220px]"
-                    value={activeTemplateId}
-                    onChange={async (event) => {
-                      const selectedId = event.target.value;
-                      const templateData = await fetchTemplateById(selectedId);
-                      if (templateData) {
-                        await saveTemplateToServer(selectedId, templateData.name, mergeLabelTemplate(templateData), true);
-                      }
-                      await refreshTemplateLibrary(selectedId);
-                    }}
-                  >
-                    {templates.map((item) => (
-                      <option key={item.template_id || item.id} value={item.template_id || item.id}>{item.name}</option>
-                    ))}
-                  </select>
-                <select
-                  className="app-select min-w-[220px]"
-                  value={previewLang}
-                  onChange={(event) => setPreviewLang(event.target.value)}
-                >
-                  <option value="tr">Önizleme: Türkçe</option>
-                  <option value="en">Preview: English</option>
-                </select>
-              </div>
+            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--app-text-muted)]">Önizleme</div>
+
+            {/* Şablon seçici */}
+            <div className="mt-3">
+              <div className="text-xs font-semibold text-[color:var(--app-text-muted)] mb-1">Aktif şablon</div>
+              <select
+                className="app-select w-full"
+                value={activeId}
+                onChange={e => handleSelectTemplate(e.target.value)}
+              >
+                {templates.map(t => (
+                  <option key={t.template_id || t.id} value={t.template_id || t.id}>{t.name}</option>
+                ))}
+              </select>
             </div>
 
-            <LabelPreviewCard record={previewRecord} template={template} lang={previewLang} className="mt-5" />
+            {/* Şablon adı — inline düzenle */}
+            <div className="mt-3">
+              <div className="text-xs font-semibold text-[color:var(--app-text-muted)] mb-1">Şablon adı</div>
+              <input
+                className="app-input w-full"
+                value={templateName}
+                onChange={e => setTemplateName(e.target.value)}
+                placeholder="Şablon adı"
+              />
+            </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {/* Önizleme dili */}
+            <div className="mt-3">
+              <select className="app-select w-full" value={previewLang} onChange={e => setPreviewLang(e.target.value)}>
+                <option value="tr">Önizleme: Türkçe</option>
+                <option value="en">Preview: English</option>
+              </select>
+            </div>
+
+            <LabelPreviewCard record={previewRecord} template={template} lang={previewLang} className="mt-4" />
+
+            {/* Ana eylemler */}
+            <div className="mt-4 grid gap-2 grid-cols-2">
+              <button type="button" className="app-btn-primary col-span-2" onClick={handleSave} disabled={saving}>
+                {saving ? 'Kaydediliyor...' : 'Kaydet'}
+              </button>
               <button type="button" className="app-btn-secondary" onClick={() => printLabels([previewRecord], template, 'tr')}>
-                Yazdır (TR)
+                Yazdır TR
               </button>
               <button type="button" className="app-btn-secondary" onClick={() => printLabels([previewRecord], template, 'en')}>
-                Print (EN)
+                Print EN
               </button>
             </div>
 
-<div className="mt-5 flex flex-wrap gap-3">
-               <button
-                 type="button"
-                 className="app-btn-secondary"
-                 onClick={async () => {
-                   await saveTemplate(template);
-                 }}
-               >
-                 Tasarımı kaydet
-               </button>
-               <button
-                 type="button"
-                 className="app-btn-secondary"
-                  onClick={async () => {
-                    const name = window.prompt('Yeni şablon adı', `Şablon ${templates.length + 1}`);
-                    if (!name) return;
-                    const newId = `template-${Date.now()}`;
-                    const result = await saveTemplateToServer(newId, name, template, true);
-                    if (result?.success) {
-                      const createdName = result.data?.name || name;
-                      const createdId = result.data?.templateId || newId;
-                      await refreshTemplateLibrary(createdId);
-                      setStatus(`Yeni şablon oluşturuldu: ${createdName}`);
-                    } else {
-                      setStatus('Şablon oluşturulamadı.');
-                    }
-                  }}
-               >
-                 Yeni şablon
-               </button>
-               <button
-                 type="button"
-                 className="app-btn-secondary"
-                 onClick={async () => {
-                   const current = templates.find((item) => (item.template_id || item.id) === activeTemplateId);
-                   if (!current) return;
-                   const name = window.prompt('Şablon adını güncelle', current?.name || '');
-                   if (!name) return;
-                   await saveTemplateToServer(activeTemplateId, name, template, false);
-                   await refreshTemplateLibrary(activeTemplateId);
-                   setStatus('Şablon adı güncellendi.');
-                 }}
-               >
-                 Yeniden adlandır
-               </button>
-               <button
-                 type="button"
-                 className="app-btn-secondary"
-                 onClick={async () => {
-                   const result = await fetch('/api/admin/label-templates/export');
-                   if (result.ok) {
-                     const csv = await result.text();
-                     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-                     const url = URL.createObjectURL(blob);
-                     const link = document.createElement('a');
-                     link.href = url;
-                     link.download = `label-templates-${new Date().toISOString().slice(0, 10)}.csv`;
-                     document.body.appendChild(link);
-                     link.click();
-                     document.body.removeChild(link);
-                     URL.revokeObjectURL(url);
-                     setStatus('Şablonlar CSV olarak dışa aktarıldı.');
-                   } else {
-                     const payload = await result.json().catch(() => ({}));
-                     setStatus(payload.error || 'Dışa aktarma başarısız.');
-                   }
-                 }}
-               >
-                 CSV Dışa Aktar
-               </button>
-               <label className="app-btn-secondary" style={{ cursor: 'pointer' }}>
-                 CSV İçe Aktar
-                 <input
-                   type="file"
-                   accept=".csv,text/csv"
-                   className="hidden"
-                   onChange={async (event) => {
-                     const file = event.target.files?.[0];
-                     if (!file) return;
-                     const text = await file.text();
-                     const result = await fetch('/api/admin/label-templates/import', {
-                       method: 'POST',
-                       headers: { 'Content-Type': 'text/csv' },
-                       body: text,
-                     });
-                     const payload = await result.json();
-                     if (result.ok && payload.success) {
-                       await refreshTemplateLibrary(activeTemplateId);
-                       setStatus(`${payload.data.importedCount} şablon içe aktarıldı.`);
-                     } else {
-                       setStatus(payload.error || 'İçe aktarma başarısız.');
-                     }
-                     event.target.value = '';
-                   }}
-                 />
-               </label>
-               <button
-                 type="button"
-                 className="app-btn-secondary"
-                 onClick={() => {
-                   setTemplate(defaultLabelTemplate);
-                   setPreviewLang(defaultLabelTemplate.previewLang);
-                   setStatus('Varsayılan tasarım yüklendi.');
-                 }}
-               >
-                 Varsayılana dön
-               </button>
-               <button
-                 type="button"
-                 className="app-btn-danger"
-                 onClick={async () => {
-                   const current = templates.find((item) => (item.template_id || item.id) === activeTemplateId);
-                   if (!current || templates.length <= 1) return;
-                   if (!window.confirm(`"${current.name}" şablonunu silmek istiyor musunuz?`)) return;
-                   const result = await fetch(`/api/admin/label-templates/${activeTemplateId}`, { method: 'DELETE' });
-                   if (result.ok) {
-                     const nextTemplates = templates.filter((item) => (item.template_id || item.id) !== activeTemplateId);
-                     const nextActiveId = nextTemplates[0]?.template_id || nextTemplates[0]?.id || 'default-template';
-                     await refreshTemplateLibrary(nextActiveId);
-                     setStatus('Şablon silindi.');
-                   }
-                 }}
-                 disabled={templates.length <= 1}
-               >
-                 Şablonu sil
-               </button>
-             </div>
+            {/* Şablon yönetimi */}
+            <div className="mt-4 border-t border-[color:var(--app-border)] pt-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--app-text-muted)] mb-3">Şablon yönetimi</div>
+              <div className="grid gap-2 grid-cols-2">
+                <button type="button" className="app-btn-secondary" onClick={handleNew}>
+                  + Yeni şablon
+                </button>
+                <button type="button" className="app-btn-secondary" onClick={() => { setTemplate(defaultLabelTemplate); setStatus('Varsayılan yüklendi.'); setTimeout(() => setStatus(''), 2000); }}>
+                  Varsayılana dön
+                </button>
+                <button type="button" className="app-btn-secondary" onClick={handleExport}>
+                  CSV Dışa Aktar
+                </button>
+                <label className="app-btn-secondary text-center cursor-pointer">
+                  CSV İçe Aktar
+                  <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleImport} />
+                </label>
+                <button
+                  type="button"
+                  className="app-btn-danger col-span-2"
+                  onClick={handleDelete}
+                  disabled={templates.length <= 1}
+                >
+                  Bu şablonu sil
+                </button>
+              </div>
+            </div>
           </section>
         </div>
       </div>

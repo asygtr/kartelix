@@ -1312,6 +1312,24 @@ app.post('/api/firmalar', (req, res, next) => {
   );
 });
 
+// Kullanıcı adı varlık kontrolü (şifre doğrulamaz)
+app.post('/api/check-username', (req, res, next) => {
+  const { username } = req.body;
+  if (!username || !String(username).trim()) {
+    return res.status(400).json({ success: false, message: 'Kullanıcı adı gereklidir' });
+  }
+
+  const normalizedUsername = String(username).trim().toLowerCase();
+  const loginAliases = { admin: 'yonetici', staff: 'satici', yonetici: 'yonetici', satici: 'satici', mamul: 'mamul' };
+  const finalUsername = loginAliases[normalizedUsername] || normalizedUsername;
+
+  db.get(`SELECT id, username FROM kullanicilar WHERE username = ?`, [finalUsername], (err, row) => {
+    if (err) return next(err);
+    if (!row) return res.json({ success: false, message: 'Kullanıcı bulunamadı' });
+    res.json({ success: true });
+  });
+});
+
 // Giriş kontrolü
 app.post('/api/login', (req, res, next) => {
   const { username, password } = req.body;
