@@ -155,8 +155,8 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
             type="button"
             onClick={onClose}
             className="app-nav-icon-button"
-aria-label="Kamerayı kapat"
-             title="Kamerayı kapat"
+            aria-label="Kamerayı kapat"
+            title="Kamerayı kapat"
           >
             <CloseIcon />
           </button>

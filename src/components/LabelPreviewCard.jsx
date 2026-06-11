@@ -76,7 +76,7 @@ const LabelPreviewCard = ({ record, template: templateInput, lang = 'tr', classN
   const isVerticalBrand = template.brandPosition === 'left' || template.brandPosition === 'right';
   const previewGridColumns = columns.join(' ');
   const topBottomRows = template.showBrandRail && (template.brandPosition === 'top' || template.brandPosition === 'bottom');
-  const availableWidth = Math.max(containerWidth - 32, stageWidthPx);
+  const availableWidth = Math.max(containerWidth - 16, Math.min(stageWidthPx, containerWidth));
   const previewScale = availableWidth / stageWidthPx;
 
   useEffect(() => {
@@ -106,15 +106,15 @@ const LabelPreviewCard = ({ record, template: templateInput, lang = 'tr', classN
     <div ref={shellRef} className={`app-label-preview-shell ${className}`}>
       <div
         className="app-label-preview-stage"
-        style={{ height: `${stageHeightPx * previewScale}px` }}
+        style={{ height: `${stageHeightPx * previewScale}px`, width: `${containerWidth || stageWidthPx}px` }}
       >
         <div
           className="app-label-preview-sheet"
           style={{
-            width: `${stageWidthPx}px`,
-            height: `${stageHeightPx}px`,
+            width: `${containerWidth || stageWidthPx}px`,
+            height: `${stageHeightPx * previewScale}px`,
             transform: `scale(${previewScale})`,
-            transformOrigin: 'top center'
+            transformOrigin: 'top left'
           }}
         >
           <div

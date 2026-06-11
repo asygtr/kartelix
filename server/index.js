@@ -3368,7 +3368,8 @@ app.post('/api/admin/label-templates', async (req, res, next) => {
           template_json = excluded.template_json,
           updated_at = CURRENT_TIMESTAMP
       `;
-      db.run(sql, [resolvedTemplateId, String(name || 'Şablon').trim(), JSON.stringify(template), setActive ? 1 : 0], (err) => {
+      const resolvedName = String(name || '').trim() || `Şablon ${Date.now()}`;
+      db.run(sql, [resolvedTemplateId, resolvedName, JSON.stringify(template), setActive ? 1 : 0], (err) => {
         if (err) reject(err);
         else resolve();
       });
@@ -3383,7 +3384,7 @@ app.post('/api/admin/label-templates', async (req, res, next) => {
       });
     }
 
-    res.json({ success: true, data: { templateId: resolvedTemplateId, name } });
+    res.json({ success: true, data: { templateId: resolvedTemplateId, name: String(name || '').trim() || `Şablon ${Date.now()}` } });
   } catch (err) {
     next(err);
   }

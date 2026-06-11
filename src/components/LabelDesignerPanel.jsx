@@ -388,16 +388,22 @@ const saveTemplate = async (patch) => {
                <button
                  type="button"
                  className="app-btn-secondary"
-                 onClick={async () => {
-                   const name = window.prompt('Yeni şablon adı', `Şablon ${templates.length + 1}`);
-                   if (!name) return;
-                   const newId = `template-${Date.now()}`;
-                   const result = await saveTemplateToServer(newId, name, template, true);
-                   if (result?.success) {
-                     refreshTemplateLibrary(newId);
-                     setStatus(`Yeni şablon oluşturuldu: ${name}`);
-                   }
-                 }}
+                  onClick={async () => {
+                    const name = window.prompt('Yeni şablon adı', `Şablon ${templates.length + 1}`);
+                    if (!name) return;
+                    const newId = `template-${Date.now()}`;
+                    const result = await saveTemplateToServer(newId, name, template, true);
+                    if (result?.success) {
+                      const createdName = result.data.name || name;
+                      setTemplates((prev) => {
+                        const withoutDefault = prev.filter((item) => (item.template_id || item.id) !== 'default-template');
+                        return [...withoutDefault, { id: newId, template_id: newId, name: createdName, is_active: true }];
+                      });
+                      setActiveTemplateId(newId);
+                      setTemplate(mergeLabelTemplate(template));
+                      setStatus(`Yeni şablon oluşturuldu: ${createdName}`);
+                    }
+                  }}
                >
                  Yeni şablon
                </button>
