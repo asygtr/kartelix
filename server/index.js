@@ -3233,6 +3233,43 @@ app.delete('/api/siparis/:id', (req, res, next) => {
 
 // --- ETİKET ŞABLONLARI API ROTLARI ---
 
+// Etiket şablonları - özel route'lar önce tanımlanmalı
+app.get('/api/admin/label-templates/export', async (req, res, next) => {
+  try {
+    const rows = await new Promise((resolve, reject) => {
+      db.all(`SELECT template_id, name, template_json, is_active FROM label_templates ORDER BY created_at ASC`, [], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+
+    if (!rows.length) {
+      return res.status(404).json({ success: false, error: 'Aktarılacak şablon bulunamadı' });
+    }
+
+    const escapeCsvValue = (value) => {
+      const text = String(value ?? '');
+      if (text.includes('"') || text.includes(',') || text.includes('\n') || text.includes('\r')) {
+        return '"' + text.replace(/"/g, '""') + '"';
+      }
+      return text;
+    };
+
+    const header = 'template_id,name,is_active,template_json';
+    const body = rows.map((row) => {
+      const templateJson = escapeCsvValue(row.template_json);
+      return [row.template_id, row.name, row.is_active, templateJson].join(',');
+    }).join('\n');
+
+    const csv = `${header}\n${body}\n`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="label-templates.csv"');
+    res.send(csv);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Aktif etiket şablonunu getir
 app.get('/api/admin/label-templates/active', async (req, res, next) => {
   try {
@@ -3407,43 +3444,6 @@ app.delete('/api/admin/label-templates/:templateId', async (req, res, next) => {
     next(err);
   }
 });
-
-app.get('/api/admin/label-templates/export', async (req, res, next) => {
-  try {
-    const rows = await new Promise((resolve, reject) => {
-      db.all(`SELECT template_id, name, template_json, is_active FROM label_templates ORDER BY created_at ASC`, [], (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows || []);
-      });
-    });
-
-    if (!rows.length) {
-      return res.status(404).json({ success: false, error: 'Aktarılacak şablon bulunamadı' });
-    }
-
-    const escapeCsvValue = (value) => {
-      const text = String(value ?? '');
-      if (text.includes('"') || text.includes(',') || text.includes('\n') || text.includes('\r')) {
-        return '"' + text.replace(/"/g, '""') + '"';
-      }
-      return text;
-    };
-
-    const header = 'template_id,name,is_active,template_json';
-    const body = rows.map((row) => {
-      const templateJson = escapeCsvValue(row.template_json);
-      return [row.template_id, row.name, row.is_active, templateJson].join(',');
-    }).join('\n');
-
-    const csv = `${header}\n${body}\n`;
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="label-templates.csv"');
-    res.send(csv);
-  } catch (err) {
-    next(err);
-  }
-});
-
 const parseLabelTemplateCsv = (rawText) => {
   const lines = rawText.split(/\r?\n/).filter((line) => line.trim().length > 0);
   if (lines.length < 2) return [];

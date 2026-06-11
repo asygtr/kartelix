@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import LabelPreviewCard from './LabelPreviewCard';
-import { defaultLabelTemplate, mergeLabelTemplate, printLabels } from '../utils/labelTemplate';
+import { defaultLabelTemplate, mergeLabelTemplate, printLabels, loadLabelTemplate } from '../utils/labelTemplate';
 
 const CloseIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
@@ -27,26 +27,22 @@ const fetchActiveTemplate = async () => {
   return mergeLabelTemplate(defaultLabelTemplate);
 };
 
-const fetchTemplateById = async (templateId) => {
-  try {
-    const response = await fetch(`/api/admin/label-templates/${templateId}`);
-    if (response.ok) {
-      const result = await response.json();
-      if (result.success && result.data) {
-        return mergeLabelTemplate(result.data);
-      }
-    }
-  } catch {}
-  return mergeLabelTemplate(defaultLabelTemplate);
-};
-
 const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
   const [template, setTemplate] = useState(null);
 
   useEffect(() => {
     const loadTemplate = async () => {
-      const loadedTemplate = templateId ? await fetchTemplateById(templateId) : await fetchActiveTemplate();
-      setTemplate(loadedTemplate);
+      if (templateId) {
+        // Önce localStorage'dan dene (listLabelTemplates ile kaydedilmiş olabilir)
+        const localTemplate = loadLabelTemplate(templateId);
+        if (localTemplate) {
+          setTemplate(localTemplate);
+          return;
+        }
+      }
+      // localStorage'da yoksa server'dan aktif şablonu al
+      const loaded = await fetchActiveTemplate();
+      setTemplate(loaded);
     };
     loadTemplate();
   }, [templateId]);
