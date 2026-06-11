@@ -8,11 +8,31 @@ import {
   getFieldValue,
   getResolvedLabelMetrics,
   getVisibleFieldIds,
-  normalizeLabelText
+  normalizeLabelText,
+  resolveColorHex,
+  extractColorName
 } from '../utils/labelTemplate';
 
 const PX_PER_MM = 96 / 25.4;
 const PX_PER_PT = 96 / 72;
+
+const ColorSwatch = ({ hex, size = 14 }) => {
+  if (!hex) return null;
+  return (
+    <span
+      className="inline-block rounded-sm border border-gray-300"
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        backgroundColor: hex,
+        marginLeft: '4px',
+        verticalAlign: 'middle',
+        display: 'inline-block'
+      }}
+      title="Renk örneği"
+    />
+  );
+};
 
 const LabelPreviewCard = ({ record, template: templateInput, lang = 'tr', className = '' }) => {
   const template = getResolvedLabelMetrics(templateInput);
@@ -164,14 +184,18 @@ const LabelPreviewCard = ({ record, template: templateInput, lang = 'tr', classN
               >
                 {visibleFieldIds.map((fieldId) => {
                   const field = getFieldDefinition(fieldId);
+                  const isRenkField = fieldId === 'renk';
+                  const colorHex = isRenkField ? resolveColorHex(record) : null;
+                  const displayValue = isRenkField && record?.renk ? normalizeLabelText(extractColorName(record.renk)) : normalizeLabelText(getFieldValue(record, fieldId));
                   return (
                     <React.Fragment key={fieldId}>
                       <div className={`app-label-preview-key ${field.compact ? 'is-compact' : ''}`}>{normalizeLabelText(getFieldLabel(fieldId, lang))}:</div>
                       <div
-                        className={`app-label-preview-value ${field.compact ? 'is-compact' : ''}`}
+                        className={`app-label-preview-value ${field.compact ? 'is-compact' : ''} ${isRenkField ? 'relative' : ''}`}
                         style={field.compact ? { fontSize: `${compactFontPx}px` } : undefined}
                       >
-                        {normalizeLabelText(getFieldValue(record, fieldId))}
+                        {displayValue}
+                        {isRenkField && colorHex ? <ColorSwatch hex={colorHex} size={12} /> : null}
                       </div>
                     </React.Fragment>
                   );

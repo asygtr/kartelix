@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import PageSearchBar from '../components/PageSearchBar';
+import { extractColorName, resolveColorHex } from '../utils/labelTemplate';
 
 const emptyYarn = { iplik_tanim_id: '', iplik_adi: '', oran_yuzde: '', birim_fiyat: '' };
 const emptyProcess = { proses_tanim_id: '', proses_adi: '', proses_tipi: '', birim_maliyet: '', renk_bazli: false, aciklama: '' };
@@ -41,7 +42,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
   const [selectedMamulId, setSelectedMamulId] = useState(null);
   const [selectedMamulDetail, setSelectedMamulDetail] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [, setShowEditor] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
   const [form, setForm] = useState(createEmptyForm);
 
   const fetchInitial = async () => {
@@ -279,9 +280,9 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
           emptyResultsText="Bu aramaya uygun mamül bulunamadı."
         />
 
-        <div className="space-y-6">
-          {false ? (
-          <form onSubmit={submitForm} className="app-collapse-panel space-y-6">
+<div className="space-y-6">
+            {showEditor ? (
+           <form onSubmit={submitForm} className="app-collapse-panel space-y-6">
             <section className="app-panel p-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
@@ -430,7 +431,39 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
             <section className="app-panel p-6">
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Mamül detayı</h2>
-                <button type="button" onClick={() => setSelectedMamulDetail(null)} className="app-btn-secondary">Listeye geri dön</button>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => {
+                    setSelectedMamulId(selectedMamulDetail.id);
+                    setForm({
+                      ...createEmptyForm(),
+                      ...selectedMamulDetail,
+                      mamulTuruId: selectedMamulDetail.mamul_turu_id,
+                      renkId: selectedMamulDetail.renk_id || '',
+                      birKgSatisFiyati: selectedMamulDetail.bir_kg_satis_fiyati || '',
+                      gorselUrl: selectedMamulDetail.gorsel_url || '',
+                      tanitimBasligi: selectedMamulDetail.tanitim_basligi || '',
+                      tanitimHikayesi: selectedMamulDetail.tanitim_hikayesi || '',
+                      materyalNotlari: selectedMamulDetail.materyal_notlari || '',
+                      vurguEtiketi: selectedMamulDetail.vurgu_etiketi || '',
+                      iplikler: selectedMamulDetail.iplikler?.length ? selectedMamulDetail.iplikler.map(i => ({
+                        iplik_tanim_id: i.iplik_tanim_id || '',
+                        iplik_adi: i.iplik_adi || '',
+                        oran_yuzde: i.oran_yuzde || '',
+                        birim_fiyat: i.birim_fiyat || ''
+                      })) : [{ ...emptyYarn }],
+                      prosesler: selectedMamulDetail.prosesler?.length ? selectedMamulDetail.prosesler.map(p => ({
+                        proses_tanim_id: p.proses_tanim_id || '',
+                        proses_adi: p.proses_adi || '',
+                        proses_tipi: p.proses_tipi || '',
+                        birim_maliyet: p.birim_maliyet || '',
+                        renk_bazli: !!p.renk_bazli,
+                        aciklama: p.aciklama || ''
+                      })) : [{ ...emptyProcess }]
+                    });
+                    setShowEditor(true);
+                  }} className="app-btn-secondary">Düzenle</button>
+                  <button type="button" onClick={() => setSelectedMamulDetail(null)} className="app-btn-secondary">Listeye geri dön</button>
+                </div>
               </div>
 
               {!selectedMamulDetail ? (
@@ -443,9 +476,9 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                     <div className="mt-2 text-sm text-[color:var(--app-text-muted)]">{selectedMamulDetail.article_code} / {selectedMamulDetail.article_no}</div>
                   </div>
 
-                  <div className="app-data-table">
-                    <div className="app-data-row"><div className="app-data-key">Renk</div><div className="app-data-value">{selectedMamulDetail.renk || '-'}</div></div>
-                    <div className="app-data-row"><div className="app-data-key">Koleksiyon</div><div className="app-data-value">{selectedMamulDetail.koleksiyon_adi || '-'}</div></div>
+<div className="app-data-table">
+                     <div className="app-data-row"><div className="app-data-key">Renk</div><div className="app-data-value">{extractColorName(selectedMamulDetail.renk) || '-'}<span style={resolveColorHex(selectedMamulDetail) ? { display: 'inline-block', width: '12px', height: '12px', backgroundColor: resolveColorHex(selectedMamulDetail), border: '1px solid #999', borderRadius: '2px', marginLeft: '6px', verticalAlign: 'middle' } : {}} /></div></div>
+                     <div className="app-data-row"><div className="app-data-key">Koleksiyon</div><div className="app-data-value">{selectedMamulDetail.koleksiyon_adi || '-'}</div></div>
                     <div className="app-data-row"><div className="app-data-key">Kompozisyon</div><div className="app-data-value">{selectedMamulDetail.kompozisyon_ozeti || '-'}</div></div>
                     <div className="app-data-row"><div className="app-data-key">Ölçü</div><div className="app-data-value">{selectedMamulDetail.en || '-'} EN / {selectedMamulDetail.gramaj || '-'} GR</div></div>
                     <div className="app-data-row"><div className="app-data-key">1 kg maliyet</div><div className="app-data-value">{Number(selectedMamulDetail.bir_kg_maliyet || 0).toFixed(2)}</div></div>
@@ -499,7 +532,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
 <div key={item.id} className="app-table-row app-mamul-table hidden md:grid">
                     <div className="font-semibold text-[color:var(--app-text)]">{item.mamul_adi}</div>
                     <div className="text-sm text-[color:var(--app-text-muted)]">{item.article_code} / {item.article_no}</div>
-                    <div className="text-sm text-[color:var(--app-text-muted)]">{item.mamul_turu_adi}{item.renk ? ` · ${item.renk}` : ''}</div>
+                    <div className="text-sm text-[color:var(--app-text-muted)]">{item.mamul_turu_adi}{extractColorName(item.renk) ? ` · ${extractColorName(item.renk)}` : ''}<span style={resolveColorHex(item) ? { display: 'inline-block', width: '10px', height: '10px', backgroundColor: resolveColorHex(item), border: '1px solid #999', borderRadius: '2px', marginLeft: '4px', verticalAlign: 'middle' } : {}} /></div>
                     <div className="text-sm font-semibold text-[color:var(--app-success)]">{Number(item.bir_kg_satis_fiyati || 0).toFixed(2)}</div>
                     <div className="app-mamul-actions-pc">
                       <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary btn-sm">Detay</button>
@@ -524,8 +557,8 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                         <div className="text-sm">{item.mamul_turu_adi}</div>
                       </div>
                       <div>
-                        <div className="app-mamul-secondary-label">Renk</div>
-                        <div className="text-sm">{item.renk || '-'}</div>
+<div className="app-mamul-secondary-label">Renk</div>
+                         <div className="text-sm">{item.renk || '-'}<span style={resolveColorHex(item) ? { display: 'inline-block', width: '10px', height: '10px', backgroundColor: resolveColorHex(item), border: '1px solid #999', borderRadius: '2px', marginLeft: '4px', verticalAlign: 'middle' } : {}} /></div>
                       </div>
                     </div>
 <div className="app-mamul-actions flex gap-2">

@@ -91,6 +91,58 @@ export const normalizeLabelText = (value) =>
     .replace(/Ş/g, 'S')
     .replace(/Ö/g, 'O');
 
+export const extractColorName = (value) => {
+  if (!value) return '';
+  const str = String(value).trim();
+  const parts = str.split(/\s+/);
+  const codePart = parts.find(p => /^\d+[A-Z]*$/i.test(p) || /^[A-Z]{2}\d+$/i.test(p));
+  if (codePart && parts.length > 1) {
+    return parts.filter(p => p !== codePart).join(' ');
+  }
+  return str;
+};
+
+const colorNameToHex = (colorName) => {
+  if (!colorName) return null;
+  const extractedName = extractColorName(colorName);
+  const normalized = extractedName.toLowerCase();
+  
+  const colorMap = {
+    'red': '#ef4444', 'kırmızı': '#ef4444', 'kirmizi': '#ef4444',
+    'blue': '#3b82f6', 'mavi': '#3b82f6',
+    'navy': '#1e3a8a', 'lacivert': '#1e3a8a', 'navy blue': '#1e3a8a',
+    'green': '#22c55e', 'yeşil': '#22c55e', 'yesil': '#22c55e',
+    'brown': '#a3a3a3', 'kahverengi': '#a3a3a3', 'bege': '#d6d3d1', 'beige': '#d6d3d1',
+    'black': '#000000', 'siyah': '#000000',
+    'white': '#ffffff', 'beyaz': '#ffffff',
+    'gray': '#6b7280', 'grey': '#6b7280', 'gri': '#6b7280',
+    'yellow': '#eab308', 'sarı': '#eab308', 'sari': '#eab308',
+    'orange': '#f97316', 'turuncu': '#f97316',
+    'purple': '#a855f7', 'mor': '#a855f7', 'violet': '#8b5cf6',
+    'pink': '#ec4899', 'pembe': '#ec4899',
+    'indigo': '#6366f1', 'ındigo': '#6366f1',
+    'teal': '#14b8a6', 'turkuaz': '#14b8a6',
+    'cyan': '#06b6d4',
+    'lime': '#84cc16',
+    'amber': '#f59e0b',
+    'rose': '#f43f5e',
+    'emerald': '#10b981'
+  };
+  
+  return colorMap[normalized] || null;
+};
+
+export const resolveColorHex = (record) => {
+  const renkKodu = record?.renk_kodu || record?.renk || '';
+  if (!renkKodu) return null;
+  
+  if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(renkKodu)) {
+    return renkKodu;
+  }
+  
+  return colorNameToHex(renkKodu);
+};
+
 export const getFieldDefinition = (fieldId) =>
   labelFieldCatalog.find((field) => field.id === fieldId) || labelFieldCatalog[0];
 
@@ -105,16 +157,17 @@ export const getFieldValue = (record, fieldId) => {
 };
 
 export const mergeLabelTemplate = (incomingTemplate = {}) => {
-  const nextOrder = Array.isArray(incomingTemplate.fieldOrder)
-    ? incomingTemplate.fieldOrder.filter((fieldId) => labelFieldCatalog.some((field) => field.id === fieldId))
+  const templateInput = incomingTemplate && typeof incomingTemplate === 'object' ? incomingTemplate : {};
+  const nextOrder = Array.isArray(templateInput.fieldOrder)
+    ? templateInput.fieldOrder.filter((fieldId) => labelFieldCatalog.some((field) => field.id === fieldId))
     : defaultLabelTemplate.fieldOrder;
 
   const remainingFields = labelFieldCatalog
     .map((field) => field.id)
     .filter((fieldId) => !nextOrder.includes(fieldId));
 
-  const nextCareIcons = Array.isArray(incomingTemplate.careIcons)
-    ? incomingTemplate.careIcons.slice(0, 8).map((icon, index) => ({
+  const nextCareIcons = Array.isArray(templateInput.careIcons)
+    ? templateInput.careIcons.slice(0, 8).map((icon, index) => ({
         id: icon.id || `care-${index}`,
         label: String(icon.label || ''),
         title: String(icon.title || ''),
@@ -124,38 +177,38 @@ export const mergeLabelTemplate = (incomingTemplate = {}) => {
 
   return {
     ...defaultLabelTemplate,
-    ...incomingTemplate,
-    widthMm: coerceNumber(incomingTemplate.widthMm, defaultLabelTemplate.widthMm),
-    heightMm: coerceNumber(incomingTemplate.heightMm, defaultLabelTemplate.heightMm),
-    innerWidthMm: coerceNumber(incomingTemplate.innerWidthMm, defaultLabelTemplate.innerWidthMm),
-    innerHeightMm: coerceNumber(incomingTemplate.innerHeightMm, defaultLabelTemplate.innerHeightMm),
-    paddingMm: coerceNumber(incomingTemplate.paddingMm, defaultLabelTemplate.paddingMm),
-    pageMarginTopMm: coerceNumber(incomingTemplate.pageMarginTopMm, incomingTemplate.paddingMm ?? defaultLabelTemplate.pageMarginTopMm),
-    pageMarginRightMm: coerceNumber(incomingTemplate.pageMarginRightMm, incomingTemplate.paddingMm ?? defaultLabelTemplate.pageMarginRightMm),
-    pageMarginBottomMm: coerceNumber(incomingTemplate.pageMarginBottomMm, incomingTemplate.paddingMm ?? defaultLabelTemplate.pageMarginBottomMm),
-    pageMarginLeftMm: coerceNumber(incomingTemplate.pageMarginLeftMm, incomingTemplate.paddingMm ?? defaultLabelTemplate.pageMarginLeftMm),
-    railWidthMm: coerceNumber(incomingTemplate.railWidthMm, defaultLabelTemplate.railWidthMm),
-    qrColumnWidthMm: coerceNumber(incomingTemplate.qrColumnWidthMm, defaultLabelTemplate.qrColumnWidthMm),
-    qrSizeMm: coerceNumber(incomingTemplate.qrSizeMm, defaultLabelTemplate.qrSizeMm),
-    qrOffsetTopMm: coerceNumberAllowZero(incomingTemplate.qrOffsetTopMm, defaultLabelTemplate.qrOffsetTopMm),
-    labelColumnMm: coerceNumber(incomingTemplate.labelColumnMm, defaultLabelTemplate.labelColumnMm),
-    rowGapMm: coerceNumber(incomingTemplate.rowGapMm, defaultLabelTemplate.rowGapMm),
-    columnGapMm: coerceNumber(incomingTemplate.columnGapMm, defaultLabelTemplate.columnGapMm),
-    contentGapMm: coerceNumber(incomingTemplate.contentGapMm, defaultLabelTemplate.contentGapMm),
-    careGapMm: coerceNumber(incomingTemplate.careGapMm, defaultLabelTemplate.careGapMm),
-    careTopGapMm: coerceNumber(incomingTemplate.careTopGapMm, defaultLabelTemplate.careTopGapMm),
-    borderRadiusMm: coerceNumber(incomingTemplate.borderRadiusMm, defaultLabelTemplate.borderRadiusMm),
-    borderWidthMm: coerceNumber(incomingTemplate.borderWidthMm, defaultLabelTemplate.borderWidthMm),
-    cornerSizeMm: coerceNumber(incomingTemplate.cornerSizeMm, defaultLabelTemplate.cornerSizeMm),
-    bodyFontPt: coerceNumber(incomingTemplate.bodyFontPt, defaultLabelTemplate.bodyFontPt),
-    compactFontPt: coerceNumber(incomingTemplate.compactFontPt, defaultLabelTemplate.compactFontPt),
-    bodyLineHeight: coerceNumber(incomingTemplate.bodyLineHeight, defaultLabelTemplate.bodyLineHeight),
-    brandLetterSpacing: coerceNumber(incomingTemplate.brandLetterSpacing, defaultLabelTemplate.brandLetterSpacing),
-    brandPosition: ['left', 'right', 'top', 'bottom'].includes(incomingTemplate.brandPosition) ? incomingTemplate.brandPosition : defaultLabelTemplate.brandPosition,
-    qrVerticalAlign: ['top', 'center', 'bottom'].includes(incomingTemplate.qrVerticalAlign) ? incomingTemplate.qrVerticalAlign : defaultLabelTemplate.qrVerticalAlign,
-    frameStyle: ['solid', 'double', 'dashed', 'corners'].includes(incomingTemplate.frameStyle) ? incomingTemplate.frameStyle : defaultLabelTemplate.frameStyle,
+    ...templateInput,
+    widthMm: coerceNumber(templateInput.widthMm, defaultLabelTemplate.widthMm),
+    heightMm: coerceNumber(templateInput.heightMm, defaultLabelTemplate.heightMm),
+    innerWidthMm: coerceNumber(templateInput.innerWidthMm, defaultLabelTemplate.innerWidthMm),
+    innerHeightMm: coerceNumber(templateInput.innerHeightMm, defaultLabelTemplate.innerHeightMm),
+    paddingMm: coerceNumber(templateInput.paddingMm, defaultLabelTemplate.paddingMm),
+    pageMarginTopMm: coerceNumber(templateInput.pageMarginTopMm, templateInput.paddingMm ?? defaultLabelTemplate.pageMarginTopMm),
+    pageMarginRightMm: coerceNumber(templateInput.pageMarginRightMm, templateInput.paddingMm ?? defaultLabelTemplate.pageMarginRightMm),
+    pageMarginBottomMm: coerceNumber(templateInput.pageMarginBottomMm, templateInput.paddingMm ?? defaultLabelTemplate.pageMarginBottomMm),
+    pageMarginLeftMm: coerceNumber(templateInput.pageMarginLeftMm, templateInput.paddingMm ?? defaultLabelTemplate.pageMarginLeftMm),
+    railWidthMm: coerceNumber(templateInput.railWidthMm, defaultLabelTemplate.railWidthMm),
+    qrColumnWidthMm: coerceNumber(templateInput.qrColumnWidthMm, defaultLabelTemplate.qrColumnWidthMm),
+    qrSizeMm: coerceNumber(templateInput.qrSizeMm, defaultLabelTemplate.qrSizeMm),
+    qrOffsetTopMm: coerceNumberAllowZero(templateInput.qrOffsetTopMm, defaultLabelTemplate.qrOffsetTopMm),
+    labelColumnMm: coerceNumber(templateInput.labelColumnMm, defaultLabelTemplate.labelColumnMm),
+    rowGapMm: coerceNumber(templateInput.rowGapMm, defaultLabelTemplate.rowGapMm),
+    columnGapMm: coerceNumber(templateInput.columnGapMm, defaultLabelTemplate.columnGapMm),
+    contentGapMm: coerceNumber(templateInput.contentGapMm, defaultLabelTemplate.contentGapMm),
+    careGapMm: coerceNumber(templateInput.careGapMm, defaultLabelTemplate.careGapMm),
+    careTopGapMm: coerceNumber(templateInput.careTopGapMm, defaultLabelTemplate.careTopGapMm),
+    borderRadiusMm: coerceNumber(templateInput.borderRadiusMm, defaultLabelTemplate.borderRadiusMm),
+    borderWidthMm: coerceNumber(templateInput.borderWidthMm, defaultLabelTemplate.borderWidthMm),
+    cornerSizeMm: coerceNumber(templateInput.cornerSizeMm, defaultLabelTemplate.cornerSizeMm),
+    bodyFontPt: coerceNumber(templateInput.bodyFontPt, defaultLabelTemplate.bodyFontPt),
+    compactFontPt: coerceNumber(templateInput.compactFontPt, defaultLabelTemplate.compactFontPt),
+    bodyLineHeight: coerceNumber(templateInput.bodyLineHeight, defaultLabelTemplate.bodyLineHeight),
+    brandLetterSpacing: coerceNumber(templateInput.brandLetterSpacing, defaultLabelTemplate.brandLetterSpacing),
+    brandPosition: ['left', 'right', 'top', 'bottom'].includes(templateInput.brandPosition) ? templateInput.brandPosition : defaultLabelTemplate.brandPosition,
+    qrVerticalAlign: ['top', 'center', 'bottom'].includes(templateInput.qrVerticalAlign) ? templateInput.qrVerticalAlign : defaultLabelTemplate.qrVerticalAlign,
+    frameStyle: ['solid', 'double', 'dashed', 'corners'].includes(templateInput.frameStyle) ? templateInput.frameStyle : defaultLabelTemplate.frameStyle,
     fieldOrder: [...nextOrder, ...remainingFields],
-    hiddenFields: Array.isArray(incomingTemplate.hiddenFields) ? incomingTemplate.hiddenFields : [],
+    hiddenFields: Array.isArray(templateInput.hiddenFields) ? templateInput.hiddenFields : [],
     careIcons: nextCareIcons
   };
 };
@@ -421,10 +474,13 @@ export const buildLabelPrintMarkup = (record, templateInput, lang = 'tr') => {
     const value = normalizeLabelText(getFieldValue(record, fieldId));
     const valueClass = definition.compact ? 'composition-value' : 'value';
     const labelClass = definition.compact ? 'label composition-label' : 'label';
+    const colorSwatch = fieldId === 'renk' && resolveColorHex(record)
+      ? `<span class="color-swatch" style="display:inline-block;width:4mm;height:4mm;background:${resolveColorHex(record)};border:0.3mm solid ${template.borderColor};border-radius:${template.borderRadiusMm}mm;margin-left:1mm;vertical-align:middle;"></span>`
+      : '';
 
     return `
       <div class="${labelClass}">${normalizeLabelText(getFieldLabel(fieldId, lang))}:</div>
-      <div class="${valueClass}">${value}</div>
+      <div class="${valueClass}">${value}${colorSwatch}</div>
     `;
   }).join('');
 

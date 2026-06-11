@@ -783,7 +783,7 @@ const importUrgeWorkbook = async (db, configuredFile, workbook, sheetName) => {
     const yarnDescription = compactText(cellValue(sheet, `M${rowNumber}`));
     const hamMaliyet = cellNumber(sheet, `AJ${rowNumber}`, 0);
     const prosesMaliyeti = cellNumber(sheet, `AN${rowNumber}`, 0);
-    const mamulMaliyeti = cellNumber(sheet, `AM${rowNumber}`, 0);
+    const mamulMaliyeti = cellNumber(sheet, `AM${rowNumber}`, 0) || (hamMaliyet + prosesMaliyeti);
     const fasonOrgu = cellNumber(sheet, `AI${rowNumber}`, 0);
     const qrSlug = slugify(`${articleNo}-${product}-${color}`);
     const yarns = parseUrgeYarns(sheet, rowNumber);

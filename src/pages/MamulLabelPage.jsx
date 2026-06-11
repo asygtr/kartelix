@@ -93,10 +93,10 @@ const MamulLabelPage = () => {
 
         {hasSearchContext ? (
           <section className="app-panel p-6 app-reveal-up app-reveal-delay-2">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Kayıtlı mamül etiketleri</h2>
-              <div className="flex items-center gap-3">
-                <select className="app-select max-w-[220px]" value={selectedTemplateId} onChange={(event) => setSelectedTemplateId(event.target.value)}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-[color:var(--app-text)]">Kayıtlı mamül etiketleri</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <select className="app-select w-full sm:w-auto" value={selectedTemplateId} onChange={(event) => setSelectedTemplateId(event.target.value)}>
                   {templates.map((item) => (
                     <option key={item.id} value={item.id}>{item.name}</option>
                   ))}
@@ -106,19 +106,19 @@ const MamulLabelPage = () => {
                     Toplu yazdir ({selectedIds.length})
                   </button>
                 ) : null}
-                {loading ? <span className="text-sm text-[color:var(--app-text-muted)]">Yükleniyor...</span> : null}
+                {loading ? <span className="text-xs text-[color:var(--app-text-muted)]">Yükleniyor...</span> : null}
               </div>
             </div>
 
             {!loading && records.length === 0 ? (
-              <div className="mt-5 app-soft-panel px-4 py-8 text-sm text-[color:var(--app-text-muted)]">
+              <div className="mt-4 app-soft-panel px-3 py-5 text-xs text-[color:var(--app-text-muted)]">
                 Filtreye uygun etiket bulunamadı.
               </div>
             ) : null}
 
             {records.length > 0 ? (
-              <div className="mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-white">
-                <div className="grid grid-cols-[56px_120px_minmax(220px,1.4fr)_140px_120px_120px_120px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+              <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                <div className="hidden md:grid grid-cols-[56px_110px_minmax(200px,1.4fr)_120px_100px_90px_80px] gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2.5 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-slate-500">
                   <div>Seç</div>
                   <div>Article</div>
                   <div>Mamül</div>
@@ -128,11 +128,11 @@ const MamulLabelPage = () => {
                   <div>Gramaj</div>
                 </div>
 
-                <div className="max-h-[68vh] overflow-y-auto">
+                <div className="max-h-[58vh] overflow-y-auto md:max-h-[62vh]">
                   {records.map((item) => (
                     <div
                       key={item.id}
-                      className="grid cursor-pointer grid-cols-[56px_120px_minmax(220px,1.4fr)_140px_120px_120px_120px] gap-3 border-b border-slate-100 px-4 py-3 text-sm text-slate-700 transition hover:bg-emerald-50"
+                      className="hidden md:grid cursor-pointer grid-cols-[56px_110px_minmax(200px,1.4fr)_120px_100px_90px_80px] gap-2 border-b border-slate-100 px-3 py-2.5 text-sm text-slate-700 transition hover:bg-emerald-50"
                       onClick={() => setSelectedRecord(item)}
                     >
                       <div className="flex items-center" onClick={(event) => event.stopPropagation()}>
@@ -153,6 +153,36 @@ const MamulLabelPage = () => {
                       <div className="flex items-center">{item.gramaj || '-'}</div>
                     </div>
                   ))}
+                  {records.map((item) => (
+                    <div
+                      key={`mobile-${item.id}`}
+                      className="md:hidden border-b border-slate-100 px-3 py-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1 cursor-pointer" onClick={() => setSelectedRecord(item)}>
+                          <div className="truncate text-sm font-semibold text-slate-900">{item.mamul_adi}</div>
+                          <div className="mt-0.5 text-xs text-slate-500">{item.article_code} / {item.article_no}</div>
+                          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500">
+                            <span>{item.mamul_turu_adi || '-'}</span>
+                            <span>{item.renk || '-'}</span>
+                            <span>{item.en || '-'} EN</span>
+                            <span>{item.gramaj || '-'} GR</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center" onClick={(event) => event.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(item.id)}
+                            onChange={() => toggleSelected(item.id)}
+                            className="h-4 w-4"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {records.length === 0 ? (
+                    <div className="app-soft-panel m-3 px-4 py-5 text-xs text-[color:var(--app-text-muted)]">Henüz etiket bulunamadı.</div>
+                  ) : null}
                 </div>
               </div>
             ) : null}

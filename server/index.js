@@ -432,437 +432,9 @@ db.run(`CREATE TABLE IF NOT EXISTS ui_ayarlari (
     db.run(
       `INSERT OR IGNORE INTO ui_ayarlari (anahtar, deger) VALUES (?, ?)`,
       ['app_background', '/showroom-bg.png']
-    );
+);
 
-    db.run(
-      `INSERT OR IGNORE INTO ui_ayarlari (anahtar, deger) VALUES (?, ?)`,
-      ['excel_poll_ms', '60000']
-    );
-
-    const demoMamuller = [
-        {
-          turAdi: '2 İplik',
-          mamul_adi: 'Deneme 2 Iplik',
-          article_no: '54321',
-          article_code: '20-54321',
-          koleksiyon_adi: 'Urban Core',
-          yayin_durumu: 'yayinda',
-          renk: 'Antrasit',
-          renk_kodu: 'ANT-01',
-          kompozisyon_ozeti: '%33 Pamuk / %7 Polyester / %60 Viskon',
-          en: '180',
-          gramaj: '240',
-          aciklama: 'Fuar ve showroom sunumu icin yumusak tuseli 2 iplik demo mamul.',
-          bir_kg_maliyet: 8.92,
-          bir_kg_satis_fiyati: 12.75,
-          qr_slug: '20-54321-deneme-2-iplik-antrasit',
-          aktif: 1,
-          tanitim_basligi: 'Yumusak tutumlu iki iplik demo serisi',
-          tanitim_hikayesi: 'Urban Core koleksiyonu icin gelistirilen bu yuzey, yumusak tusesi ve dengeli gramaji ile gunluk premium giyim gruplarina hitap eder.',
-          materyal_notlari: 'Ic yuzeyde konfor, dis yuzeyde tok bir durus hedeflenmistir.',
-          gorsel_url: '',
-          vurgu_etiketi: 'Yeni Sezon',
-          iplikler: [
-            { iplik_adi: 'Pamuk 30/1', oran_yuzde: 33, birim_fiyat: 5.5 },
-            { iplik_adi: 'Polyester', oran_yuzde: 7, birim_fiyat: 4.25 },
-            { iplik_adi: 'Viskon', oran_yuzde: 60, birim_fiyat: 6.1 }
-          ],
-          prosesler: [
-            { proses_adi: 'Boyama', proses_tipi: 'Renk', renk_bazli: 1, birim_maliyet: 1.4, aciklama: 'Antrasit boya prosesi' },
-            { proses_adi: 'Sanfor', proses_tipi: 'Finisaj', renk_bazli: 0, birim_maliyet: 0.8, aciklama: 'Cekme kontrolu' }
-          ]
-        },
-        {
-          turAdi: 'Suprem',
-          mamul_adi: 'Soft Suprem Indigo',
-          article_no: '10124',
-          article_code: '10-10124',
-          koleksiyon_adi: 'Daily Ease',
-          yayin_durumu: 'yayinda',
-          renk: 'Indigo',
-          renk_kodu: 'IND-07',
-          kompozisyon_ozeti: '%95 Organik Pamuk / %5 Elastan',
-          en: '175',
-          gramaj: '190',
-          aciklama: 'Gunluk giyim icin esnek ve nefes alan suprem demo mamul.',
-          bir_kg_maliyet: 9.35,
-          bir_kg_satis_fiyati: 14.4,
-          qr_slug: '10-10124-soft-suprem-indigo',
-          aktif: 1,
-          tanitim_basligi: 'Esnek ve rafine suprem yapisi',
-          tanitim_hikayesi: 'Daily Ease kapsulu icin hazirlanan bu mamul, elastan katkisi ile hareket ozgurlugu saglarken organik pamuk yapisiyla dogal bir yuzey verir.',
-          materyal_notlari: 'Hafif gramajli, yakin ten temasinda konfor odakli.',
-          gorsel_url: '',
-          vurgu_etiketi: 'Core',
-          iplikler: [
-            { iplik_adi: 'Organik Pamuk 24/1', oran_yuzde: 95, birim_fiyat: 6.85 },
-            { iplik_adi: 'Elastan', oran_yuzde: 5, birim_fiyat: 8.2 }
-          ],
-          prosesler: [
-            { proses_adi: 'Boyama', proses_tipi: 'Renk', renk_bazli: 1, birim_maliyet: 1.4, aciklama: 'Indigo renk uygulamasi' },
-            { proses_adi: 'Soft Touch', proses_tipi: 'Apre', renk_bazli: 0, birim_maliyet: 0.55, aciklama: 'Yumusak tutum bitisi' }
-          ]
-        },
-        {
-          turAdi: '3 İplik',
-          mamul_adi: 'Compact 3 Iplik Tas',
-          article_no: '30018',
-          article_code: '30-30018',
-          koleksiyon_adi: 'Studio Layer',
-          yayin_durumu: 'taslak',
-          renk: 'Tas',
-          renk_kodu: 'TAS-12',
-          kompozisyon_ozeti: '%70 Pamuk / %30 Polyester',
-          en: '185',
-          gramaj: '310',
-          aciklama: 'Tok duruslu, ust giyim ve dis katman urunleri icin 3 iplik demo mamul.',
-          bir_kg_maliyet: 10.65,
-          bir_kg_satis_fiyati: 16.9,
-          qr_slug: '30-30018-compact-3-iplik-tas',
-          aktif: 1,
-          tanitim_basligi: 'Tok duruslu compact 3 iplik',
-          tanitim_hikayesi: 'Studio Layer grubu icin gelistirilen bu yapida compact ve enzim yikama kombinasyonu ile daha rafine bir yuzey elde edilir.',
-          materyal_notlari: 'Daha tok, daha net siluet isteyen ust grup icin konumlanir.',
-          gorsel_url: '',
-          vurgu_etiketi: 'Preview',
-          iplikler: [
-            { iplik_adi: 'Pamuk 30/1', oran_yuzde: 70, birim_fiyat: 5.5 },
-            { iplik_adi: 'Polyester', oran_yuzde: 30, birim_fiyat: 4.25 }
-          ],
-          prosesler: [
-            { proses_adi: 'Compact', proses_tipi: 'Finisaj', renk_bazli: 0, birim_maliyet: 0.65, aciklama: 'Yuzey toparlama' },
-            { proses_adi: 'Enzim Yikama', proses_tipi: 'Yikama', renk_bazli: 0, birim_maliyet: 1.1, aciklama: 'Tuse yumusatma' }
-          ]
-        }
-      ];
-
-    const demoFirmalar = [
-      { ad: 'Nova Knit Studio', telefon: '+90 212 555 10 10', adres: 'Merter / Istanbul' },
-      { ad: 'Luma Retail Group', telefon: '+90 216 555 22 22', adres: 'Kadikoy / Istanbul' },
-      { ad: 'Northline Apparel', telefon: '+90 232 555 33 33', adres: 'Bornova / Izmir' }
-    ];
-
-    const demoSiparisler = [
-      {
-        musteriAdi: 'Selin Akar',
-        firmaAdi: 'Nova Knit Studio',
-        ilgiliKisi: 'Selin Akar',
-        telefon: '+90 532 111 22 33',
-        email: 'selin@novaknit.example',
-        fuarAdi: 'Premiere Vision',
-        aciklama: 'Demo siparis: ikili sunum toplantisi sonrasi numune teyidi beklenecek.',
-        durum: 'kaydedildi',
-        personelUsername: 'satici',
-        paraBirimi: 'TRY',
-        items: [
-          { articleCode: '20-54321', miktarKg: 85 },
-          { articleCode: '10-10124', miktarKg: 42 }
-        ]
-      },
-      {
-        musteriAdi: 'Murat Yalin',
-        firmaAdi: 'Luma Retail Group',
-        ilgiliKisi: 'Murat Yalin',
-        telefon: '+90 533 444 55 66',
-        email: 'murat@lumaretail.example',
-        fuarAdi: 'Showroom ziyareti',
-        aciklama: 'Demo siparis: tas ve compact grup icin ikinci gorusme planlandi.',
-        durum: 'isleme_alindi',
-        personelUsername: 'yonetici',
-        paraBirimi: 'TRY',
-        items: [
-          { articleCode: '30-30018', miktarKg: 120 },
-          { articleCode: '20-54321', miktarKg: 30 }
-        ]
-      },
-      {
-        musteriAdi: 'Deniz Koc',
-        firmaAdi: 'Northline Apparel',
-        ilgiliKisi: 'Deniz Koc',
-        telefon: '+90 542 777 88 99',
-        email: 'deniz@northline.example',
-        fuarAdi: 'WhatsApp talebi',
-        aciklama: 'Demo siparis: renk kartela teyidi sonrasi kapatilacak deneme siparisi.',
-        durum: 'kapatildi',
-        personelUsername: 'satici',
-        paraBirimi: 'TRY',
-        items: [
-          { articleCode: '10-10124', miktarKg: 18 }
-        ]
-      }
-    ];
-
-    let demoSiparisSeedRunning = false;
-
-    const trySeedDemoSiparisler = () => {
-      if (demoSiparisSeedRunning) {
-        return;
-      }
-
-      demoSiparisSeedRunning = true;
-
-      db.get(`SELECT COUNT(*) AS count FROM kartelix_orders`, [], (countErr, row) => {
-        if (countErr) {
-          console.error('Demo sipariş seed kontrol hatası:', countErr);
-          demoSiparisSeedRunning = false;
-          return;
-        }
-
-        if (row?.count > 0) {
-          demoSiparisSeedRunning = false;
-          return;
-        }
-
-        const firmaAdlari = demoFirmalar.map((firma) => firma.ad);
-        const articleCodes = [...new Set(demoSiparisler.flatMap((siparis) => siparis.items.map((item) => item.articleCode)))];
-        const firmaPlaceholders = firmaAdlari.map(() => '?').join(', ');
-        const articlePlaceholders = articleCodes.map(() => '?').join(', ');
-
-        db.all(
-          `SELECT id, ad FROM firmalar WHERE ad IN (${firmaPlaceholders})`,
-          firmaAdlari,
-          (firmaErr, firmaRows) => {
-            if (firmaErr) {
-              console.error('Demo firma kontrol hatasi:', firmaErr);
-              demoSiparisSeedRunning = false;
-              return;
-            }
-
-            if (firmaRows.length < demoFirmalar.length) {
-              demoSiparisSeedRunning = false;
-              return;
-            }
-
-            db.all(
-              `SELECT id, mamul_adi, article_no, article_code, renk, bir_kg_satis_fiyati
-               FROM mamul_kartlari
-               WHERE article_code IN (${articlePlaceholders})`,
-              articleCodes,
-              (mamulErr, mamulRows) => {
-                if (mamulErr) {
-                  console.error('Demo siparis mamul kontrol hatasi:', mamulErr);
-                  demoSiparisSeedRunning = false;
-                  return;
-                }
-
-                if (mamulRows.length < articleCodes.length) {
-                  demoSiparisSeedRunning = false;
-                  return;
-                }
-
-                const mamulMap = new Map(mamulRows.map((row) => [row.article_code, row]));
-                let kalanSiparis = demoSiparisler.length;
-
-                const finishSeed = () => {
-                  kalanSiparis -= 1;
-                  if (kalanSiparis <= 0) {
-                    demoSiparisSeedRunning = false;
-                  }
-                };
-
-                demoSiparisler.forEach((siparis) => {
-                  db.get(
-                    `SELECT id FROM kartelix_orders
-                     WHERE musteri_adi = ? AND firma_adi = ? AND fuar_adi = ? AND personel_username = ?`,
-                    [siparis.musteriAdi, siparis.firmaAdi, siparis.fuarAdi, siparis.personelUsername],
-                    (existingErr, existingRow) => {
-                      if (existingErr) {
-                        console.error('Demo siparis kontrol hatasi:', existingErr);
-                        finishSeed();
-                        return;
-                      }
-
-                      if (existingRow) {
-                        finishSeed();
-                        return;
-                      }
-
-                      const enrichedItems = siparis.items
-                        .map((item) => {
-                          const mamul = mamulMap.get(item.articleCode);
-                          if (!mamul) return null;
-                          const miktarKg = Number(item.miktarKg || 0);
-                          const birimFiyat = Number(mamul.bir_kg_satis_fiyati || 0);
-                          return {
-                            mamulId: mamul.id,
-                            mamul_adi: mamul.mamul_adi,
-                            article_no: mamul.article_no,
-                            article_code: mamul.article_code,
-                            renk: mamul.renk || '',
-                            miktar_kg: miktarKg,
-                            birim_fiyat: birimFiyat,
-                            tutar: Number((miktarKg * birimFiyat).toFixed(2))
-                          };
-                        })
-                        .filter(Boolean);
-
-                      if (enrichedItems.length === 0) {
-                        finishSeed();
-                        return;
-                      }
-
-                      const toplamTutar = Number(enrichedItems.reduce((sum, item) => sum + item.tutar, 0).toFixed(2));
-
-                      db.run(
-                        `INSERT INTO kartelix_orders (
-                          musteri_adi, firma_adi, ilgili_kisi, telefon, email, fuar_adi, aciklama,
-                          durum, personel_username, toplam_tutar, para_birimi
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                        [
-                          siparis.musteriAdi,
-                          siparis.firmaAdi,
-                          siparis.ilgiliKisi,
-                          siparis.telefon,
-                          siparis.email,
-                          siparis.fuarAdi,
-                          siparis.aciklama,
-                          siparis.durum,
-                          siparis.personelUsername,
-                          toplamTutar,
-                          siparis.paraBirimi
-                        ],
-                        function(insertErr) {
-                          if (insertErr) {
-                            console.error('Demo siparis ekleme hatasi:', insertErr);
-                            finishSeed();
-                            return;
-                          }
-
-                          const siparisId = this.lastID;
-                          let kalanKalem = enrichedItems.length;
-
-                          enrichedItems.forEach((item) => {
-                            db.run(
-                              `INSERT INTO kartelix_order_items (
-                                siparis_id, mamul_id, mamul_adi, article_no, article_code, renk,
-                                miktar_kg, birim_fiyat, tutar
-                              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                              [
-                                siparisId,
-                                item.mamulId,
-                                item.mamul_adi,
-                                item.article_no,
-                                item.article_code,
-                                item.renk,
-                                item.miktar_kg,
-                                item.birim_fiyat,
-                                item.tutar
-                              ],
-                              (itemErr) => {
-                                if (itemErr) {
-                                  console.error('Demo siparis kalemi ekleme hatasi:', itemErr);
-                                }
-
-                                kalanKalem -= 1;
-                                if (kalanKalem === 0) {
-                                  finishSeed();
-                                }
-                              }
-                            );
-                          });
-                        }
-                      );
-                    }
-                  );
-                });
-              }
-            );
-          }
-        );
-      });
-    };
-
-    demoFirmalar.forEach((firma) => {
-      db.run(
-        `INSERT OR IGNORE INTO firmalar (ad, telefon, adres) VALUES (?, ?, ?)`,
-        [firma.ad, firma.telefon, firma.adres],
-        () => {
-          trySeedDemoSiparisler();
-        }
-      );
-    });
-
-    demoMamuller.forEach((demo) => {
-      db.get(`SELECT id FROM mamul_kartlari WHERE article_code = ?`, [demo.article_code], (existingErr, existingRow) => {
-        if (existingErr) {
-          console.error('Demo mamul kontrol hatasi:', existingErr);
-          return;
-        }
-
-        if (existingRow) {
-          trySeedDemoSiparisler();
-          return;
-        }
-
-        db.get(`SELECT id FROM mamul_turleri WHERE ad = ?`, [demo.turAdi], (turErr, turRow) => {
-          if (turErr || !turRow) {
-            if (turErr) console.error('Demo mamul tur hatasi:', turErr);
-            return;
-          }
-
-          db.run(
-            `INSERT OR IGNORE INTO mamul_kartlari (
-              mamul_adi, mamul_turu_id, article_no, article_code, koleksiyon_adi, yayin_durumu,
-              renk, renk_kodu, kompozisyon_ozeti, en, gramaj, aciklama,
-              bir_kg_maliyet, bir_kg_satis_fiyati, qr_slug, aktif,
-              tanitim_basligi, tanitim_hikayesi, materyal_notlari, gorsel_url, vurgu_etiketi
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              demo.mamul_adi,
-              turRow.id,
-              demo.article_no,
-              demo.article_code,
-              demo.koleksiyon_adi,
-              demo.yayin_durumu,
-              demo.renk,
-              demo.renk_kodu,
-              demo.kompozisyon_ozeti,
-              demo.en,
-              demo.gramaj,
-              demo.aciklama,
-              demo.bir_kg_maliyet,
-              demo.bir_kg_satis_fiyati,
-              demo.qr_slug,
-              demo.aktif,
-              demo.tanitim_basligi,
-              demo.tanitim_hikayesi,
-              demo.materyal_notlari,
-              demo.gorsel_url,
-              demo.vurgu_etiketi
-            ],
-            function (insertErr) {
-              if (insertErr) {
-                console.error('Demo mamul ekleme hatasi:', insertErr);
-                return;
-              }
-
-              const mamulId = this.lastID;
-
-              if (!mamulId) return;
-
-              demo.iplikler.forEach((iplik, index) => {
-                const maliyetTutari = Number((((Number(iplik.oran_yuzde || 0) / 100) * Number(iplik.birim_fiyat || 0))).toFixed(2));
-                db.run(
-                  `INSERT INTO mamul_iplik_detaylari (mamul_id, iplik_adi, oran_yuzde, birim_fiyat, maliyet_tutari, sira_no)
-                   VALUES (?, ?, ?, ?, ?, ?)`,
-                  [mamulId, iplik.iplik_adi, Number(iplik.oran_yuzde || 0), Number(iplik.birim_fiyat || 0), maliyetTutari, index + 1]
-                );
-              });
-
-              demo.prosesler.forEach((proses, index) => {
-                db.run(
-                  `INSERT INTO mamul_proses_detaylari (mamul_id, proses_adi, proses_tipi, renk_bazli, birim_maliyet, aciklama, sira_no)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                  [mamulId, proses.proses_adi, proses.proses_tipi, proses.renk_bazli ? 1 : 0, Number(proses.birim_maliyet || 0), proses.aciklama, index + 1]
-                );
-              });
-
-              trySeedDemoSiparisler();
-            }
-          );
-        });
-      });
-    });
+    // Mock/demo veriler kaldırıldı - sadece Excel'den gelen veriler kullanılacak
 
     ensureColumnExists('siparisler', 'created_at', `DATETIME DEFAULT CURRENT_TIMESTAMP`);
     ensureColumnExists('siparisler', 'firma_adi', `TEXT`);
@@ -2590,61 +2162,79 @@ app.put('/api/admin/mamuller/:id', (req, res, next) => {
     if (findErr) return next(findErr);
     if (!existing) return res.status(404).json({ error: 'Mamül bulunamadı' });
 
-    const qrSlug = slugify(`${existing.article_code}-${mamulAdi}-${renk || ''}`);
-    const calculatedYarnCost = calculateYarnCost(iplikler);
-    const calculatedProcessCost = calculateProcessCost(prosesler);
-    const totalCost = Number((calculatedYarnCost + calculatedProcessCost).toFixed(2));
-    const normalizedIplikler = iplikler.filter((item) => item.iplik_adi);
-    const normalizedProsesler = prosesler.filter((item) => item.proses_adi);
+const qrSlug = slugify(`${existing.article_code}-${mamulAdi}-${renk || ''}`);
+        const calculatedYarnCost = calculateYarnCost(iplikler);
+        const calculatedProcessCost = calculateProcessCost(prosesler);
+        const totalCost = Number((calculatedYarnCost + calculatedProcessCost).toFixed(2));
+        const normalizedIplikler = iplikler.filter((item) => item.iplik_adi);
+        const normalizedProsesler = prosesler.filter((item) => item.proses_adi);
+        const formulJson = JSON.stringify({
+          editedAt: new Date().toISOString(),
+          source: 'admin_edit',
+          iplikler: normalizedIplikler.map(item => ({
+            iplik_adi: item.iplik_adi,
+            oran_yuzde: Number(item.oran_yuzde || 0),
+            birim_fiyat: Number(item.birim_fiyat || 0),
+            maliyet_tutari: Number(((Number(item.oran_yuzde || 0) / 100) * Number(item.birim_fiyat || 0)).toFixed(2))
+          })),
+          prosesler: normalizedProsesler.map(item => ({
+            proses_adi: item.proses_adi,
+            proses_tipi: item.proses_tipi,
+            birim_maliyet: Number(item.birim_maliyet || 0)
+          }))
+        });
 
-    db.serialize(() => {
-      db.run('BEGIN TRANSACTION');
+        db.serialize(() => {
+          db.run('BEGIN TRANSACTION');
 
       db.run(
-        `UPDATE mamul_kartlari
-         SET mamul_adi = ?,
-             mamul_turu_id = ?,
-             koleksiyon_adi = ?,
-             yayin_durumu = ?,
-             renk = ?,
-             renk_kodu = ?,
-             kompozisyon_ozeti = ?,
-             en = ?,
-             gramaj = ?,
-             aciklama = ?,
-             tanitim_basligi = ?,
-             tanitim_hikayesi = ?,
-             materyal_notlari = ?,
-             gorsel_url = ?,
-             vurgu_etiketi = ?,
-             bir_kg_maliyet = ?,
-             bir_kg_satis_fiyati = ?,
-             qr_slug = ?,
-             aktif = ?,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE id = ?`,
-        [
-          String(mamulAdi).trim(),
-          mamulTuruId,
-          String(koleksiyonAdi || '').trim(),
-          String(yayinDurumu || 'taslak').trim(),
-          String(renk || '').trim(),
-          String(renkKodu || '').trim(),
-          String(kompozisyonOzeti || '').trim(),
-          String(en || '').trim(),
-          String(gramaj || '').trim(),
-          String(aciklama || '').trim(),
-          String(tanitimBasligi || '').trim(),
-          String(tanitimHikayesi || '').trim(),
-          String(materyalNotlari || '').trim(),
-          String(gorselUrl || '').trim(),
-          String(vurguEtiketi || '').trim(),
-          totalCost,
-          Number(birKgSatisFiyati || 0),
-          qrSlug,
-          aktif ? 1 : 0,
-          mamulId
-        ],
+`UPDATE mamul_kartlari
+          SET mamul_adi = ?,
+              mamul_turu_id = ?,
+              koleksiyon_adi = ?,
+              yayin_durumu = ?,
+              renk = ?,
+              renk_kodu = ?,
+              kompozisyon_ozeti = ?,
+              en = ?,
+              gramaj = ?,
+              aciklama = ?,
+              tanitim_basligi = ?,
+              tanitim_hikayesi = ?,
+              materyal_notlari = ?,
+              gorsel_url = ?,
+              vurgu_etiketi = ?,
+              bir_kg_maliyet = ?,
+              bir_kg_satis_fiyati = ?,
+              qr_slug = ?,
+              aktif = ?,
+              excel_formul_json = ?,
+              excel_updated_at = CURRENT_TIMESTAMP,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?`,
+          [
+            String(mamulAdi).trim(),
+            mamulTuruId,
+            String(koleksiyonAdi || '').trim(),
+            String(yayinDurumu || 'taslak').trim(),
+            String(renk || '').trim(),
+            String(renkKodu || '').trim(),
+            String(kompozisyonOzeti || '').trim(),
+            String(en || '').trim(),
+            String(gramaj || '').trim(),
+            String(aciklama || '').trim(),
+            String(tanitimBasligi || '').trim(),
+            String(tanitimHikayesi || '').trim(),
+            String(materyalNotlari || '').trim(),
+            String(gorselUrl || '').trim(),
+            String(vurguEtiketi || '').trim(),
+            totalCost,
+            Number(birKgSatisFiyati || 0),
+            qrSlug,
+            aktif ? 1 : 0,
+            formulJson,
+            mamulId
+          ],
         (updateErr) => {
           if (updateErr) {
             db.run('ROLLBACK');

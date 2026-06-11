@@ -28,12 +28,12 @@ const ReportsPage = () => {
 
   return (
     <>
-      {message ? <div className="app-panel p-4 text-sm">{message}</div> : null}
-        {loading && !report ? <div className="app-panel p-4 text-sm">Rapor verisi yükleniyor...</div> : null}
+      {message ? <div className="app-panel p-3 sm:p-4 text-xs sm:text-sm">{message}</div> : null}
+        {loading && !report ? <div className="app-panel p-3 sm:p-4 text-xs sm:text-sm">Rapor verisi yükleniyor...</div> : null}
 
         {report ? (
           <>
-            <div className="grid gap-4 md:grid-cols-4 app-reveal-up app-reveal-delay-1">
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4 app-reveal-up app-reveal-delay-1">
               <div className="app-stat">
                 <div className="app-stat-label">Toplam mamül</div>
                 <div className="app-stat-value">{report.toplamMamul}</div>
@@ -52,15 +52,15 @@ const ReportsPage = () => {
               </div>
             </div>
 
-            <div className="grid gap-6 xl:grid-cols-2 app-reveal-up app-reveal-delay-2">
-              <section className="app-panel p-6">
-                <h2 className="text-xl font-semibold text-[color:var(--app-text)]">En çok okutulanlar</h2>
-                <div className="mt-5 space-y-3">
+            <div className="grid gap-3 sm:gap-4 xl:grid-cols-2 app-reveal-up app-reveal-delay-2">
+              <section className="app-panel p-4 sm:p-6">
+                <h2 className="text-base sm:text-xl font-semibold text-[color:var(--app-text)]">En çok okutulanlar</h2>
+                <div className="mt-3 sm:mt-5 space-y-2 sm:space-y-3">
                   {report.enCokOkutulanlar?.map((item) => (
-                    <div key={item.id} className="app-soft-panel p-4">
-                      <div className="font-semibold text-[color:var(--app-text)]">{item.mamul_adi}</div>
-                      <div className="mt-1 text-sm text-[color:var(--app-text-muted)]">{item.article_code}</div>
-                      <div className="mt-3 text-sm text-[color:var(--app-text-muted)]">
+                    <div key={item.id} className="app-soft-panel p-3 sm:p-4">
+                      <div className="text-sm font-semibold text-[color:var(--app-text)]">{item.mamul_adi}</div>
+                      <div className="mt-0.5 text-xs text-[color:var(--app-text-muted)]">{item.article_code}</div>
+                      <div className="mt-2 text-xs text-[color:var(--app-text-muted)]">
                         Okutulma: <span className="font-semibold text-[color:var(--app-text)]">{item.okutulma}</span>
                       </div>
                     </div>
@@ -68,14 +68,14 @@ const ReportsPage = () => {
                 </div>
               </section>
 
-              <section className="app-panel p-6">
-                <h2 className="text-xl font-semibold text-[color:var(--app-text)]">En çok siparişe girenler</h2>
-                <div className="mt-5 space-y-3">
+              <section className="app-panel p-4 sm:p-6">
+                <h2 className="text-base sm:text-xl font-semibold text-[color:var(--app-text)]">En çok siparişe girenler</h2>
+                <div className="mt-3 sm:mt-5 space-y-2 sm:space-y-3">
                   {report.enCokSipariseGirenler?.map((item) => (
-                    <div key={item.id} className="app-soft-panel p-4">
-                      <div className="font-semibold text-[color:var(--app-text)]">{item.mamul_adi}</div>
-                      <div className="mt-1 text-sm text-[color:var(--app-text-muted)]">{item.article_code}</div>
-                      <div className="mt-3 text-sm text-[color:var(--app-text-muted)]">
+                    <div key={item.id} className="app-soft-panel p-3 sm:p-4">
+                      <div className="text-sm font-semibold text-[color:var(--app-text)]">{item.mamul_adi}</div>
+                      <div className="mt-0.5 text-xs text-[color:var(--app-text-muted)]">{item.article_code}</div>
+                      <div className="mt-2 text-xs text-[color:var(--app-text-muted)]">
                         Toplam kg: <span className="font-semibold text-[color:var(--app-text)]">{Number(item.toplam_kg || 0).toFixed(2)}</span>
                       </div>
                     </div>

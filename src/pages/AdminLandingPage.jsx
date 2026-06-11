@@ -69,7 +69,7 @@ const AdminLandingPage = () => {
         <Link key={card.to} to={card.to} className="app-card app-quick-card">
           <div className="app-quick-card-icon">{iconMap[card.icon]}</div>
           <div className="app-quick-card-copy">
-            <h3 className="text-xl font-semibold text-[color:var(--app-text)]">{card.title}</h3>
+            <h3 className="text-base sm:text-lg md:text-xl font-semibold text-[color:var(--app-text)]">{card.title}</h3>
           </div>
         </Link>
       ))}

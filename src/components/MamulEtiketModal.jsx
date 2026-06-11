@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import LabelPreviewCard from './LabelPreviewCard';
-import { loadLabelTemplate, printLabels } from '../utils/labelTemplate';
+import { defaultLabelTemplate, mergeLabelTemplate, printLabels } from '../utils/labelTemplate';
 
 const CloseIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
@@ -14,11 +14,41 @@ const PrintIcon = () => (
   </svg>
 );
 
+const fetchActiveTemplate = async () => {
+  try {
+    const response = await fetch('/api/admin/label-templates/active');
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success && result.data) {
+        return mergeLabelTemplate(result.data);
+      }
+    }
+  } catch {}
+  return mergeLabelTemplate(defaultLabelTemplate);
+};
+
+const fetchTemplateById = async (templateId) => {
+  try {
+    const response = await fetch(`/api/admin/label-templates/${templateId}`);
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success && result.data) {
+        return mergeLabelTemplate(result.data);
+      }
+    }
+  } catch {}
+  return mergeLabelTemplate(defaultLabelTemplate);
+};
+
 const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
-  const [template, setTemplate] = useState(() => loadLabelTemplate(templateId));
+  const [template, setTemplate] = useState(null);
 
   useEffect(() => {
-    setTemplate(loadLabelTemplate(templateId));
+    const loadTemplate = async () => {
+      const loadedTemplate = templateId ? await fetchTemplateById(templateId) : await fetchActiveTemplate();
+      setTemplate(loadedTemplate);
+    };
+    loadTemplate();
   }, [templateId]);
 
   useEffect(() => {
@@ -45,17 +75,17 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
         }
       }}
     >
-      <div className="w-full max-w-4xl rounded-[2rem] bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+      <div className="w-full max-w-4xl mx-auto rounded-[1.25rem] sm:rounded-[2rem] bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 sm:px-6 py-3 sm:py-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-emerald-700">Kartelix / Etiket</p>
-            <h2 className="mt-2 text-xl font-semibold text-slate-900">{mamul.article_code}</h2>
-            <p className="mt-1 text-sm text-slate-500">{mamul.mamul_adi || '-'}</p>
+            <p className="text-[0.65rem] sm:text-xs uppercase tracking-[0.24em] text-emerald-700">Kartelix / Etiket</p>
+            <h2 className="mt-1 text-base sm:text-xl font-semibold text-slate-900">{mamul.article_code}</h2>
+            <p className="mt-0.5 text-xs sm:text-sm text-slate-500">{mamul.mamul_adi || '-'}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-slate-100 p-2 text-slate-700 hover:bg-slate-200"
+            className="rounded-full bg-slate-100 p-1.5 sm:p-2 text-slate-700 hover:bg-slate-200"
             aria-label="Kapat"
             title="Kapat"
           >
@@ -63,7 +93,7 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
           </button>
         </div>
 
-        <div className="grid gap-6 p-6 lg:grid-cols-[1.15fr,0.85fr]">
+        <div className="grid gap-4 sm:gap-6 p-4 sm:p-6 lg:grid-cols-[1.15fr,0.85fr]">
           <div>
             <LabelPreviewCard record={mamul} template={template} lang="tr" />
           </div>
