@@ -2118,28 +2118,16 @@ code {
 
   .app-label-preview-shell {
     padding: 0.6rem;
+    max-width: 100%;
+    overflow-x: auto;
   }
 
-  .app-nav-shell {
-    padding: 0.35rem 0.6rem 0.3rem;
+  .app-label-preview-stage {
+    min-width: 0;
   }
 
-  .app-nav-brand-name {
-    font-size: 0.82rem;
-  }
-
-  .app-nav-mobile-title {
-    font-size: 0.72rem;
-  }
-
-  .app-nav-icon-button {
-    width: 2rem;
-    height: 2rem;
-  }
-
-  .app-nav-icon-svg {
-    width: 0.92rem;
-    height: 0.92rem;
+  .app-label-preview-sheet {
+    transform-origin: top left;
   }
 }
 

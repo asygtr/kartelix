@@ -3407,6 +3407,160 @@ app.delete('/api/admin/label-templates/:templateId', async (req, res, next) => {
   }
 });
 
+app.get('/api/admin/label-templates/export', async (req, res, next) => {
+  try {
+    const rows = await new Promise((resolve, reject) => {
+      db.all(`SELECT template_id, name, template_json, is_active FROM label_templates ORDER BY created_at ASC`, [], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+
+    if (!rows.length) {
+      return res.status(404).json({ success: false, error: 'Aktarılacak şablon bulunamadı' });
+    }
+
+    const escapeCsvValue = (value) => {
+      const text = String(value ?? '');
+      if (text.includes('"') || text.includes(',') || text.includes('\n') || text.includes('\r')) {
+        return '"' + text.replace(/"/g, '""') + '"';
+      }
+      return text;
+    };
+
+    const header = 'template_id,name,is_active,template_json';
+    const body = rows.map((row) => {
+      const templateJson = escapeCsvValue(row.template_json);
+      return [row.template_id, row.name, row.is_active, templateJson].join(',');
+    }).join('\n');
+
+    const csv = `${header}\n${body}\n`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="label-templates.csv"');
+    res.send(csv);
+  } catch (err) {
+    next(err);
+  }
+});
+
+const parseLabelTemplateCsv = (rawText) => {
+  const lines = rawText.split(/\r?\n/).filter((line) => line.trim().length > 0);
+  if (lines.length < 2) return [];
+
+  const rows = [];
+  let header = null;
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (!header) {
+      header = line.split(',').map((part) => part.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+      continue;
+    }
+
+    const match = line.match(/^(("[^"]*(?:""[^"]*)*")|[^,]*)(?:,|$)/);
+    if (!match || match.index !== 0) continue;
+
+    const first = match[1].replace(/^"|"$/g, '').replace(/""/g, '"');
+    const afterFirst = line.slice(match[0].length);
+
+    const secondMatch = afterFirst.match(/^(("[^"]*(?:""[^"]*)*")|[^,]*)(?:,|$)/);
+    const second = secondMatch ? secondMatch[1].replace(/^"|"$/g, '').replace(/""/g, '"') : '';
+
+    const afterSecond = secondMatch ? afterFirst.slice(secondMatch[0].length) : afterFirst;
+    const thirdMatch = afterSecond.match(/^(("[^"]*(?:""[^"]*)*")|[^,]*)(?:,|$)/);
+    const third = thirdMatch ? thirdMatch[1].replace(/^"|"$/g, '').replace(/""/g, '"') : '';
+
+    const fourth = afterSecond.slice(thirdMatch ? thirdMatch[0].length : 0).replace(/,$/, '').replace(/^"|"$/g, '').replace(/""/g, '"');
+
+    rows.push({
+      template_id: first,
+      name: second,
+      is_active: third,
+      template_json: fourth,
+    });
+  }
+
+  return rows;
+};
+
+app.post('/api/admin/label-templates/import', express.text({ type: 'text/csv', limit: '2mb' }), async (req, res, next) => {
+  try {
+    const raw = String(req.body || '').trim();
+    if (!raw) {
+      return res.status(400).json({ success: false, error: 'CSV içeriği boş' });
+    }
+
+    const rows = parseLabelTemplateCsv(raw);
+    const imported = [];
+    const skipped = [];
+    let activatedId = null;
+
+    for (const row of rows) {
+      const templateId = String(row.template_id || '').trim();
+      const name = String(row.name || 'Şablon').trim();
+      const isActive = String(row.is_active || '0').trim() !== '0';
+      const templateJson = String(row.template_json || '').trim();
+
+      if (!templateId) {
+        skipped.push({ reason: 'template_id eksik', row });
+        continue;
+      }
+
+      let templateData = { name, template_json: templateJson };
+      try {
+        if (templateJson) {
+          const parsed = JSON.parse(templateJson);
+          templateData = { name, template_json: JSON.stringify(parsed) };
+        }
+      } catch {
+        skipped.push({ reason: 'template_json geçersiz', template_id: templateId });
+      }
+
+      await new Promise((resolve, reject) => {
+        db.run(
+          `INSERT INTO label_templates (template_id, name, template_json, is_active)
+           VALUES (?, ?, ?, ?)
+           ON CONFLICT(template_id) DO UPDATE SET
+             name = excluded.name,
+             template_json = excluded.template_json,
+             updated_at = CURRENT_TIMESTAMP`,
+          [templateId, name, templateData.template_json, isActive ? 1 : 0],
+          (err) => {
+            if (err) reject(err);
+            else resolve();
+          }
+        );
+      });
+
+      imported.push({ template_id: templateId, name });
+
+      if (isActive) {
+        activatedId = templateId;
+      }
+    }
+
+    if (activatedId) {
+      await new Promise((resolve, reject) => {
+        db.run(`UPDATE label_templates SET is_active = 0 WHERE template_id != ?`, [activatedId], (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        importedCount: imported.length,
+        skippedCount: skipped.length,
+        templates: imported,
+        skipped,
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // --- ETİKET AYARLARI API ROTLARI ---
 
 // Etiket ayarlarını getir

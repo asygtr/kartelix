@@ -404,7 +404,7 @@ const saveTemplate = async (patch) => {
                <button
                  type="button"
                  className="app-btn-secondary"
-                 onClick={() => {
+                 onClick={async () => {
                    const current = templates.find((item) => item.template_id === activeTemplateId);
                    const name = window.prompt('Şablon adını güncelle', current?.name || '');
                    if (!name) return;
@@ -415,6 +415,57 @@ const saveTemplate = async (patch) => {
                >
                  Yeniden adlandır
                </button>
+               <button
+                 type="button"
+                 className="app-btn-secondary"
+                 onClick={async () => {
+                   const result = await fetch('/api/admin/label-templates/export');
+                   if (result.ok) {
+                     const csv = await result.text();
+                     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+                     const url = URL.createObjectURL(blob);
+                     const link = document.createElement('a');
+                     link.href = url;
+                     link.download = `label-templates-${new Date().toISOString().slice(0, 10)}.csv`;
+                     document.body.appendChild(link);
+                     link.click();
+                     document.body.removeChild(link);
+                     URL.revokeObjectURL(url);
+                     setStatus('Şablonlar CSV olarak dışa aktarıldı.');
+                   } else {
+                     const payload = await result.json().catch(() => ({}));
+                     setStatus(payload.error || 'Dışa aktarma başarısız.');
+                   }
+                 }}
+               >
+                 CSV Dışa Aktar
+               </button>
+               <label className="app-btn-secondary" style={{ cursor: 'pointer' }}>
+                 CSV İçe Aktar
+                 <input
+                   type="file"
+                   accept=".csv,text/csv"
+                   className="hidden"
+                   onChange={async (event) => {
+                     const file = event.target.files?.[0];
+                     if (!file) return;
+                     const text = await file.text();
+                     const result = await fetch('/api/admin/label-templates/import', {
+                       method: 'POST',
+                       headers: { 'Content-Type': 'text/csv' },
+                       body: text,
+                     });
+                     const payload = await result.json();
+                     if (result.ok && payload.success) {
+                       await refreshTemplateLibrary(activeTemplateId);
+                       setStatus(`${payload.data.importedCount} şablon içe aktarıldı.`);
+                     } else {
+                       setStatus(payload.error || 'İçe aktarma başarısız.');
+                     }
+                     event.target.value = '';
+                   }}
+                 />
+               </label>
                <button
                  type="button"
                  className="app-btn-secondary"
