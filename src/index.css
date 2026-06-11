@@ -64,12 +64,14 @@ code {
   padding: 5.2rem 0 6rem;
   box-sizing: border-box;
   -webkit-overflow-scrolling: touch;
+  word-break: break-word;
 }
 
 .app-container {
   max-width: 88rem;
   margin: 0 auto;
   padding: 0 1.25rem;
+  overflow-x: hidden;
 }
 
 .app-panel {
@@ -723,7 +725,6 @@ code {
 }
 
 .app-collapse-panel {
-  overflow: hidden;
   animation: appSlideDown 240ms ease;
 }
 
@@ -780,6 +781,7 @@ code {
   color: var(--app-text);
   padding: 0.9rem 1rem;
   outline: none;
+  font-size: 1rem;
 }
 
 .app-input:focus,
@@ -1972,7 +1974,7 @@ code {
   .app-select {
     padding: 0.55rem 0.6rem;
     border-radius: 0.5rem;
-    font-size: 0.85rem;
+    font-size: 1rem;
   }
 
   .app-table-head > div,
@@ -2151,7 +2153,7 @@ code {
   .app-textarea,
   .app-select {
     padding: 0.45rem 0.5rem;
-    font-size: 0.8rem;
+    font-size: 1rem;
   }
 
   .app-quick-card {

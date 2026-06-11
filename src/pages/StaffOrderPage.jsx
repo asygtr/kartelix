@@ -531,15 +531,15 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
             <div className="app-order-band-grid">
               <button type="button" onClick={openCreatePanel} className="app-order-mode-button">
                 <span className="app-order-mode-icon"><PlusIcon /></span>
-                <span>Sipariş ekle</span>
+                <span>Ekle</span>
               </button>
               <button type="button" onClick={openEditPanel} className="app-order-mode-button">
                 <span className="app-order-mode-icon"><EditIcon /></span>
-                <span>Sipariş düzenle</span>
+                <span>Düzenle</span>
               </button>
               <button type="button" onClick={openDeletePanel} className="app-order-mode-button is-danger">
                 <span className="app-order-mode-icon"><TrashIcon /></span>
-                <span>Sipariş sil</span>
+                <span>Sil</span>
               </button>
             </div>
           </section>

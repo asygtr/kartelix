@@ -68,14 +68,15 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
+      className="fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto p-2 sm:p-4"
+      style={{ background: 'rgba(15,23,42,0.6)' }}
       onClick={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
         }
       }}
     >
-      <div className="w-full max-w-4xl mx-auto rounded-[1.25rem] sm:rounded-[2rem] bg-white shadow-2xl">
+      <div className="w-full max-w-2xl mx-auto my-auto rounded-[1rem] sm:rounded-[1.5rem] bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-4 sm:px-6 py-3 sm:py-4">
           <div>
             <p className="text-[0.65rem] sm:text-xs uppercase tracking-[0.24em] text-emerald-700">Kartelix / Etiket</p>
@@ -93,8 +94,8 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
           </button>
         </div>
 
-        <div className="grid gap-4 sm:gap-6 p-4 sm:p-6 lg:grid-cols-[1.15fr,0.85fr]">
-          <div>
+        <div className="grid gap-4 p-4 sm:gap-6 sm:p-6 lg:grid-cols-[1.15fr,0.85fr]">
+          <div className="min-w-0 overflow-x-auto">
             <LabelPreviewCard record={mamul} template={template} lang="tr" />
           </div>
 

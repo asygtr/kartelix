@@ -394,14 +394,12 @@ const saveTemplate = async (patch) => {
                     const newId = `template-${Date.now()}`;
                     const result = await saveTemplateToServer(newId, name, template, true);
                     if (result?.success) {
-                      const createdName = result.data.name || name;
-                      setTemplates((prev) => {
-                        const withoutDefault = prev.filter((item) => (item.template_id || item.id) !== 'default-template');
-                        return [...withoutDefault, { id: newId, template_id: newId, name: createdName, is_active: true }];
-                      });
-                      setActiveTemplateId(newId);
-                      setTemplate(mergeLabelTemplate(template));
+                      const createdName = result.data?.name || name;
+                      const createdId = result.data?.templateId || newId;
+                      await refreshTemplateLibrary(createdId);
                       setStatus(`Yeni şablon oluşturuldu: ${createdName}`);
+                    } else {
+                      setStatus('Şablon oluşturulamadı.');
                     }
                   }}
                >
@@ -411,11 +409,12 @@ const saveTemplate = async (patch) => {
                  type="button"
                  className="app-btn-secondary"
                  onClick={async () => {
-                   const current = templates.find((item) => item.template_id === activeTemplateId);
+                   const current = templates.find((item) => (item.template_id || item.id) === activeTemplateId);
+                   if (!current) return;
                    const name = window.prompt('Şablon adını güncelle', current?.name || '');
                    if (!name) return;
-                   saveTemplateToServer(activeTemplateId, name, template, false);
-                   refreshTemplateLibrary(activeTemplateId);
+                   await saveTemplateToServer(activeTemplateId, name, template, false);
+                   await refreshTemplateLibrary(activeTemplateId);
                    setStatus('Şablon adı güncellendi.');
                  }}
                >
@@ -487,14 +486,14 @@ const saveTemplate = async (patch) => {
                  type="button"
                  className="app-btn-danger"
                  onClick={async () => {
-                   const current = templates.find((item) => item.template_id === activeTemplateId);
+                   const current = templates.find((item) => (item.template_id || item.id) === activeTemplateId);
                    if (!current || templates.length <= 1) return;
                    if (!window.confirm(`"${current.name}" şablonunu silmek istiyor musunuz?`)) return;
                    const result = await fetch(`/api/admin/label-templates/${activeTemplateId}`, { method: 'DELETE' });
                    if (result.ok) {
-                     const nextTemplates = templates.filter((item) => item.template_id !== activeTemplateId);
-                     const nextActiveId = nextTemplates[0]?.template_id || 'default-template';
-                     refreshTemplateLibrary(nextActiveId);
+                     const nextTemplates = templates.filter((item) => (item.template_id || item.id) !== activeTemplateId);
+                     const nextActiveId = nextTemplates[0]?.template_id || nextTemplates[0]?.id || 'default-template';
+                     await refreshTemplateLibrary(nextActiveId);
                      setStatus('Şablon silindi.');
                    }
                  }}

@@ -144,8 +144,8 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/78 p-4">
-      <div className="app-panel w-full max-w-xl p-4 sm:p-6">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4" style={{ background: 'rgba(7,12,20,0.88)' }}>
+      <div className="app-panel w-full max-w-xl p-4 sm:p-6" style={{ maxHeight: '90dvh', overflowY: 'auto', position: 'relative' }}>
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-[color:var(--app-text)]">{title}</h2>
