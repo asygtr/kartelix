@@ -13,10 +13,12 @@ import { ThemeProvider } from './theme/ThemeProvider';
 import ScrollToTop from './components/ScrollToTop';
 import ReportsPage from './pages/ReportsPage';
 import AppLayout from './components/AppLayout';
+import { ToastProvider } from './components/Toast';
 
 function App() {
   return (
     <ThemeProvider>
+      <ToastProvider>
       <Router>
         <ScrollToTop />
         <Routes>
@@ -49,6 +51,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
+      </ToastProvider>
     </ThemeProvider>
   );
 }

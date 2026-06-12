@@ -445,6 +445,8 @@ db.run(`CREATE TABLE IF NOT EXISTS ui_ayarlari (
     ensureColumnExists('siparis_kartelalari', 'created_at', `DATETIME DEFAULT CURRENT_TIMESTAMP`);
     ensureColumnExists('siparis_kalemleri', 'created_at', `DATETIME DEFAULT CURRENT_TIMESTAMP`);
     ensureColumnExists('kartelix_orders', 'created_at', `DATETIME DEFAULT CURRENT_TIMESTAMP`);
+    ensureColumnExists('kartelix_orders', 'onay_email', `TEXT`);
+    ensureColumnExists('kartelix_orders', 'tamamlandi_at', `DATETIME`);
     ensureColumnExists('kartelix_orders', 'email', `TEXT`);
     ensureColumnExists('kartelix_orders', 'kartvizit_gorsel', `TEXT`);
     ensureColumnExists('kartelix_orders', 'kartvizit_notu', `TEXT`);
@@ -534,6 +536,8 @@ const defaultOrderEmailSettings = {
   smtpUser: '',
   smtpPassword: '',
   recipientEmails: '',
+  approvalEmails: '',
+  approvalShowPrices: true,
   testRecipient: '',
   replyTo: '',
   lastAuthError: ''
@@ -581,6 +585,8 @@ const sanitizeOrderEmailSettings = (settings) => ({
   smtpUser: String(settings.smtpUser || '').trim(),
   smtpPassword: '',
   recipientEmails: String(settings.recipientEmails || '').trim(),
+  approvalEmails: String(settings.approvalEmails || '').trim(),
+  approvalShowPrices: settings.approvalShowPrices !== undefined ? Boolean(settings.approvalShowPrices) : true,
   testRecipient: String(settings.testRecipient || '').trim(),
   replyTo: String(settings.replyTo || '').trim(),
   lastAuthError: String(settings.lastAuthError || '').trim()
@@ -619,6 +625,8 @@ async function loadOrderEmailSettings(includeSecrets = false) {
     smtpUser: String(parsed.smtpUser || '').trim(),
     smtpPassword: String(parsed.smtpPassword || '').trim(),
     recipientEmails: String(parsed.recipientEmails || '').trim(),
+    approvalEmails: String(parsed.approvalEmails || '').trim(),
+    approvalShowPrices: parsed.approvalShowPrices !== undefined ? Boolean(parsed.approvalShowPrices) : true,
     testRecipient: String(parsed.testRecipient || '').trim(),
     replyTo: String(parsed.replyTo || '').trim(),
     lastAuthError: String(parsed.lastAuthError || '').trim()
@@ -639,6 +647,8 @@ async function saveOrderEmailSettings(incomingSettings) {
     smtpUser: String(incomingSettings.smtpUser || existing.smtpUser || '').trim(),
     smtpPassword: String(incomingSettings.smtpPassword || existing.smtpPassword || '').trim(),
     recipientEmails: String(incomingSettings.recipientEmails || existing.recipientEmails || '').trim(),
+    approvalEmails: String(incomingSettings.approvalEmails !== undefined ? incomingSettings.approvalEmails : (existing.approvalEmails || '')).trim(),
+    approvalShowPrices: incomingSettings.approvalShowPrices !== undefined ? Boolean(incomingSettings.approvalShowPrices) : (existing.approvalShowPrices !== undefined ? Boolean(existing.approvalShowPrices) : true),
     testRecipient: String(incomingSettings.testRecipient || existing.testRecipient || '').trim(),
     replyTo: String(incomingSettings.replyTo || existing.replyTo || '').trim(),
     lastAuthError: ''
@@ -850,6 +860,68 @@ async function ensureGraphAccessToken(settings) {
 
   await persistOrderEmailConnection(nextSettings);
   return { accessToken: nextSettings.accessToken, settings: nextSettings };
+}
+
+function buildApprovalEmailContent(order, items = [], showPrices = true) {
+  const siparisNo = `#${order.id}`;
+  const firma = order.firma_adi || order.musteri_adi || '-';
+  const colSpan = showPrices ? 5 : 4;
+  const itemRows = items.length
+    ? items.map((item) => [
+        '<tr>',
+        `<td style="padding:8px;border-bottom:1px solid #e8e0d4">${item.article_code || item.article_no || '-'}</td>`,
+        `<td style="padding:8px;border-bottom:1px solid #e8e0d4">${item.mamul_adi || '-'}</td>`,
+        `<td style="padding:8px;border-bottom:1px solid #e8e0d4">${item.renk || '-'}</td>`,
+        `<td style="padding:8px;border-bottom:1px solid #e8e0d4;text-align:right">${Number(item.miktar_kg || 0).toFixed(2)} kg</td>`,
+        showPrices ? `<td style="padding:8px;border-bottom:1px solid #e8e0d4;text-align:right">${Number(item.tutar || 0).toFixed(2)} ${order.para_birimi || 'TRY'}</td>` : '',
+        '</tr>'
+      ].join('')).join('')
+    : `<tr><td colspan="${colSpan}" style="padding:8px;color:#888">-</td></tr>`;
+
+  const priceTh = showPrices ? '<th align="right" style="padding:8px">Tutar</th>' : '';
+  const totalRow = showPrices
+    ? `<tr><td style="padding:4px 0;color:#666">Toplam Tutar</td><td style="padding:4px 0;font-weight:700;font-size:15px">${Number(order.toplam_tutar || 0).toFixed(2)} ${order.para_birimi || 'TRY'}</td></tr>`
+    : '';
+
+  const html = [
+    '<div style="font-family:Arial,sans-serif;color:#1a2024;line-height:1.6;max-width:640px">',
+    '<div style="background:#1a2024;padding:24px 32px;border-radius:8px 8px 0 0">',
+    '<div style="color:#fff;font-size:18px;font-weight:700;letter-spacing:0.04em">SÄ°PARÄ°Å ONAYLANDI</div>',
+    `<div style="color:rgba(255,255,255,0.6);font-size:13px;margin-top:4px">SipariÅŸ ${siparisNo} â€” ${firma}</div>`,
+    '</div>',
+    '<div style="background:#faf8f5;padding:24px 32px;border:1px solid #e8e0d4;border-top:none">',
+    '<p style="margin:0 0 16px">SayÄ±n Ä°lgili,</p>',
+    `<p style="margin:0 0 16px"><strong>${firma}</strong> firmasÄ±na ait <strong>${siparisNo}</strong> numaralÄ± sipariÅŸ tarafÄ±mÄ±zca incelenmiÅŸ ve <strong>onaylanmÄ±ÅŸtÄ±r</strong>. SipariÅŸin Ã¼retim sÃ¼recine alÄ±nmasÄ± iÃ§in bilgilerinizi paylaÅŸÄ±yoruz.</p>`,
+    '<table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px">',
+    `<thead><tr style="background:#ede8df"><th align="left" style="padding:8px">Article</th><th align="left" style="padding:8px">MamÃ¼l</th><th align="left" style="padding:8px">Renk</th><th align="right" style="padding:8px">Miktar</th>${priceTh}</tr></thead>`,
+    `<tbody>${itemRows}</tbody>`,
+    '</table>',
+    '<table cellpadding="0" cellspacing="0" style="width:100%;font-size:13px;margin-bottom:16px">',
+    `<tr><td style="padding:4px 0;color:#666">Firma</td><td style="padding:4px 0;font-weight:600">${order.firma_adi || '-'}</td></tr>`,
+    `<tr><td style="padding:4px 0;color:#666">Ä°lgili KiÅŸi</td><td style="padding:4px 0">${order.ilgili_kisi || '-'}</td></tr>`,
+    `<tr><td style="padding:4px 0;color:#666">Telefon</td><td style="padding:4px 0">${order.telefon || '-'}</td></tr>`,
+    `<tr><td style="padding:4px 0;color:#666">Fuar / Kaynak</td><td style="padding:4px 0">${order.fuar_adi || '-'}</td></tr>`,
+    totalRow,
+    '</table>',
+    order.aciklama ? `<p style="margin:0 0 16px;font-size:13px;color:#555"><strong>Not:</strong> ${order.aciklama}</p>` : '',
+    '<p style="margin:16px 0 0;font-size:13px;color:#888">Bu e-posta otomatik olarak gÃ¶nderilmiÅŸtir.</p>',
+    '</div></div>'
+  ].join('');
+
+  const text = [
+    `SÄ°PARÄ°Å ONAYLANDI â€” ${siparisNo}`,
+    `Firma: ${firma}`,
+    `Ä°lgili KiÅŸi: ${order.ilgili_kisi || '-'}`,
+    `Telefon: ${order.telefon || '-'}`,
+    ...(showPrices ? [`Toplam: ${Number(order.toplam_tutar || 0).toFixed(2)} ${order.para_birimi || 'TRY'}`] : []),
+    '',
+    'Kalemler:',
+    ...(items.length ? items.map((i) => showPrices
+      ? `${i.article_code} - ${i.mamul_adi} - ${Number(i.miktar_kg || 0).toFixed(2)} kg - ${Number(i.tutar || 0).toFixed(2)} ${order.para_birimi || 'TRY'}`
+      : `${i.article_code} - ${i.mamul_adi} - ${Number(i.miktar_kg || 0).toFixed(2)} kg`) : ['-'])
+  ].join('\n');
+
+  return { subject: `SipariÅŸ OnaylandÄ± ${siparisNo} â€” ${firma}`, html, text };
 }
 
 function buildOrderEmailContent(order, items = []) {
@@ -2807,6 +2879,39 @@ app.post('/api/orders', (req, res, next) => {
       });
     }
   );
+});
+
+app.post('/api/orders/:id/complete', async (req, res, next) => {
+  const siparisId = req.params.id;
+
+  try {
+    const order = await dbGetAsync(`SELECT * FROM kartelix_orders WHERE id = ?`, [siparisId]);
+    if (!order) return res.status(404).json({ success: false, error: 'Siparis bulunamadi' });
+
+    await dbRunAsync(
+      `UPDATE kartelix_orders SET durum = 'tamamlandi', tamamlandi_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      [siparisId]
+    );
+
+    const settings = await loadOrderEmailSettings(true);
+    const approvalRecipients = parseEmailList(settings.approvalEmails);
+    let emailStatus = { skipped: true, message: 'Sipariş onay e-posta adresi tanımlı değil' };
+
+    if (approvalRecipients.length && settings.smtpHost && (settings.smtpUser || settings.senderEmail) && settings.smtpPassword) {
+      try {
+        const { order: freshOrder, items } = await loadOrderForEmail(siparisId);
+        const content = buildApprovalEmailContent(freshOrder, items, settings.approvalShowPrices !== false);
+        const result = await sendSmtpMail({ settings, recipients: approvalRecipients, subject: content.subject, html: content.html, text: content.text });
+        emailStatus = { skipped: false, message: 'Onay e-postası gönderildi', ...result };
+      } catch (emailErr) {
+        emailStatus = { skipped: false, error: emailErr.message || 'E-posta gonderilemedi' };
+      }
+    }
+
+    res.json({ success: true, data: { siparisId: Number(siparisId), emailStatus } });
+  } catch (err) {
+    next(err);
+  }
 });
 
 app.get('/api/orders', (req, res, next) => {

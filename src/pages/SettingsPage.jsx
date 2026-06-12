@@ -28,6 +28,8 @@ const initialEmailForm = {
   smtpUser: '',
   smtpPassword: '',
   recipientEmails: '',
+  approvalEmails: '',
+  approvalShowPrices: true,
   testRecipient: '',
   replyTo: '',
   lastAuthError: ''
@@ -306,6 +308,8 @@ const SettingsPage = () => {
         smtpUser: emailForm.smtpUser,
         smtpPassword: emailForm.smtpPassword,
         recipientEmails: emailForm.recipientEmails,
+        approvalEmails: emailForm.approvalEmails,
+        approvalShowPrices: emailForm.approvalShowPrices,
         testRecipient: emailForm.testRecipient,
         replyTo: emailForm.replyTo
       })
@@ -765,6 +769,29 @@ const SettingsPage = () => {
                 placeholder="siparis@firma.com; ikinci@firma.com"
               />
             </label>
+            <label className="block lg:col-span-2">
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Sipariş onay e-posta adresleri</div>
+              <textarea
+                className="app-input min-h-[80px]"
+                value={emailForm.approvalEmails}
+                onChange={(event) => setEmailForm((prev) => ({ ...prev, approvalEmails: event.target.value }))}
+                placeholder="onay@firma.com; uretim@firma.com"
+              />
+              <div className="mt-1 text-xs text-slate-500">Sipariş tamamlandığında bu adreslere kurumsal onay bildirimi gönderilir.</div>
+            </label>
+            <div className="app-soft-panel p-4">
+              <label className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-sm font-semibold text-[color:var(--app-text)]">Onay mailinde fiyatları göster</div>
+                  <div className="mt-0.5 text-xs text-slate-500">Kapalıysa tutar ve birim fiyat sütunları onay mailinde yer almaz.</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={emailForm.approvalShowPrices}
+                  onChange={(event) => setEmailForm((prev) => ({ ...prev, approvalShowPrices: event.target.checked }))}
+                />
+              </label>
+            </div>
             <label className="block lg:col-span-2">
               <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Yanıt adresi</div>
               <input

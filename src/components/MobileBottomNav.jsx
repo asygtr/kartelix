@@ -95,10 +95,22 @@ const MobileBottomNav = ({ items = [], location, searchOpen, onSearchClick }) =>
 
         if (item.action) {
           return (
-            <button key={item.key} type="button" className={cls} style={itemStyle}
-              onClick={() => onSearchClick?.(item)}>
-              {inner}
-            </button>
+            <motion.button
+              key={item.key}
+              type="button"
+              className={cls}
+              style={itemStyle}
+              onClick={() => onSearchClick?.(item)}
+              whileTap={{ scale: 0.88 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+            >
+              <span className="app-mobile-nav-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '1.6rem' }}>
+                <svg viewBox="0 0 24 24" aria-hidden="true" style={{ width: '1.5rem', height: '1.5rem' }}>
+                  <path d="M10.5 4a6.5 6.5 0 1 0 4.03 11.6l4.43 4.43 1.41-1.41-4.43-4.43A6.5 6.5 0 0 0 10.5 4Zm0 2a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z" fill="currentColor" />
+                </svg>
+              </span>
+              <span className="app-mobile-nav-label">{item.label}</span>
+            </motion.button>
           );
         }
 
@@ -112,9 +124,29 @@ const MobileBottomNav = ({ items = [], location, searchOpen, onSearchClick }) =>
         }
 
         return (
-          <Link key={item.key} to={item.to} className={cls} style={itemStyle}>
-            {inner}
-          </Link>
+          <motion.div
+            key={item.key}
+            whileTap={{ scale: 0.88 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+            style={itemStyle}
+          >
+            <Link to={item.to} className={cls} style={{ display: 'contents' }}>
+              <span className="app-mobile-nav-icon">
+                {isActive ? (
+                  <motion.span
+                    layoutId="nav-active-icon"
+                    initial={{ scale: 0.7 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 22 }}
+                    style={{ display: 'inline-flex' }}
+                  >
+                    {item.icon}
+                  </motion.span>
+                ) : item.icon}
+              </span>
+              <span className="app-mobile-nav-label">{item.label}</span>
+            </Link>
+          </motion.div>
         );
       })}
     </nav>

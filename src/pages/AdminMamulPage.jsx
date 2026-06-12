@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import PageSearchBar from '../components/PageSearchBar';
 import { extractColorName, resolveColorHex } from '../utils/labelTemplate';
 
@@ -427,8 +428,16 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
           </div>
 
           <div className="space-y-6">
+            <AnimatePresence mode="wait">
             {selectedMamulDetail ? (
-            <section className="app-panel p-6">
+            <motion.section
+              key={selectedMamulDetail.id}
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}
+              className="app-panel p-6"
+            >
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Mamül detayı</h2>
                 <div className="flex gap-2">
@@ -511,8 +520,9 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                   </div>
                 </div>
               )}
-            </section>
+            </motion.section>
             ) : null}
+            </AnimatePresence>
 
             {!selectedMamulDetail ? (
             <section className="app-panel p-6">
@@ -529,16 +539,21 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                   <div>İşlem</div>
                 </div>
                 {filteredMamulList.map((item) => (
-<div key={item.id} className="app-table-row app-mamul-table hidden md:grid">
+                  <motion.div
+                    key={item.id}
+                    className="app-table-row app-mamul-table hidden md:grid"
+                    whileHover={{ x: 3 }}
+                    transition={{ duration: 0.18 }}
+                  >
                     <div className="font-semibold text-[color:var(--app-text)]">{item.mamul_adi}</div>
                     <div className="text-sm text-[color:var(--app-text-muted)]">{item.article_code} / {item.article_no}</div>
                     <div className="text-sm text-[color:var(--app-text-muted)]">{item.mamul_turu_adi}{extractColorName(item.renk) ? ` · ${extractColorName(item.renk)}` : ''}<span style={resolveColorHex(item) ? { display: 'inline-block', width: '10px', height: '10px', backgroundColor: resolveColorHex(item), border: '1px solid #999', borderRadius: '2px', marginLeft: '4px', verticalAlign: 'middle' } : {}} /></div>
                     <div className="text-sm font-semibold text-[color:var(--app-success)]">{Number(item.bir_kg_satis_fiyati || 0).toFixed(2)}</div>
-                    <div className="app-mamul-actions-pc">
-                      <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary btn-sm">Detay</button>
-                      <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary btn-sm">Görüntüle</a>
+                    <div className="app-mamul-actions-pc" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'nowrap' }}>
+                      <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary btn-sm" style={{ whiteSpace: 'nowrap' }}>Detay</button>
+                      <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary btn-sm" style={{ whiteSpace: 'nowrap' }}>Görüntüle</a>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
                 {filteredMamulList.map((item) => (
                   <div key={`mobile-${item.id}`} className="app-mamul-card md:hidden">
