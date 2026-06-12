@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import PageSearchBar from '../components/PageSearchBar';
 import { extractColorName, resolveColorHex } from '../utils/labelTemplate';
@@ -45,6 +45,42 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showEditor, setShowEditor] = useState(false);
   const [form, setForm] = useState(createEmptyForm);
+  const [gorselUploading, setGorselUploading] = useState(false);
+  const gorselInputRef = useRef(null);
+
+  const uploadGorsel = async (file) => {
+    if (!selectedMamulDetail?.id) return;
+    setGorselUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('gorsel', file);
+      const res = await fetch(`/api/admin/mamuller/${selectedMamulDetail.id}/gorsel`, { method: 'POST', body: fd });
+      const result = await res.json();
+      if (!result.success) throw new Error(result.error || 'Yüklenemedi');
+      setSelectedMamulDetail((prev) => ({ ...prev, gorsel_url: result.data.gorsel_url }));
+      setMessage('Görsel güncellendi.');
+    } catch (err) {
+      setMessage(err.message);
+    } finally {
+      setGorselUploading(false);
+    }
+  };
+
+  const deleteGorsel = async () => {
+    if (!selectedMamulDetail?.id) return;
+    setGorselUploading(true);
+    try {
+      const res = await fetch(`/api/admin/mamuller/${selectedMamulDetail.id}/gorsel`, { method: 'DELETE' });
+      const result = await res.json();
+      if (!result.success) throw new Error(result.error || 'Silinemedi');
+      setSelectedMamulDetail((prev) => ({ ...prev, gorsel_url: null }));
+      setMessage('Görsel silindi.');
+    } catch (err) {
+      setMessage(err.message);
+    } finally {
+      setGorselUploading(false);
+    }
+  };
 
   const fetchInitial = async () => {
     const [typesResponse, colorsResponse, yarnsResponse, processesResponse, mamulResponse] = await Promise.all([
@@ -215,6 +251,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const pageTitle = mode === 'mamul' ? 'Excel mamül kartları' : 'Mamül kartı';
   const resolveMamulMatch = (rawValue) => {
     const term = normalizeSearchValue(rawValue);
@@ -483,6 +520,58 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                     <div className="text-xs uppercase tracking-[0.3em] text-[color:var(--app-text-muted)]">{selectedMamulDetail.mamul_turu_adi}</div>
                     <div className="mt-2 text-xl font-semibold text-[color:var(--app-text)]">{selectedMamulDetail.mamul_adi}</div>
                     <div className="mt-2 text-sm text-[color:var(--app-text-muted)]">{selectedMamulDetail.article_code} / {selectedMamulDetail.article_no}</div>
+                  </div>
+
+                  {/* Görsel yükleme */}
+                  <div className="app-soft-panel p-4">
+                    <div className="text-sm font-semibold text-[color:var(--app-text)] mb-3">Ürün görseli</div>
+                    <input
+                      ref={gorselInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      style={{ display: 'none' }}
+                      onChange={(e) => e.target.files[0] && uploadGorsel(e.target.files[0])}
+                    />
+                    {selectedMamulDetail.gorsel_url ? (
+                      <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                        <img
+                          src={selectedMamulDetail.gorsel_url}
+                          alt="Ürün görseli"
+                          style={{ width: '8rem', height: '8rem', objectFit: 'cover', borderRadius: '0.7rem', border: '1px solid var(--app-border)' }}
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          <button
+                            type="button"
+                            disabled={gorselUploading}
+                            onClick={() => gorselInputRef.current?.click()}
+                            className="app-btn-secondary"
+                          >
+                            {gorselUploading ? 'Yükleniyor...' : 'Görseli değiştir'}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={gorselUploading}
+                            onClick={deleteGorsel}
+                            className="app-btn-danger"
+                          >
+                            Görseli sil
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={gorselUploading}
+                        onClick={() => gorselInputRef.current?.click()}
+                        className="app-btn-secondary"
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                          <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2ZM8.5 13.5l2.5 3 3.5-4.5 4.5 6H5l3.5-4.5ZM6.5 9a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Z"/>
+                        </svg>
+                        {gorselUploading ? 'Yükleniyor...' : 'Görsel yükle'}
+                      </button>
+                    )}
                   </div>
 
 <div className="app-data-table">

@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const multer = require('multer');
 const { startExcelSync, SOURCE_ORDER } = require('./excelSync');
 
 const app = express();
@@ -464,6 +465,7 @@ db.run(`CREATE TABLE IF NOT EXISTS ui_ayarlari (
     ensureColumnExists('mamul_kartlari', 'vurgu_etiketi', `TEXT`);
     ensureColumnExists('mamul_kartlari', 'koleksiyon_adi', `TEXT`);
     ensureColumnExists('mamul_kartlari', 'yayin_durumu', `TEXT DEFAULT 'taslak'`);
+    ensureColumnExists('mamul_kartlari', 'bakim_talimatlari', `TEXT`);
 
     console.log('✅ Veritabanı tabloları hazır');
   });
@@ -2079,6 +2081,7 @@ app.post('/api/admin/mamuller', (req, res, next) => {
     materyalNotlari,
     gorselUrl,
     vurguEtiketi,
+    bakimTalimatlari,
     birKgSatisFiyati,
     aktif = true,
     iplikler = [],
@@ -2108,8 +2111,8 @@ app.post('/api/admin/mamuller', (req, res, next) => {
         `INSERT INTO mamul_kartlari (
           mamul_adi, mamul_turu_id, article_no, article_code, koleksiyon_adi, yayin_durumu, renk, renk_kodu,
           kompozisyon_ozeti, en, gramaj, aciklama, tanitim_basligi, tanitim_hikayesi,
-          materyal_notlari, gorsel_url, vurgu_etiketi, bir_kg_maliyet, bir_kg_satis_fiyati, qr_slug, aktif
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
+          materyal_notlari, gorsel_url, vurgu_etiketi, bakim_talimatlari, bir_kg_maliyet, bir_kg_satis_fiyati, qr_slug, aktif
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
         [
           String(mamulAdi).trim(),
           mamulTuruId,
@@ -2128,6 +2131,7 @@ app.post('/api/admin/mamuller', (req, res, next) => {
           String(materyalNotlari || '').trim(),
           String(gorselUrl || '').trim(),
           String(vurguEtiketi || '').trim(),
+          String(bakimTalimatlari || '').trim(),
           totalCost,
           Number(birKgSatisFiyati || 0),
           qrSlug,
@@ -2234,6 +2238,7 @@ app.put('/api/admin/mamuller/:id', (req, res, next) => {
     materyalNotlari,
     gorselUrl,
     vurguEtiketi,
+    bakimTalimatlari,
     birKgSatisFiyati,
     aktif = true,
     iplikler = [],
@@ -2294,6 +2299,7 @@ const qrSlug = slugify(`${existing.article_code}-${mamulAdi}-${renk || ''}`);
               materyal_notlari = ?,
               gorsel_url = ?,
               vurgu_etiketi = ?,
+              bakim_talimatlari = ?,
               bir_kg_maliyet = ?,
               bir_kg_satis_fiyati = ?,
               qr_slug = ?,
@@ -2318,6 +2324,7 @@ const qrSlug = slugify(`${existing.article_code}-${mamulAdi}-${renk || ''}`);
             String(materyalNotlari || '').trim(),
             String(gorselUrl || '').trim(),
             String(vurguEtiketi || '').trim(),
+            String(bakimTalimatlari || '').trim(),
             totalCost,
             Number(birKgSatisFiyati || 0),
             qrSlug,
@@ -2505,6 +2512,7 @@ app.get('/api/public/mamuller/:slug', (req, res, next) => {
                       materyal_notlari: mamul.materyal_notlari,
                       gorsel_url: mamul.gorsel_url,
                       vurgu_etiketi: mamul.vurgu_etiketi,
+                      bakim_talimatlari: mamul.bakim_talimatlari,
                       iplikler: yarnRows.map((item) => ({
                         ...item,
                         oran_yuzde: Number(item.oran_yuzde || 0)
@@ -4211,6 +4219,76 @@ app.get('/api/health', (req, res) => {
     });
   });
 });
+
+// Görsel upload ayarları
+const uploadsDir = path.join(__dirname, '..', 'public', 'uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+const gorselStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    cb(null, `mamul-${req.params.id}-${Date.now()}${ext}`);
+  }
+});
+
+const gorselUpload = multer({
+  storage: gorselStorage,
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    cb(null, /^image\/(jpeg|png|webp|gif)$/.test(file.mimetype));
+  }
+});
+
+app.post('/api/admin/mamuller/:id/gorsel', gorselUpload.single('gorsel'), (req, res, next) => {
+  if (!req.file) return res.status(400).json({ error: 'Geçerli bir görsel dosyası seçin (jpg, png, webp)' });
+
+  const mamulId = req.params.id;
+  const gorselUrl = `/uploads/${req.file.filename}`;
+
+  // Eski görseli sil
+  db.get(`SELECT gorsel_url FROM mamul_kartlari WHERE id = ?`, [mamulId], (err, row) => {
+    if (!err && row?.gorsel_url && row.gorsel_url.startsWith('/uploads/')) {
+      const oldPath = path.join(__dirname, '..', 'public', row.gorsel_url);
+      fs.unlink(oldPath, () => {});
+    }
+
+    db.run(
+      `UPDATE mamul_kartlari SET gorsel_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      [gorselUrl, mamulId],
+      function(updateErr) {
+        if (updateErr) return next(updateErr);
+        if (this.changes === 0) return res.status(404).json({ error: 'Mamül bulunamadı' });
+        res.json({ success: true, data: { gorsel_url: gorselUrl } });
+      }
+    );
+  });
+});
+
+app.delete('/api/admin/mamuller/:id/gorsel', (req, res, next) => {
+  const mamulId = req.params.id;
+  db.get(`SELECT gorsel_url FROM mamul_kartlari WHERE id = ?`, [mamulId], (err, row) => {
+    if (err) return next(err);
+    if (!row) return res.status(404).json({ error: 'Mamül bulunamadı' });
+
+    if (row.gorsel_url && row.gorsel_url.startsWith('/uploads/')) {
+      const oldPath = path.join(__dirname, '..', 'public', row.gorsel_url);
+      fs.unlink(oldPath, () => {});
+    }
+
+    db.run(
+      `UPDATE mamul_kartlari SET gorsel_url = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      [mamulId],
+      (updateErr) => {
+        if (updateErr) return next(updateErr);
+        res.json({ success: true });
+      }
+    );
+  });
+});
+
+// /uploads klasörünü serve et
+app.use('/uploads', express.static(uploadsDir));
 
 if (fs.existsSync(buildDir)) {
   app.use(express.static(buildDir));
