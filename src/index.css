@@ -552,13 +552,10 @@ code {
 }
 
 .app-mobile-nav-item.is-active {
-  color: var(--app-primary-strong);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--app-primary) 14%, white 86%), color-mix(in srgb, var(--app-surface) 82%, white 18%));
-  border-color: color-mix(in srgb, var(--app-primary) 34%, white 66%);
-  box-shadow:
-    0 10px 22px rgba(15, 23, 42, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
-  transform: translateY(-3px);
+  color: white;
+  background: linear-gradient(135deg, var(--app-primary-strong), var(--app-primary) 55%, var(--app-accent));
+  border-color: transparent;
+  box-shadow: 0 6px 16px rgba(15, 76, 79, 0.32);
 }
 
 .app-mobile-nav-item.is-disabled {
@@ -2544,10 +2541,7 @@ body::before {
   transform: none;
 }
 
-.app-mobile-nav-item.is-active {
-  color: var(--app-primary-strong);
-  background: linear-gradient(135deg, rgba(15, 76, 79, 0.1), rgba(185, 121, 58, 0.14));
-}
+
 
 @keyframes spin {
   to { transform: translateY(-50%) rotate(360deg); }
