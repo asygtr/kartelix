@@ -11,7 +11,7 @@ const T = {
   TR: {
     fabric: 'KumaÅŸ Hikayesi', material: 'Hammadde', process: 'Ãœretim SÃ¼reci',
     technical: 'Teknik', related: 'AynÄ± Gruptan', width: 'En', weight: 'Gramaj',
-    article: 'Article', color: 'Renk', order: 'Bu KumaÅŸÄ± SipariÅŸ Et',
+    article: 'Article', color: 'Renk', order: 'Order This Fabric',
     care: 'BakÄ±m TalimatlarÄ±', notFound: 'ÃœrÃ¼n bulunamadÄ±', searching: 'AranÄ±yor...',
     share: 'PaylaÅŸ', copied: 'BaÄŸlantÄ± kopyalandÄ±!',
     careLabels: {
