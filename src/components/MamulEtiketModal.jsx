@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import LabelPreviewCard from './LabelPreviewCard';
 import { defaultLabelTemplate, mergeLabelTemplate, printLabels, loadLabelTemplate } from '../utils/labelTemplate';
 
@@ -29,23 +30,36 @@ const fetchActiveTemplate = async () => {
 
 const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
   const [template, setTemplate] = useState(null);
+  const [templates, setTemplates] = useState([]);
+  const [activeTemplateId, setActiveTemplateId] = useState(templateId || '');
+
+  useEffect(() => {
+    fetch('/api/admin/label-templates')
+      .then(r => r.json())
+      .then(res => { if (res.success) setTemplates(res.data || []); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const loadTemplate = async () => {
-      if (templateId) {
-        // Önce localStorage'dan dene (listLabelTemplates ile kaydedilmiş olabilir)
-        const localTemplate = loadLabelTemplate(templateId);
-        if (localTemplate) {
-          setTemplate(localTemplate);
-          return;
-        }
+      const tid = activeTemplateId || templateId;
+      if (tid) {
+        const localTemplate = loadLabelTemplate(tid);
+        if (localTemplate) { setTemplate(localTemplate); return; }
       }
-      // localStorage'da yoksa server'dan aktif şablonu al
       const loaded = await fetchActiveTemplate();
       setTemplate(loaded);
     };
     loadTemplate();
-  }, [templateId]);
+  }, [activeTemplateId, templateId]);
+
+  const handleTemplateChange = async (id) => {
+    setActiveTemplateId(id);
+    try {
+      const res = await fetch(`/api/admin/label-templates/${id}`).then(r => r.json());
+      if (res.success) setTemplate(mergeLabelTemplate(res.data));
+    } catch {}
+  };
 
   useEffect(() => {
     const handleEscape = (event) => {
@@ -62,7 +76,7 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
 
   const publicUrl = `${window.location.origin}/u/${mamul.qr_slug}`;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto p-2 sm:p-4"
       style={{ background: 'rgba(15,23,42,0.6)' }}
@@ -92,16 +106,24 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
 
         <div className="grid gap-4 p-4 sm:gap-6 sm:p-6 lg:grid-cols-[1.15fr,0.85fr]">
           <div className="min-w-0 overflow-x-auto">
-            <LabelPreviewCard record={mamul} template={template} lang="tr" />
+            <LabelPreviewCard record={mamul} template={template} lang="en" />
           </div>
 
           <div className="space-y-4">
+            {templates.length > 0 && (
+              <select
+                className="app-select w-full"
+                value={activeTemplateId}
+                onChange={(e) => handleTemplateChange(e.target.value)}
+              >
+                <option value="">-- Şablon seç --</option>
+                {templates.map((t) => (
+                  <option key={t.template_id || t.id} value={t.template_id || t.id}>{t.name}</option>
+                ))}
+              </select>
+            )}
             <div className="grid gap-3 sm:grid-cols-2">
-              <button type="button" onClick={() => printLabels([mamul], template, 'tr')} className="app-btn-primary inline-flex items-center justify-center gap-2">
-                <PrintIcon />
-                <span>Yazdır (TR)</span>
-              </button>
-              <button type="button" onClick={() => printLabels([mamul], template, 'en')} className="app-btn-secondary inline-flex items-center justify-center gap-2">
+              <button type="button" onClick={() => printLabels([mamul], template, 'en')} className="app-btn-primary inline-flex items-center justify-center gap-2">
                 <PrintIcon />
                 <span>Print (EN)</span>
               </button>
@@ -118,7 +140,8 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

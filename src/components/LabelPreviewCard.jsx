@@ -186,7 +186,8 @@ const LabelPreviewCard = ({ record, template: templateInput, lang = 'tr', classN
                   const field = getFieldDefinition(fieldId);
                   const isRenkField = fieldId === 'renk';
                   const colorHex = isRenkField ? resolveColorHex(record) : null;
-                  const displayValue = isRenkField && record?.renk ? normalizeLabelText(extractColorName(record.renk)) : normalizeLabelText(getFieldValue(record, fieldId));
+                  const rawValue = isRenkField && record?.renk ? extractColorName(record.renk) : getFieldValue(record, fieldId);
+                  const displayValue = normalizeLabelText(rawValue);
                   return (
                     <React.Fragment key={fieldId}>
                       <div className={`app-label-preview-key ${field.compact ? 'is-compact' : ''}`}>{normalizeLabelText(getFieldLabel(fieldId, lang))}:</div>

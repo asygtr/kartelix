@@ -5,8 +5,8 @@ export const labelFieldCatalog = [
   { id: 'mamul_adi', labelTr: 'Mamül', labelEn: 'Product' },
   { id: 'kompozisyon_ozeti', labelTr: 'Kompozisyon', labelEn: 'Composition', compact: true },
   { id: 'renk', labelTr: 'Renk', labelEn: 'Color' },
-  { id: 'en', labelTr: 'En', labelEn: 'Width' },
-  { id: 'gramaj', labelTr: 'Gramaj', labelEn: 'Weight' },
+  { id: 'en', labelTr: 'En (cm)', labelEn: 'Width (cm)' },
+  { id: 'gramaj', labelTr: 'Gramaj (gr/m²)', labelEn: 'Weight (gr/m²)' },
   { id: 'mamul_turu_adi', labelTr: 'Tür', labelEn: 'Type' }
 ];
 
@@ -120,15 +120,21 @@ export const resolveColorHex = (record) => {
   return colorNameToHex(val);
 };
 
-export const normalizeLabelText = (value) =>
-  String(value || '-')
+export const normalizeLabelText = (value) => {
+  // ² sembolünü geçici olarak koru
+  const placeholder = '\x00SUP2\x00';
+  const withPlaceholder = String(value || '-').replace(/²/g, placeholder);
+  return withPlaceholder
     .toUpperCase()
     .replace(/İ/g, 'I')
+    .replace(/I\u0307/g, 'I')
     .replace(/Ü/g, 'U')
     .replace(/Ç/g, 'C')
     .replace(/Ğ/g, 'G')
     .replace(/Ş/g, 'S')
-    .replace(/Ö/g, 'O');
+    .replace(/Ö/g, 'O')
+    .replace(new RegExp(placeholder, 'g'), '²');
+};
 
 export const getFieldDefinition = (fieldId) =>
   labelFieldCatalog.find((field) => field.id === fieldId) || labelFieldCatalog[0];
