@@ -238,6 +238,7 @@ const LabelDesignerPanel = () => {
                   <span className="text-sm font-medium text-[color:var(--app-text)]">Çerçeve stili</span>
                 </div>
                 <select className="app-select" value={template.frameStyle} onChange={e => updateTemplate({ frameStyle: e.target.value })}>
+                  <option value="none">Yok (çerçevesiz)</option>
                   <option value="solid">Düz çizgi</option>
                   <option value="double">Çift çizgi</option>
                   <option value="dashed">Kesik çizgi</option>

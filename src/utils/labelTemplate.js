@@ -348,6 +348,17 @@ export const getFramePresentation = (templateInput, unit = 'mm') => {
   const cornerSize = Math.max(template.cornerSizeMm, borderWidth * 4);
   const innerInset = Math.max(borderWidth * 2.6, 0.9);
 
+  if (template.frameStyle === 'none') {
+    return {
+      border: 'none',
+      borderRadius: withUnit(borderRadius, unit),
+      showInnerFrame: false,
+      innerFrameStyle: {},
+      showCorners: false,
+      cornerStyle: {}
+    };
+  }
+
   const base = {
     border: `${withUnit(borderWidth, unit)} solid ${template.borderColor}`,
     borderRadius: withUnit(borderRadius, unit),
