@@ -2331,23 +2331,6 @@ body::before {
     0 1px 0 rgba(255, 255, 255, 0.78) inset;
 }
 
-.app-panel::before,
-.app-card::before,
-.app-soft-panel::before,
-.public-related-card::before,
-.public-story-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(115deg, transparent 0%, rgba(185, 121, 58, 0.14) 42%, transparent 72%),
-    repeating-linear-gradient(90deg, rgba(15, 76, 79, 0.035) 0 1px, transparent 1px 11px);
-  opacity: 0.36;
-  transform: translateX(-28%);
-  transition: opacity 420ms ease, transform 620ms ease;
-}
-
 .app-panel:hover,
 .app-card:hover,
 .app-soft-panel:hover,
@@ -2357,15 +2340,6 @@ body::before {
   box-shadow:
     0 28px 68px rgba(17, 23, 25, 0.15),
     0 1px 0 rgba(255, 255, 255, 0.86) inset;
-}
-
-.app-panel:hover::before,
-.app-card:hover::before,
-.app-soft-panel:hover::before,
-.public-related-card:hover::before,
-.public-story-card:hover::before {
-  opacity: 0.68;
-  transform: translateX(24%);
 }
 
 .app-nav-shell {
