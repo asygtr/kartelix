@@ -638,9 +638,9 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                     <div className="text-sm text-[color:var(--app-text-muted)]">{item.article_code} / {item.article_no}</div>
                     <div className="text-sm text-[color:var(--app-text-muted)]">{item.mamul_turu_adi}{extractColorName(item.renk) ? ` · ${extractColorName(item.renk)}` : ''}<span style={resolveColorHex(item) ? { display: 'inline-block', width: '10px', height: '10px', backgroundColor: resolveColorHex(item), border: '1px solid #999', borderRadius: '2px', marginLeft: '4px', verticalAlign: 'middle' } : {}} /></div>
                     <div className="text-sm font-semibold text-[color:var(--app-success)]">{Number(item.bir_kg_satis_fiyati || 0).toFixed(2)}</div>
-                    <div className="app-mamul-actions-pc" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'nowrap' }}>
-                      <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary btn-sm" style={{ whiteSpace: 'nowrap' }}>Detay</button>
-                      <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary btn-sm" style={{ whiteSpace: 'nowrap' }}>Görüntüle</a>
+                    <div className="app-mamul-actions-pc" style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', minWidth: 0 }}>
+                      <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary" style={{ whiteSpace: 'nowrap', fontSize: '0.75rem', padding: '0.3rem 0.65rem', lineHeight: 1.4 }}>Detay</button>
+                      <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary" style={{ whiteSpace: 'nowrap', fontSize: '0.75rem', padding: '0.3rem 0.65rem', lineHeight: 1.4, textDecoration: 'none', display: 'inline-block' }}>Görüntüle</a>
                     </div>
                   </motion.div>
                 ))}

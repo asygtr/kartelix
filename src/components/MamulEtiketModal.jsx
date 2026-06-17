@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import LabelPreviewCard from './LabelPreviewCard';
-import { defaultLabelTemplate, mergeLabelTemplate, printLabels, loadLabelTemplate } from '../utils/labelTemplate';
+import { defaultLabelTemplate, mergeLabelTemplate, printLabels } from '../utils/labelTemplate';
 
 const CloseIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
@@ -15,17 +15,14 @@ const PrintIcon = () => (
   </svg>
 );
 
+const fetchTemplateById = async (id) => {
+  const res = await fetch(`/api/admin/label-templates/${id}`).then(r => r.json()).catch(() => ({ success: false }));
+  return res.success ? mergeLabelTemplate(res.data) : null;
+};
+
 const fetchActiveTemplate = async () => {
-  try {
-    const response = await fetch('/api/admin/label-templates/active');
-    if (response.ok) {
-      const result = await response.json();
-      if (result.success && result.data) {
-        return mergeLabelTemplate(result.data);
-      }
-    }
-  } catch {}
-  return mergeLabelTemplate(defaultLabelTemplate);
+  const res = await fetch('/api/admin/label-templates/active').then(r => r.json()).catch(() => ({ success: false }));
+  return res.success && res.data ? mergeLabelTemplate(res.data) : mergeLabelTemplate(defaultLabelTemplate);
 };
 
 const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
@@ -36,16 +33,26 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
   useEffect(() => {
     fetch('/api/admin/label-templates')
       .then(r => r.json())
-      .then(res => { if (res.success) setTemplates(res.data || []); })
+      .then(res => {
+        if (res.success) {
+          const list = res.data || [];
+          setTemplates(list);
+          // Eğer activeTemplateId henüz set edilmediyse ilk şablonu otomatik seç
+          if (!activeTemplateId && list.length > 0) {
+            const firstId = list[0].template_id || list[0].id;
+            setActiveTemplateId(firstId);
+          }
+        }
+      })
       .catch(() => {});
   }, []);
 
   useEffect(() => {
     const loadTemplate = async () => {
       const tid = activeTemplateId || templateId;
-      if (tid) {
-        const localTemplate = loadLabelTemplate(tid);
-        if (localTemplate) { setTemplate(localTemplate); return; }
+      if (tid && tid !== 'default') {
+        const loaded = await fetchTemplateById(tid);
+        if (loaded) { setTemplate(loaded); return; }
       }
       const loaded = await fetchActiveTemplate();
       setTemplate(loaded);
@@ -55,10 +62,8 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
 
   const handleTemplateChange = async (id) => {
     setActiveTemplateId(id);
-    try {
-      const res = await fetch(`/api/admin/label-templates/${id}`).then(r => r.json());
-      if (res.success) setTemplate(mergeLabelTemplate(res.data));
-    } catch {}
+    const loaded = await fetchTemplateById(id);
+    if (loaded) setTemplate(loaded);
   };
 
   useEffect(() => {
@@ -116,7 +121,6 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
                 value={activeTemplateId}
                 onChange={(e) => handleTemplateChange(e.target.value)}
               >
-                <option value="">-- Şablon seç --</option>
                 {templates.map((t) => (
                   <option key={t.template_id || t.id} value={t.template_id || t.id}>{t.name}</option>
                 ))}

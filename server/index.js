@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const path = require('path');
@@ -888,32 +888,32 @@ function buildApprovalEmailContent(order, items = [], showPrices = true) {
   const html = [
     '<div style="font-family:Arial,sans-serif;color:#1a2024;line-height:1.6;max-width:640px">',
     '<div style="background:#1a2024;padding:24px 32px;border-radius:8px 8px 0 0">',
-    '<div style="color:#fff;font-size:18px;font-weight:700;letter-spacing:0.04em">SÄ°PARÄ°Å ONAYLANDI</div>',
-    `<div style="color:rgba(255,255,255,0.6);font-size:13px;margin-top:4px">SipariÅŸ ${siparisNo} â€” ${firma}</div>`,
+    '<div style="color:#fff;font-size:18px;font-weight:700;letter-spacing:0.04em">SİPARİŞ ONAYLANDI</div>',
+    `<div style="color:rgba(255,255,255,0.6);font-size:13px;margin-top:4px">Sipariş ${siparisNo} – ${firma}</div>`,
     '</div>',
     '<div style="background:#faf8f5;padding:24px 32px;border:1px solid #e8e0d4;border-top:none">',
-    '<p style="margin:0 0 16px">SayÄ±n Ä°lgili,</p>',
-    `<p style="margin:0 0 16px"><strong>${firma}</strong> firmasÄ±na ait <strong>${siparisNo}</strong> numaralÄ± sipariÅŸ tarafÄ±mÄ±zca incelenmiÅŸ ve <strong>onaylanmÄ±ÅŸtÄ±r</strong>. SipariÅŸin Ã¼retim sÃ¼recine alÄ±nmasÄ± iÃ§in bilgilerinizi paylaÅŸÄ±yoruz.</p>`,
+    '<p style="margin:0 0 16px">Sayın İlgili,</p>',
+    `<p style="margin:0 0 16px"><strong>${firma}</strong> firmasına ait <strong>${siparisNo}</strong> numaralı sipariş tarafımızca incelenmiş ve <strong>onaylanmıştır</strong>. Siparişin üretim sürecine alınması için bilgilerinizi paylaşıyoruz.</p>`,
     '<table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px">',
-    `<thead><tr style="background:#ede8df"><th align="left" style="padding:8px">Article</th><th align="left" style="padding:8px">MamÃ¼l</th><th align="left" style="padding:8px">Renk</th><th align="right" style="padding:8px">Miktar</th>${priceTh}</tr></thead>`,
+    `<thead><tr style="background:#ede8df"><th align="left" style="padding:8px">Article</th><th align="left" style="padding:8px">Mamül</th><th align="left" style="padding:8px">Renk</th><th align="right" style="padding:8px">Miktar</th>${priceTh}</tr></thead>`,
     `<tbody>${itemRows}</tbody>`,
     '</table>',
     '<table cellpadding="0" cellspacing="0" style="width:100%;font-size:13px;margin-bottom:16px">',
     `<tr><td style="padding:4px 0;color:#666">Firma</td><td style="padding:4px 0;font-weight:600">${order.firma_adi || '-'}</td></tr>`,
-    `<tr><td style="padding:4px 0;color:#666">Ä°lgili KiÅŸi</td><td style="padding:4px 0">${order.ilgili_kisi || '-'}</td></tr>`,
+    `<tr><td style="padding:4px 0;color:#666">İlgili Kişi</td><td style="padding:4px 0">${order.ilgili_kisi || '-'}</td></tr>`,
     `<tr><td style="padding:4px 0;color:#666">Telefon</td><td style="padding:4px 0">${order.telefon || '-'}</td></tr>`,
     `<tr><td style="padding:4px 0;color:#666">Fuar / Kaynak</td><td style="padding:4px 0">${order.fuar_adi || '-'}</td></tr>`,
     totalRow,
     '</table>',
     order.aciklama ? `<p style="margin:0 0 16px;font-size:13px;color:#555"><strong>Not:</strong> ${order.aciklama}</p>` : '',
-    '<p style="margin:16px 0 0;font-size:13px;color:#888">Bu e-posta otomatik olarak gÃ¶nderilmiÅŸtir.</p>',
+    '<p style="margin:16px 0 0;font-size:13px;color:#888">Bu e-posta otomatik olarak gönderilmiştir.</p>',
     '</div></div>'
   ].join('');
 
   const text = [
-    `SÄ°PARÄ°Å ONAYLANDI â€” ${siparisNo}`,
+    `SİPARİŞ ONAYLANDI – ${siparisNo}`,
     `Firma: ${firma}`,
-    `Ä°lgili KiÅŸi: ${order.ilgili_kisi || '-'}`,
+    `İlgili Kişi: ${order.ilgili_kisi || '-'}`,
     `Telefon: ${order.telefon || '-'}`,
     ...(showPrices ? [`Toplam: ${Number(order.toplam_tutar || 0).toFixed(2)} ${order.para_birimi || 'TRY'}`] : []),
     '',
@@ -923,7 +923,7 @@ function buildApprovalEmailContent(order, items = [], showPrices = true) {
       : `${i.article_code} - ${i.mamul_adi} - ${Number(i.miktar_kg || 0).toFixed(2)} kg`) : ['-'])
   ].join('\n');
 
-  return { subject: `SipariÅŸ OnaylandÄ± ${siparisNo} â€” ${firma}`, html, text };
+  return { subject: `Sipariş Onaylandı ${siparisNo} – ${firma}`, html, text };
 }
 
 function buildOrderEmailContent(order, items = []) {
@@ -935,7 +935,7 @@ function buildOrderEmailContent(order, items = []) {
     title,
     '',
     `Firma: ${order.firma_adi || order.musteri_adi || '-'}`,
-    `Ilgili kisi: ${order.ilgili_kisi || '-'}`,
+    `İlgili kişi: ${order.ilgili_kisi || '-'}`,
     `Telefon: ${order.telefon || '-'}`,
     `E-posta: ${order.email || '-'}`,
     `Fuar: ${order.fuar_adi || '-'}`,
@@ -965,7 +965,7 @@ function buildOrderEmailContent(order, items = []) {
     <div style="font-family:Arial,sans-serif;color:#172023;line-height:1.5">
       <h2>${title}</h2>
       <p><strong>Firma:</strong> ${order.firma_adi || order.musteri_adi || '-'}</p>
-      <p><strong>Ilgili kisi:</strong> ${order.ilgili_kisi || '-'}<br>
+      <p><strong>İlgili kişi:</strong> ${order.ilgili_kisi || '-'}<br>
       <strong>Telefon:</strong> ${order.telefon || '-'}<br>
       <strong>E-posta:</strong> ${order.email || '-'}<br>
       <strong>Fuar:</strong> ${order.fuar_adi || '-'}<br>
@@ -3404,65 +3404,30 @@ app.get('/api/admin/label-templates/export', async (req, res, next) => {
 // Aktif etiket şablonunu getir
 app.get('/api/admin/label-templates/active', async (req, res, next) => {
   try {
-    const row = await new Promise((resolve, reject) => {
+    let row = await new Promise((resolve, reject) => {
       db.get(`SELECT * FROM label_templates WHERE is_active = 1 LIMIT 1`, [], (err, row) => {
         if (err) reject(err);
         else resolve(row || null);
       });
     });
 
+    // Aktif şablon yoksa ilk şablonu kullan ve aktif yap
     if (!row) {
-      const defaultTemplate = {
-        brandName: 'KARTELIX',
-        widthMm: 90,
-        heightMm: 60,
-        innerWidthMm: 86,
-        innerHeightMm: 56,
-        paddingMm: 2,
-        pageMarginTopMm: 2,
-        pageMarginRightMm: 2,
-        pageMarginBottomMm: 2,
-        pageMarginLeftMm: 2,
-        railWidthMm: 4,
-        brandPosition: 'left',
-        qrColumnWidthMm: 15,
-        qrSizeMm: 13.75,
-        qrVerticalAlign: 'top',
-        qrOffsetTopMm: 0,
-        labelColumnMm: 10,
-        rowGapMm: 0.45,
-        columnGapMm: 0.45,
-        contentGapMm: 1.2,
-        careGapMm: 0.55,
-        careTopGapMm: 0.7,
-        borderRadiusMm: 0.4,
-        borderWidthMm: 0.35,
-        frameStyle: 'solid',
-        cornerSizeMm: 3.2,
-        borderColor: '#111827',
-        accentColor: '#111827',
-        backgroundColor: '#ffffff',
-        scanTextTr: '↗ BENİ TARA',
-        scanTextEn: '↗ SCAN ME',
-        showBrandRail: true,
-        showQr: true,
-        showCareIcons: true,
-        brandLetterSpacing: 0.06,
-        bodyFontPt: 5.2,
-        bodyLineHeight: 1.04,
-        compactFontPt: 4.8,
-        previewLang: 'tr',
-        fieldOrder: ['article_code', 'mamul_adi', 'kompozisyon_ozeti', 'renk', 'en', 'gramaj', 'mamul_turu_adi'],
-        hiddenFields: [],
-        careIcons: [
-          { id: 'wash-30', label: '30', title: '30°C yıkama', enabled: true },
-          { id: 'bleach-no', label: 'X', title: 'Çamaşır suyu yok', enabled: true },
-          { id: 'iron-low', label: 'I', title: 'Düşük ısı ütü', enabled: true },
-          { id: 'dry-no', label: 'D', title: 'Kurutma yok', enabled: true },
-          { id: 'dry-clean', label: 'P', title: 'Kuru temizleme', enabled: true }
-        ]
-      };
-      res.json({ success: true, data: { id: 'default', ...defaultTemplate } });
+      row = await new Promise((resolve, reject) => {
+        db.get(`SELECT * FROM label_templates ORDER BY created_at ASC LIMIT 1`, [], (err, row) => {
+          if (err) reject(err);
+          else resolve(row || null);
+        });
+      });
+      if (row) {
+        await new Promise((resolve, reject) => {
+          db.run(`UPDATE label_templates SET is_active = 1 WHERE template_id = ?`, [row.template_id], (err) => err ? reject(err) : resolve());
+        });
+      }
+    }
+
+    if (!row) {
+      res.json({ success: false, data: null });
     } else {
       try {
         const template = JSON.parse(row.template_json);
@@ -3534,6 +3499,7 @@ app.post('/api/admin/label-templates', async (req, res, next) => {
         ON CONFLICT(template_id) DO UPDATE SET
           name = excluded.name,
           template_json = excluded.template_json,
+          is_active = excluded.is_active,
           updated_at = CURRENT_TIMESTAMP
       `;
       const resolvedName = String(name || '').trim() || `Şablon ${Date.now()}`;

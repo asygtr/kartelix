@@ -28,8 +28,16 @@ const MamulLabelPage = () => {
 
         if (activeRes.success && activeRes.data) {
           const activeId = activeRes.data.id || activeRes.data.template_id || '';
-          setSelectedTemplateId(activeId);
-          setSelectedTemplate(mergeLabelTemplate(activeRes.data));
+          const merged = mergeLabelTemplate(activeRes.data);
+          // Aktif ID gerçek bir DB şablonuysa onu seç
+          const realId = list.some(t => (t.template_id || t.id) === activeId) ? activeId : (list[0]?.template_id || list[0]?.id || '');
+          setSelectedTemplateId(realId);
+          if (realId && realId !== activeId) {
+            const detailRes = await fetch(`/api/admin/label-templates/${realId}`).then(r => r.json());
+            if (detailRes.success) setSelectedTemplate(mergeLabelTemplate(detailRes.data));
+          } else {
+            setSelectedTemplate(merged);
+          }
         } else if (list.length > 0) {
           const firstId = list[0].template_id || list[0].id;
           setSelectedTemplateId(firstId);

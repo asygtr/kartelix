@@ -56,12 +56,12 @@ const detectBusinessCardText = async (file) => {
 };
 
 const matchesOrderSearch = (order, term) => {
-  const v = String(term || '').trim().toLowerCase();
+  const v = String(term || '').trim().toLocaleLowerCase('tr');
   if (!v) return true;
   return [order.id, order.firma_adi, order.musteri_adi, order.ilgili_kisi, order.telefon, order.email,
     order.fuar_adi, order.aciklama, order.article_codes, order.article_nos, order.mamul_adlari,
     order.personel_username, order.kartvizit_ocr_firma, order.kartvizit_ocr_kisi, order.kartvizit_ocr_email
-  ].some(f => String(f || '').toLowerCase().includes(v));
+  ].some(f => String(f || '').toLocaleLowerCase('tr').includes(v));
 };
 
 const StaffOrderPage = ({ mode = 'staff' }) => {
@@ -217,7 +217,7 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
     try {
       setSaving(true); setAddQrMessage('');
       const firma = String(form.firmaAdi || '').trim();
-      if (firma && !companies.some(c => c.ad?.toLowerCase() === firma.toLowerCase())) {
+      if (firma && !companies.some(c => c.ad?.toLocaleLowerCase('tr') === firma.toLocaleLowerCase('tr'))) {
         await fetch('/api/firmalar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ad: firma, telefon: form.telefon, adres: '' }) });
         await loadCompanies();
       }

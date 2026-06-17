@@ -120,11 +120,23 @@ export const resolveColorHex = (record) => {
   return colorNameToHex(val);
 };
 
-export const normalizeLabelText = (value) => {
+export const normalizeLabelText = (value, lang = 'tr') => {
   // ² sembolünü geçici olarak koru
   const placeholder = '\x00SUP2\x00';
   const withPlaceholder = String(value || '-').replace(/²/g, placeholder);
-  return withPlaceholder
+  if (lang === 'en') {
+    return withPlaceholder.toLocaleUpperCase('en-US').replace(new RegExp(placeholder, 'g'), '²');
+  }
+  // Türkçe: küçük harfleri locale-safe büyüt
+  const preConverted = withPlaceholder
+    .replace(/i/g, 'I')
+    .replace(/ı/g, 'I')
+    .replace(/ü/g, 'U')
+    .replace(/ç/g, 'C')
+    .replace(/ğ/g, 'G')
+    .replace(/ş/g, 'S')
+    .replace(/ö/g, 'O');
+  return preConverted
     .toUpperCase()
     .replace(/İ/g, 'I')
     .replace(/I\u0307/g, 'I')
@@ -463,12 +475,12 @@ export const buildLabelPrintMarkup = (record, templateInput, lang = 'tr') => {
 
   const rowsMarkup = visibleFieldIds.map((fieldId) => {
     const definition = getFieldDefinition(fieldId);
-    const value = normalizeLabelText(getFieldValue(record, fieldId));
+    const value = normalizeLabelText(getFieldValue(record, fieldId), lang);
     const valueClass = definition.compact ? 'composition-value' : 'value';
     const labelClass = definition.compact ? 'label composition-label' : 'label';
 
     return `
-      <div class="${labelClass}">${normalizeLabelText(getFieldLabel(fieldId, lang))}:</div>
+      <div class="${labelClass}">${normalizeLabelText(getFieldLabel(fieldId, lang), lang)}:</div>
       <div class="${valueClass}">${value}</div>
     `;
   }).join('');
@@ -476,7 +488,7 @@ export const buildLabelPrintMarkup = (record, templateInput, lang = 'tr') => {
   const careIconsMarkup = template.showCareIcons
     ? template.careIcons
         .filter((icon) => icon.enabled && icon.label)
-        .map((icon) => `<div class="wash-icon" title="${icon.title || icon.label}">${normalizeLabelText(icon.label)}</div>`)
+        .map((icon) => `<div class="wash-icon" title="${icon.title || icon.label}">${normalizeLabelText(icon.label, lang)}</div>`)
         .join('')
     : '';
 
@@ -492,7 +504,7 @@ export const buildLabelPrintMarkup = (record, templateInput, lang = 'tr') => {
         ` : ''}
         ${template.showBrandRail ? `
           <div class="brand-rail" style="${layout.brandStyle}">
-            <div class="brand" style="${layout.brandInnerStyle}">${normalizeLabelText(template.brandName)}</div>
+            <div class="brand" style="${layout.brandInnerStyle}">${normalizeLabelText(template.brandName, lang)}</div>
           </div>
         ` : ''}
         <div class="left" style="${layout.mainStyle}">
@@ -502,7 +514,7 @@ export const buildLabelPrintMarkup = (record, templateInput, lang = 'tr') => {
         ${template.showQr ? `
           <div class="qr" style="${layout.qrStyle}">
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(publicUrl)}" alt="QR" />
-            ${scanText ? `<div class="scan">${normalizeLabelText(scanText)}</div>` : ''}
+            ${scanText ? `<div class="scan">${normalizeLabelText(scanText, lang)}</div>` : ''}
           </div>
         ` : ''}
       </div>

@@ -160,7 +160,7 @@ const LabelPreviewCard = ({ record, template: templateInput, lang = 'tr', classN
                   className={`app-label-preview-brand ${isVerticalBrand ? '' : 'is-horizontal'}`}
                   style={{ letterSpacing: `${template.brandLetterSpacing}em`, color: template.accentColor, fontSize: `${brandFontPx}px` }}
                 >
-                  {normalizeLabelText(template.brandName)}
+                  {normalizeLabelText(template.brandName, lang)}
                 </div>
               </div>
             ) : null}
@@ -187,10 +187,10 @@ const LabelPreviewCard = ({ record, template: templateInput, lang = 'tr', classN
                   const isRenkField = fieldId === 'renk';
                   const colorHex = isRenkField ? resolveColorHex(record) : null;
                   const rawValue = isRenkField && record?.renk ? extractColorName(record.renk) : getFieldValue(record, fieldId);
-                  const displayValue = normalizeLabelText(rawValue);
+                  const displayValue = normalizeLabelText(rawValue, lang);
                   return (
                     <React.Fragment key={fieldId}>
-                      <div className={`app-label-preview-key ${field.compact ? 'is-compact' : ''}`}>{normalizeLabelText(getFieldLabel(fieldId, lang))}:</div>
+                      <div className={`app-label-preview-key ${field.compact ? 'is-compact' : ''}`}>{normalizeLabelText(getFieldLabel(fieldId, lang), lang)}:</div>
                       <div
                         className={`app-label-preview-value ${field.compact ? 'is-compact' : ''} ${isRenkField ? 'relative' : ''}`}
                         style={field.compact ? { fontSize: `${compactFontPx}px` } : undefined}
@@ -219,7 +219,7 @@ const LabelPreviewCard = ({ record, template: templateInput, lang = 'tr', classN
                       title={icon.title || icon.label}
                       style={{ borderColor: template.borderColor, minHeight: `${careHeightPx}px`, fontSize: `${careFontPx}px`, borderRadius: `${template.borderRadiusMm * PX_PER_MM}px` }}
                     >
-                      {normalizeLabelText(icon.label)}
+                      {normalizeLabelText(icon.label, lang)}
                     </div>
                   ))}
                 </div>
@@ -239,7 +239,7 @@ const LabelPreviewCard = ({ record, template: templateInput, lang = 'tr', classN
                 <QRCodeSVG value={buildPublicUrl(record)} size={64} style={{ width: `${qrSizePx}px`, height: `${qrSizePx}px` }} />
                 {scanText ? (
                   <div className="app-label-preview-scan-text" style={{ fontSize: `${scanFontPx}px`, marginTop: `${0.55 * PX_PER_MM}px`, lineHeight: 1, transform: 'none' }}>
-                    {normalizeLabelText(scanText)}
+                    {normalizeLabelText(scanText, lang)}
                   </div>
                 ) : null}
               </div>
