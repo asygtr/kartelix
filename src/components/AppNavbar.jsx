@@ -182,7 +182,7 @@ const AppNavbar = ({ title, action, onLogout }) => {
             <img src={appLogo} alt="Kartelix logo" className="app-nav-logo-image" />
           </Link>
           <div className="app-nav-brand-copy">
-            <div className="app-nav-brand-name">Kartelix</div>
+            <div className="app-nav-brand-name">KARTELIX</div>
             <div className="app-nav-mobile-title">{title}</div>
           </div>
         </div>
