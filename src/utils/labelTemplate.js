@@ -210,7 +210,7 @@ export const mergeLabelTemplate = (incomingTemplate = {}) => {
     brandLetterSpacing: coerceNumber(incomingTemplate.brandLetterSpacing, defaultLabelTemplate.brandLetterSpacing),
     brandPosition: ['left', 'right', 'top', 'bottom'].includes(incomingTemplate.brandPosition) ? incomingTemplate.brandPosition : defaultLabelTemplate.brandPosition,
     qrVerticalAlign: ['top', 'center', 'bottom'].includes(incomingTemplate.qrVerticalAlign) ? incomingTemplate.qrVerticalAlign : defaultLabelTemplate.qrVerticalAlign,
-    frameStyle: ['solid', 'double', 'dashed', 'corners'].includes(incomingTemplate.frameStyle) ? incomingTemplate.frameStyle : defaultLabelTemplate.frameStyle,
+    frameStyle: ['none', 'solid', 'double', 'dashed', 'corners'].includes(incomingTemplate.frameStyle) ? incomingTemplate.frameStyle : defaultLabelTemplate.frameStyle,
     fieldOrder: [...nextOrder, ...remainingFields],
     hiddenFields: Array.isArray(incomingTemplate.hiddenFields) ? incomingTemplate.hiddenFields : [],
     careIcons: nextCareIcons
