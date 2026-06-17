@@ -897,16 +897,7 @@ code {
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
 }
 
-.app-hero::after {
-  content: '';
-  position: absolute;
-  inset: auto -6rem -5rem auto;
-  width: 15rem;
-  height: 15rem;
-  border-radius: 0;
-  background: color-mix(in srgb, var(--app-accent) 30%, transparent);
-  filter: blur(8px);
-}
+
 
 .app-page-hero {
   min-height: 12.5rem;
@@ -2249,28 +2240,7 @@ body {
   background-attachment: fixed;
 }
 
-body::before,
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-}
 
-body::before {
-  display: none;
-}
-
-@media (max-width: 991px) {
-  body::before {
-    animation: none;
-  }
-
-  body::after {
-    display: none;
-  }
-}
 
 .app-page {
   /* sayfa geçiş animasyonu framer-motion tarafından yönetiliyor */
