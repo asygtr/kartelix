@@ -1,35 +1,15 @@
 import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { CheckCircle, XCircle, Info } from './icons.jsx';
 
 const ToastContext = createContext(null);
 
 const DURATION = 4000;
 
-const CheckIcon = () => (
-  <svg viewBox="0 0 20 20" fill="none" style={{ width: '1.1rem', height: '1.1rem', flexShrink: 0 }}>
-    <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
-    <path d="M6 10l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
-const ErrorIcon = () => (
-  <svg viewBox="0 0 20 20" fill="none" style={{ width: '1.1rem', height: '1.1rem', flexShrink: 0 }}>
-    <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
-    <path d="M7 7l6 6M13 7l-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-  </svg>
-);
-
-const InfoIcon = () => (
-  <svg viewBox="0 0 20 20" fill="none" style={{ width: '1.1rem', height: '1.1rem', flexShrink: 0 }}>
-    <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
-    <path d="M10 9v5M10 7v.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-  </svg>
-);
-
 const VARIANTS = {
-  success: { bg: 'rgba(22, 163, 74, 0.96)', color: '#fff', icon: <CheckIcon /> },
-  error:   { bg: 'rgba(185, 28, 28, 0.96)',  color: '#fff', icon: <ErrorIcon /> },
-  info:    { bg: 'rgba(15, 76, 79, 0.96)',   color: '#fff', icon: <InfoIcon /> },
+  success: { bg: 'rgba(22, 163, 74, 0.96)', color: '#fff', icon: <CheckCircle size={18} /> },
+  error:   { bg: 'rgba(185, 28, 28, 0.96)',  color: '#fff', icon: <XCircle size={18} /> },
+  info:    { bg: 'rgba(15, 76, 79, 0.96)',   color: '#fff', icon: <Info size={18} /> },
 };
 
 const Toast = ({ id, message, type = 'info', onClose }) => {

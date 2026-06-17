@@ -1,0 +1,23 @@
+// Merkezi ikon dosyası — tüm ikonlar lucide-react'ten gelir
+export {
+  Home,
+  Search,
+  ClipboardList,
+  Tag,
+  Layers,
+  BarChart2,
+  Settings,
+  LogOut,
+  X,
+  Menu,
+  QrCode,
+  Plus,
+  Pencil,
+  Trash2,
+  CreditCard,
+  CheckCircle,
+  XCircle,
+  Info,
+  Upload,
+  Minus,
+} from 'lucide-react';

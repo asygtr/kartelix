@@ -4,22 +4,36 @@
   "icons": [
     {
       "src": "nevres.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "nevres.png",
       "sizes": "512x512",
       "type": "image/png"
     },
     {
       "src": "nevres.png",
+      "sizes": "512x512",
       "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "nevres.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "purpose": "maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
-  "theme_color": "#0f172a",
-  "background_color": "#ffffff"
+  "orientation": "portrait",
+  "theme_color": "#0f4c4f",
+  "background_color": "#fffdf8",
+  "shortcuts": [
+    {
+      "name": "Sipariş Oluştur",
+      "url": "/staff/orders/new",
+      "description": "Yeni sipariş oluştur"
+    },
+    {
+      "name": "Mamül Kartları",
+      "url": "/admin/mamuller",
+      "description": "Mamül kartlarını yönet"
+    }
+  ]
 }

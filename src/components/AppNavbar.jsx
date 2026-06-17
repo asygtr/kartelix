@@ -5,6 +5,7 @@ import { getSession } from '../utils/auth';
 import QrCameraModal from './QrCameraModal';
 import MobileBottomNav from './MobileBottomNav';
 import { isMobileCameraDevice } from '../utils/qr';
+import { Home, Search, ClipboardList, Tag, Layers, BarChart2, Settings, LogOut, X, QrCode } from './icons.jsx';
 
 const navSets = {
   admin: [
@@ -32,41 +33,6 @@ const isActiveLink = (pathname, target) => {
   return pathname === target || pathname.startsWith(`${target}/`);
 };
 
-const HomeIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-    <path d="M12 4 4 10.5V20h5.5v-5h5V20H20v-9.5L12 4Z" fill="currentColor" />
-  </svg>
-);
-
-const SearchIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-    <path d="M10.5 4a6.5 6.5 0 1 0 4.03 11.6l4.43 4.43 1.41-1.41-4.43-4.43A6.5 6.5 0 0 0 10.5 4Zm0 2a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z" fill="currentColor" />
-  </svg>
-);
-
-const OrderIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-    <path d="M5 4h11l3 3v13H5V4Zm2 2v12h10V8.2L15.8 6H7Zm2 3h6v2H9V9Zm0 4h6v2H9v-2Z" fill="currentColor" />
-  </svg>
-);
-
-const LabelIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-    <path d="M4 7a3 3 0 0 1 3-3h6l7 7-8 8-7-7V7Zm4 1.5A1.5 1.5 0 1 0 8 5.5a1.5 1.5 0 0 0 0 3Z" fill="currentColor" />
-  </svg>
-);
-
-const FabricIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-    <path d="M6 4h12v4l-2 1.5V20H8V9.5L6 8V4Zm2 2v1l2 1.5V18h4V8.5L16 7V6H8Z" fill="currentColor" />
-  </svg>
-);
-
-const ReportIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-    <path d="M5 5h14v14H5V5Zm2 2v10h10V7H7Zm1 7h2v2H8v-2Zm3-4h2v6h-2v-6Zm3-3h2v9h-2V7Z" fill="currentColor" />
-  </svg>
-);
 
 const AppNavbar = ({ title, action, onLogout }) => {
   const { appLogo } = useTheme();
@@ -97,35 +63,35 @@ const AppNavbar = ({ title, action, onLogout }) => {
     items.push({
       key: 'home',
       label: 'Ana Sayfa',
-      icon: <HomeIcon />,
+        icon: <Home className="app-nav-icon-svg" />,
       to: role === 'admin' ? '/admin' : role === 'mamul' ? '/mamul' : '/staff/orders/new'
     });
 
     items.push({
       key: 'search',
       label: 'Ara',
-      icon: <SearchIcon />,
+      icon: <Search className="app-nav-icon-svg" />,
       action: () => setSearchOpen(true)
     });
 
     items.push({
       key: 'orders',
       label: 'Siparişler',
-      icon: <OrderIcon />,
+      icon: <ClipboardList className="app-nav-icon-svg" />,
       to: role === 'admin' ? '/admin/orders' : role === 'staff' ? '/staff/orders/new' : null
     });
 
     items.push({
       key: 'labels',
       label: 'Etiket Bas',
-      icon: <LabelIcon />,
+      icon: <Tag className="app-nav-icon-svg" />,
       to: role === 'admin' || role === 'mamul' ? '/mamul/labels' : null
     });
 
     items.push({
       key: 'mamul',
       label: 'Mamül',
-      icon: <FabricIcon />,
+      icon: <Layers className="app-nav-icon-svg" />,
       to: role === 'admin' ? '/admin/mamuller' : role === 'mamul' ? '/mamul' : null
     });
 
@@ -133,7 +99,7 @@ const AppNavbar = ({ title, action, onLogout }) => {
       items.push({
         key: 'reports',
         label: 'Raporlar',
-        icon: <ReportIcon />,
+        icon: <BarChart2 className="app-nav-icon-svg" />,
         to: '/admin/reports'
       });
     }
@@ -206,16 +172,12 @@ const AppNavbar = ({ title, action, onLogout }) => {
         <div className="app-nav-actions">
           {showSettings ? (
             <Link to="/admin/settings?menu=1" className="app-nav-icon-button" aria-label="Ayarlar" title="Ayarlar">
-              <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-                <path d="M19.14 12.94a7.43 7.43 0 0 0 .05-.94 7.43 7.43 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.12 7.12 0 0 0-1.63-.94l-.36-2.54a.49.49 0 0 0-.49-.42h-3.84a.49.49 0 0 0-.49.42l-.36 2.54a7.12 7.12 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.43 7.43 0 0 0-.05.94 7.43 7.43 0 0 0 .05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.39 1.04.71 1.63.94l.36 2.54a.49.49 0 0 0 .49.42h3.84a.49.49 0 0 0 .49-.42l.36-2.54c.59-.23 1.13-.55 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64ZM12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5Z" fill="currentColor" />
-              </svg>
+              <Settings className="app-nav-icon-svg" />
             </Link>
           ) : null}
           {onLogout ? (
             <button type="button" onClick={onLogout} className="app-nav-icon-button" aria-label="Çıkış yap" title="Çıkış yap">
-              <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-                <path d="M10 17v-2h5V9h-5V7h5a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2Zm-4 3a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5v2H6v12h5v2Zm11.59-7L14 9.41 15.41 8 21.83 14.41 15.41 20.83 14 19.41 17.59 16H9v-2Z" fill="currentColor" />
-              </svg>
+              <LogOut className="app-nav-icon-svg" />
             </button>
           ) : null}
           {action ? <div className="app-nav-utility">{action}</div> : null}
@@ -246,9 +208,7 @@ const AppNavbar = ({ title, action, onLogout }) => {
               aria-label="Aramayı kapat"
               title="Aramayı kapat"
             >
-              <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-                <path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5Z" fill="currentColor" />
-              </svg>
+              <X className="app-nav-icon-svg" />
             </button>
           </div>
 
@@ -268,7 +228,7 @@ const AppNavbar = ({ title, action, onLogout }) => {
               />
               <div className="app-searchbar-actions">
                 <button type="submit" className="app-searchbar-submit" aria-label="Ara" title="Ara">
-                  <SearchIcon />
+                  <Search className="app-nav-icon-svg" />
                 </button>
                 {canUseMobileQr ? (
                   <button
@@ -278,9 +238,7 @@ const AppNavbar = ({ title, action, onLogout }) => {
                     aria-label="QR okut"
                     title="QR okut"
                   >
-                    <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-                      <path d="M4 4h5v2H6v3H4V4Zm10 0h6v6h-2V6h-4V4ZM4 15h2v3h3v2H4v-5Zm14 3v-3h2v5h-5v-2h3ZM8 8h8v8H8V8Zm2 2v4h4v-4h-4Z" fill="currentColor" />
-                    </svg>
+                    <QrCode className="app-nav-icon-svg" />
                   </button>
                 ) : null}
               </div>

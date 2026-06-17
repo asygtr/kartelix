@@ -5,6 +5,7 @@ import { palettes } from '../theme/palettes';
 import AppNavbar from '../components/AppNavbar';
 import LabelDesignerPanel from '../components/LabelDesignerPanel';
 import { clearSession } from '../utils/auth';
+import { X, Menu } from '../components/icons.jsx';
 
 const tabs = [
   { id: 'excel', label: 'Excel Senkron' },
@@ -35,17 +36,8 @@ const initialEmailForm = {
   lastAuthError: ''
 };
 
-const CloseIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-    <path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5Z" fill="currentColor" />
-  </svg>
-);
-
-const MenuIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-    <path d="M4 7h16v2H4V7Zm0 4h16v2H4v-2Zm0 4h16v2H4v-2Z" fill="currentColor" />
-  </svg>
-);
+const CloseIcon = () => <X className="app-nav-icon-svg" />;
+const MenuIcon  = () => <Menu className="app-nav-icon-svg" />;
 
 const SettingsPage = () => {
   const location = useLocation();

@@ -1,11 +1,6 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-
-const CloseIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-    <path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5Z" fill="currentColor" />
-  </svg>
-);
+import { X } from './icons.jsx';
 
 const isMobileDevice = () => {
   if (typeof navigator === 'undefined') return false;
@@ -158,7 +153,7 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
             aria-label="Kamerayı kapat"
             title="Kamerayı kapat"
           >
-            <CloseIcon />
+            <X className="app-nav-icon-svg" />
           </button>
         </div>
 

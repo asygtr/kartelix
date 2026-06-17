@@ -2,6 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import PageSearchBar from '../components/PageSearchBar';
 import { extractColorName, resolveColorHex } from '../utils/labelTemplate';
+import { Upload } from '../components/icons.jsx';
+import { useHaptic } from '../utils/useHaptic';
+import PullToRefresh from '../components/PullToRefresh';
+import { SkeletonList } from '../components/Skeleton';
 
 const emptyYarn = { iplik_tanim_id: '', iplik_adi: '', oran_yuzde: '', birim_fiyat: '' };
 const emptyProcess = { proses_tanim_id: '', proses_adi: '', proses_tipi: '', birim_maliyet: '', renk_bazli: false, aciklama: '' };
@@ -33,12 +37,14 @@ const createEmptyForm = () => ({
 });
 
 const AdminMamulPage = ({ mode = 'admin' }) => {
+  const haptic = useHaptic();
   const [types, setTypes] = useState([]);
   const [colors, setColors] = useState([]);
   const [yarnDefinitions, setYarnDefinitions] = useState([]);
   const [processDefinitions, setProcessDefinitions] = useState([]);
   const [mamulList, setMamulList] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [listLoading, setListLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [selectedMamulId, setSelectedMamulId] = useState(null);
   const [selectedMamulDetail, setSelectedMamulDetail] = useState(null);
@@ -83,6 +89,8 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
   };
 
   const fetchInitial = async () => {
+    setListLoading(true);
+    try {
     const [typesResponse, colorsResponse, yarnsResponse, processesResponse, mamulResponse] = await Promise.all([
       fetch('/api/admin/mamul-turleri'),
       fetch('/api/admin/renkler'),
@@ -104,6 +112,9 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
     setYarnDefinitions(yarnsResult.success ? yarnsResult.data : []);
     setProcessDefinitions(processesResult.success ? processesResult.data : []);
     setMamulList(mamulResult.success ? mamulResult.data : []);
+    } finally {
+      setListLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -215,6 +226,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
       setMessage(isEditing
         ? `Mamül güncellendi. Article Code: ${result.data.articleCode}`
         : `Mamül kaydedildi. Makale No: ${result.data.articleCode}`);
+      haptic.success();
       setSelectedMamulId(null);
       setForm(createEmptyForm());
       setShowEditor(false);
@@ -275,6 +287,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
   }, [mamulList, searchTerm]);
 
   return (
+    <PullToRefresh onRefresh={fetchInitial}>
     <>
       {message ? (
         <div className="app-panel px-4 py-3 text-sm text-[color:var(--app-text)]">
@@ -566,9 +579,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                         className="app-btn-secondary"
                         style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                       >
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                          <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2ZM8.5 13.5l2.5 3 3.5-4.5 4.5 6H5l3.5-4.5ZM6.5 9a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Z"/>
-                        </svg>
+                        <Upload size={16} />
                         {gorselUploading ? 'Yükleniyor...' : 'Görsel yükle'}
                       </button>
                     )}
@@ -671,7 +682,8 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                      </div>
                   </div>
                 ))}
-                {filteredMamulList.length === 0 ? (
+                {listLoading ? <SkeletonList count={4} /> : null}
+                {!listLoading && filteredMamulList.length === 0 ? (
                   <div className="app-soft-panel m-3 px-4 py-4 text-sm text-[color:var(--app-text-muted)]">Henüz mamül kaydı yok.</div>
                 ) : null}
               </div>
@@ -679,6 +691,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
             ) : null}
     </div>
     </>
+    </PullToRefresh>
   );
 };
 

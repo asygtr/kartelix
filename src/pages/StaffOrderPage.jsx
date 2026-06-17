@@ -2,6 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getSession } from '../utils/auth';
 import PageSearchBar from '../components/PageSearchBar';
 import { useToast } from '../components/Toast';
+import { Plus, Pencil, Trash2, X, CreditCard, Minus } from '../components/icons.jsx';
+import { useHaptic } from '../utils/useHaptic';
+import PullToRefresh from '../components/PullToRefresh';
+import { SkeletonList } from '../components/Skeleton';
 
 const emptyCustomerForm = {
   musteriAdi: '', firmaAdi: '', ilgiliKisi: '', telefon: '', email: '',
@@ -11,17 +15,12 @@ const emptyCustomerForm = {
   kartvizitOcrDurumu: 'bekleniyor'
 };
 
-const PlusIcon  = () => <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z" fill="currentColor" /></svg>;
-const EditIcon  = () => <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg"><path d="m16.86 3.49 3.65 3.65-9.9 9.9-4.4.75.75-4.4 9.9-9.9Zm-8.4 11.22-.3 1.78 1.78-.3 8.55-8.55-1.48-1.48-8.55 8.55Z" fill="currentColor" /></svg>;
-const TrashIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg"><path d="M8 4h8l1 2h4v2H3V6h4l1-2Zm1 6h2v8H9v-8Zm4 0h2v8h-2v-8Z" fill="currentColor" /></svg>;
-const CloseIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg"><path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5Z" fill="currentColor" /></svg>;
-const CardIcon  = () => <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg"><path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Zm0 3v7h16V9H4Zm2 2h5v2H6v-2Z" fill="currentColor" /></svg>;
-
-const RemoveIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" style={{ width: '1rem', height: '1rem' }}>
-    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-  </svg>
-);
+const PlusIcon   = () => <Plus size={16} />;
+const EditIcon   = () => <Pencil size={16} />;
+const TrashIcon  = () => <Trash2 size={16} />;
+const CloseIcon  = () => <X size={16} />;
+const CardIcon   = () => <CreditCard size={16} />;
+const RemoveIcon = () => <Minus size={16} />;
 
 const createLineId = () => `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
@@ -68,6 +67,7 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
   const user = getSession();
   const canSeePrices = true; // fiyat her zaman gorunur ve duzenlenebilir
   const { show: showToast } = useToast();
+  const haptic = useHaptic();
   const fileInputRef = useRef(null);
   const searchBlockRef = useRef(null);
 
@@ -102,7 +102,8 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
     return () => window.removeEventListener('resize', h);
   }, []);
 
-  const loadOrders    = async () => { const r = await fetch('/api/orders'); const d = await r.json(); setOrders(d.success ? d.data : []); };
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const loadOrders    = async () => { setOrdersLoading(true); try { const r = await fetch('/api/orders'); const d = await r.json(); setOrders(d.success ? d.data : []); } finally { setOrdersLoading(false); } };
   const loadCompanies = async () => { const r = await fetch('/api/firmalar'); const d = await r.json(); setCompanies(d.success ? d.data : []); };
   const loadColors    = async () => { const r = await fetch('/api/admin/renkler'); const d = await r.json(); setColorOptions(d.success ? d.data : []); };
 
@@ -188,7 +189,7 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
 
   const deleteOrder = async (orderId) => {
     if (!window.confirm(`Sipariş #${orderId} silinsin mi?`)) return;
-    try { setDeleting(true); const r = await fetch(`/api/orders/${orderId}`, { method: 'DELETE' }); const d = await r.json(); if (!r.ok || !d.success) throw new Error(d.error || 'Silinemedi'); if (selectedOrderDetail?.id === orderId) setSelectedOrderDetail(null); showToast(`Sipariş silindi: #${orderId}`, 'success'); await loadOrders(); }
+    try { setDeleting(true); const r = await fetch(`/api/orders/${orderId}`, { method: 'DELETE' }); const d = await r.json(); if (!r.ok || !d.success) throw new Error(d.error || 'Silinemedi'); if (selectedOrderDetail?.id === orderId) setSelectedOrderDetail(null); haptic.success(); showToast(`Sipariş silindi: #${orderId}`, 'success'); await loadOrders(); }
     catch (e) { showToast(e.message, 'error'); }
     finally { setDeleting(false); }
   };
@@ -206,7 +207,7 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
       if (!r.ok || !d.success) throw new Error(d.error || 'Tamamlanamadı');
       const es = d.data.emailStatus;
       const emailMsg = es?.skipped ? '' : es?.error ? ` / E-posta: ${es.error}` : ' / Onay e-postası gönderildi';
-      showToast(`Sipariş #${orderId} tamamlandı${emailMsg}`, 'success');
+      haptic.success(); showToast(`Sipariş #${orderId} tamamlandı${emailMsg}`, 'success');
       closePanel(); await loadOrders();
     } catch (e) { showToast(e.message, 'error'); }
     finally { setCompleting(false); }
@@ -230,7 +231,7 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
       if (!r.ok || !d.success) throw new Error(d.error || 'Kaydedilemedi');
       const es = d.data.emailStatus;
       const et = !editingOrderId && es ? (es.skipped ? '' : es.error ? ` / E-posta: ${es.error}` : ` / E-posta: ${es.message || 'işlendi'}`) : '';
-      showToast(`${editingOrderId ? 'Sipariş güncellendi' : 'Sipariş kaydedildi'}. No: #${d.data.siparisId} / Toplam: ${d.data.toplamTutar.toFixed(2)}${et}`, 'success');
+      haptic.success(); showToast(`${editingOrderId ? 'Sipariş güncellendi' : 'Sipariş kaydedildi'}. No: #${d.data.siparisId} / Toplam: ${d.data.toplamTutar.toFixed(2)}${et}`, 'success');
       closePanel(); await loadOrders();
     } catch (e) { showToast(e.message, 'error'); }
     finally { setSaving(false); }
@@ -240,7 +241,7 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
   const showDetailsForm = panelMode === 'create' ? createStep === 'details' : Boolean(editingOrderId);
 
   return (
-    <>
+    <PullToRefresh onRefresh={loadOrders}>
       {!panelMode ? (
         <section className="app-panel app-order-band">
           <div className="app-order-band-grid">
@@ -512,7 +513,8 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
               <button type="button" onClick={loadOrders} className="text-sm text-[color:var(--app-primary)]">Yenile</button>
             </div>
             <div className="mt-5 space-y-3">
-              {recentOrders.length === 0 ? <div className="app-soft-panel px-4 py-6 text-sm text-[color:var(--app-text-muted)]">Henüz kayıtlı sipariş yok.</div> : null}
+              {ordersLoading ? <SkeletonList count={3} /> : null}
+              {!ordersLoading && recentOrders.length === 0 ? <div className="app-soft-panel px-4 py-6 text-sm text-[color:var(--app-text-muted)]">Henüz kayıtlı sipariş yok.</div> : null}
               {recentOrders.map((order) => (
                 <button key={order.id} type="button" onClick={() => loadOrderDetail(order.id)} className="w-full app-panel p-4 text-left">
                   <div className="flex items-start justify-between gap-4">
@@ -581,7 +583,7 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
         ) : null}
 
       </div>
-    </>
+    </PullToRefresh>
   );
 };
 

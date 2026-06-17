@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { clearSession } from '../utils/auth';
 import AppNavbar from './AppNavbar';
@@ -17,15 +17,44 @@ const pageTitles = {
 
 const pageOrder = Object.keys(pageTitles);
 
+const SWIPE_START_ZONE = 28; // px — sol kenardan bu kadar içeri dokunuş
+const SWIPE_THRESHOLD  = 80; // px — bu kadar sağa çekince geri gider
+
 const AppLayout = ({ navAction }) => {
   const location = useLocation();
-  const prevPath = useRef(location.pathname);
-  const title = pageTitles[location.pathname] || '';
+  const navigate  = useNavigate();
+  const prevPath  = useRef(location.pathname);
+  const title     = pageTitles[location.pathname] || '';
 
   const prevIndex = pageOrder.indexOf(prevPath.current);
   const currIndex = pageOrder.indexOf(location.pathname);
   const direction = currIndex >= prevIndex ? 1 : -1;
   prevPath.current = location.pathname;
+
+  // Swipe-to-back refs
+  const swipeStartX  = useRef(null);
+  const swipeStartY  = useRef(null);
+  const swipeActive  = useRef(false);
+
+  const handleTouchStart = (e) => {
+    const x = e.touches[0].clientX;
+    const y = e.touches[0].clientY;
+    if (x <= SWIPE_START_ZONE) {
+      swipeStartX.current = x;
+      swipeStartY.current = y;
+      swipeActive.current = true;
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (!swipeActive.current) return;
+    const dx = e.changedTouches[0].clientX - swipeStartX.current;
+    const dy = Math.abs(e.changedTouches[0].clientY - swipeStartY.current);
+    swipeActive.current = false;
+    if (dx > SWIPE_THRESHOLD && dy < 60) {
+      navigate(-1);
+    }
+  };
 
   const handleLogout = () => {
     clearSession();
@@ -33,7 +62,11 @@ const AppLayout = ({ navAction }) => {
   };
 
   return (
-    <>
+    <div
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      style={{ minHeight: '100dvh' }}
+    >
       <AppNavbar title={title} action={navAction} onLogout={handleLogout} />
       <div className="app-page">
         <div className="app-container space-y-6">
@@ -52,7 +85,7 @@ const AppLayout = ({ navAction }) => {
           </AnimatePresence>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

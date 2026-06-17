@@ -2,12 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import QrCameraModal from './QrCameraModal';
 import { isMobileCameraDevice } from '../utils/qr';
-
-const SearchIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-    <path d="M10.5 4a6.5 6.5 0 1 0 4.03 11.6l4.43 4.43 1.41-1.41-4.43-4.43A6.5 6.5 0 0 0 10.5 4Zm0 2a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z" fill="currentColor" />
-  </svg>
-);
+import { Search, QrCode } from './icons.jsx';
 
 const PageSearchBar = ({
   value,
@@ -79,7 +74,7 @@ const PageSearchBar = ({
           />
           <div className="app-searchbar-actions">
             <button type="submit" className="app-searchbar-submit" aria-label="Ara" title="Ara">
-              <SearchIcon />
+              <Search className="app-nav-icon-svg" />
             </button>
             {canUseQr ? (
               <button
@@ -89,9 +84,7 @@ const PageSearchBar = ({
                 aria-label={qrLabel}
                 title={qrLabel}
               >
-                <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-                  <path d="M4 4h5v2H6v3H4V4Zm10 0h6v6h-2V6h-4V4ZM4 15h2v3h3v2H4v-5Zm14 3v-3h2v5h-5v-2h3ZM8 8h8v8H8V8Zm2 2v4h4v-4h-4Z" fill="currentColor" />
-                </svg>
+                <QrCode className="app-nav-icon-svg" />
               </button>
             ) : null}
           </div>
