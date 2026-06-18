@@ -188,7 +188,7 @@ const PublicMamulPage = () => {
   };
 
   const composition = v(mamul?.kompozisyon_ozeti);
-  const story       = v(mamul?.tanitim_hikayesi) || v(mamul?.aciklama) || v(mamul?.materyal_notlari);
+  const story       = v(mamul?.tanitim_hikayesi) || (genelAyarlar.publicProsesGoster ? (v(mamul?.aciklama) || v(mamul?.materyal_notlari)) : null);
   const hasYarn     = mamul?.iplikler?.length > 0;
   const hasRelated  = mamul?.benzer_urunler?.length > 0;
   const hasProsesler = genelAyarlar.publicProsesGoster && mamul?.prosesler?.length > 0;
