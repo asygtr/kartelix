@@ -222,8 +222,8 @@ const LabelDesignerPanel = () => {
       )}
 
       <div className="app-label-designer-grid">
-        {/* Sol sütun — kontroller */}
-        <div className="app-label-designer-stack">
+        {/* Sol sütun — kontroller, kendi içinde scroll eder */}
+        <div className="app-label-designer-stack app-label-designer-scroll-col">
           <section className="app-panel p-5 app-reveal-up app-reveal-delay-1">
             <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--app-text-muted)]">Tasarım düzeni</div>
             <h3 className="mt-2 text-lg font-semibold text-[color:var(--app-text)]">Kart iskeleti</h3>

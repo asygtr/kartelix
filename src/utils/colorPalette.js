@@ -120,8 +120,8 @@ export const resolveColorPalette = (rawColor) => {
   // Tam eşleşme
   if (COLOR_PALETTES[key]) return COLOR_PALETTES[key];
 
-  // Kelime bazlı eşleşme — "powder pink" için önce "powder pink" sonra "pink"
-  const words = key.split(' ');
+  // Kelime bazlı eşleşme — uzun eşleşmelere öncelik ver
+  const words = key.split(' ').filter(Boolean);
   for (let len = words.length; len >= 1; len--) {
     for (let start = 0; start <= words.length - len; start++) {
       const phrase = words.slice(start, start + len).join(' ');

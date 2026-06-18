@@ -14,6 +14,7 @@ import ScrollToTop from './components/ScrollToTop';
 import ReportsPage from './pages/ReportsPage';
 import AppLayout from './components/AppLayout';
 import { ToastProvider } from './components/Toast';
+import DesktopOnlyGuard from './components/DesktopOnlyGuard';
 
 function App() {
   return (
@@ -32,7 +33,7 @@ function App() {
               <Route path="/admin/orders" element={<StaffOrderPage mode="admin" />} />
               <Route path="/admin/reports" element={<ReportsPage />} />
             </Route>
-            <Route path="/admin/settings" element={<SettingsPage />} />
+            <Route path="/admin/settings" element={<DesktopOnlyGuard pageName="Ayarlar"><SettingsPage /></DesktopOnlyGuard>} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['staff', 'admin']} />}>
@@ -44,7 +45,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['mamul', 'admin']} />}>
             <Route element={<AppLayout />}>
               <Route path="/mamul" element={<MamulLandingPage />} />
-              <Route path="/mamul/labels" element={<MamulLabelPage />} />
+              <Route path="/mamul/labels" element={<DesktopOnlyGuard pageName="Etiket Tasarımcısı"><MamulLabelPage /></DesktopOnlyGuard>} />
             </Route>
           </Route>
 

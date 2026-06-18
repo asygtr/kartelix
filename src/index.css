@@ -957,7 +957,8 @@ code {
 .app-label-designer-grid {
   display: grid;
   gap: 1.25rem;
-  grid-template-columns: minmax(0, 0.96fr) minmax(360px, 0.74fr);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  align-items: start;
 }
 
 .app-label-designer-stack {
@@ -965,11 +966,18 @@ code {
   gap: 1.25rem;
 }
 
-.app-label-designer-preview-column {
+/* Sol kolon: sayfa scroll'unu kullanır, bağımsız scroll yok */
+.app-label-designer-scroll-col {
   min-width: 0;
-  align-self: start;
+}
+
+/* Sağ kolon: viewport'a fixed — app-page'nin overflow'undan bağımsız */
+.app-label-designer-preview-column {
   position: sticky;
-  top: 5.25rem;
+  top: 1rem;
+  max-height: calc(100dvh - 7rem);
+  overflow-y: auto;
+  min-width: 0;
 }
 
 .app-label-preview-panel {
@@ -1849,11 +1857,15 @@ code {
   }
 
   .app-page-hero-grid,
-  .app-label-designer-grid,
   .app-label-compact-grid,
   .app-label-care-row,
   .app-label-field-row,
   .app-data-row {
+    grid-template-columns: 1fr;
+  }
+
+  /* Mobilde designer grid tek kolon */
+  .app-label-designer-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1865,9 +1877,12 @@ code {
     position: static;
   }
 
+  /* Mobilde preview kolon sticky olmaz */
   .app-label-designer-preview-column {
     position: static;
     top: auto;
+    max-height: none;
+    overflow-y: visible;
   }
 
   .app-mobile-bottom-nav {
