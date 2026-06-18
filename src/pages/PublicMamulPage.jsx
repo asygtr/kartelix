@@ -143,10 +143,10 @@ const PublicMamulPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lang, setLang] = useState('TR');
-  const [genelAyarlar, setGenelAyarlar] = useState({ publicProsesGoster: false, publicFiyatGoster: false });
+  const [genelAyarlar, setGenelAyarlar] = useState(null);
 
   useEffect(() => {
-    fetch('/api/genel-ayarlar').then(r => r.json()).then(d => { if (d.success) setGenelAyarlar(d.data); }).catch(() => {});
+    fetch('/api/genel-ayarlar').then(r => r.json()).then(d => { if (d.success) setGenelAyarlar(d.data); })  .catch(() => setGenelAyarlar({ publicProsesGoster: false, publicFiyatGoster: false }));
   }, []);
   const [shareMsg, setShareMsg] = useState('');
   const pageRef = useRef(null);
@@ -188,14 +188,15 @@ const PublicMamulPage = () => {
   };
 
   const composition = v(mamul?.kompozisyon_ozeti);
-  const story       = v(mamul?.tanitim_hikayesi) || (genelAyarlar.publicProsesGoster ? (v(mamul?.aciklama) || v(mamul?.materyal_notlari)) : null);
+  const prosesAcik  = genelAyarlar?.publicProsesGoster === true;
+  const story       = v(mamul?.tanitim_hikayesi) || (prosesAcik ? (v(mamul?.aciklama) || v(mamul?.materyal_notlari)) : null);
   const hasYarn     = mamul?.iplikler?.length > 0;
   const hasRelated  = mamul?.benzer_urunler?.length > 0;
-  const hasProsesler = genelAyarlar.publicProsesGoster && mamul?.prosesler?.length > 0;
+  const hasProsesler = prosesAcik && mamul?.prosesler?.length > 0;
   const careItems   = useMemo(() => parseCare(mamul?.bakim_talimatlari), [mamul?.bakim_talimatlari]);
   const gorselUrl   = v(mamul?.gorsel_url);
 
-  if (loading) return (
+  if (loading || genelAyarlar === null) return (
     <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3efe7' }}>
       <div style={{ display: 'flex', gap: '0.5rem' }}>
         {[0,1,2].map(i => (
