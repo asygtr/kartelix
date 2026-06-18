@@ -4170,7 +4170,7 @@ app.get('/api/qr-scan/:kod', (req, res, next) => {
 
 
 // --- GENEL AYARLAR ---
-const defaultGenelAyarlar = { publicProsesGoster: false, publicFiyatGoster: false };
+const defaultGenelAyarlar = { publicProsesGoster: false, publicFiyatGoster: false, publicHikayeGoster: true };
 
 app.get('/api/genel-ayarlar', async (req, res, next) => {
   try {

@@ -168,17 +168,6 @@ const PublicMamulPage = () => {
   const orbY2       = useTransform(scrollY, [0, 800], [0, -60]);
   const orbY3       = useTransform(scrollY, [0, 800], [0, -180]);
 
-  useEffect(() => {
-    fetch(`/api/public/mamuller/${slug}`)
-      .then(r => r.json())
-      .then(res => {
-        if (!res.success) throw new Error(res.error || 'Bulunamadı');
-        setMamul(res.data);
-      })
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [slug]);
-
   const P    = useMemo(() => resolveColorPalette(mamul?.renk), [mamul?.renk]);
   const dark = isDarkPalette(P);
 
@@ -297,48 +286,6 @@ const PublicMamulPage = () => {
         {/* ╔╔ HERO ╔╔ */}
         <motion.section style={{ y: heroY, opacity: heroOpacity, scale: heroScale, paddingTop: '3.5rem', paddingBottom: '1.5rem', willChange: 'transform' }}>
 
-          {/* Üst bar: marka + dil toggle + paylaş */}
-          <motion.div
-            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: EASE }}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', gap: '0.5rem' }}
-          >
-            <span style={{ fontSize: '0.6rem', fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase', color: P.accent, opacity: 0.75 }}>KARTELIX</span>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              {/* Dil toggle */}
-              <button
-                onClick={() => setLang(l => l === 'TR' ? 'EN' : 'TR')}
-                style={{
-                  fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.12em',
-                  padding: '0.25rem 0.55rem', borderRadius: '999px',
-                  background: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-                  border: `1px solid ${P.border}`, color: P.textMuted, cursor: 'pointer',
-                  fontFamily: 'inherit',
-                }}
-              >
-                {lang === 'TR' ? 'EN' : 'TR'}
-              </button>
-
-              {/* Paylaş butonu */}
-              <button
-                onClick={handleShare}
-                style={{
-                  fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.1em',
-                  padding: '0.25rem 0.65rem', borderRadius: '999px',
-                  background: `${P.accent}18`, border: `1px solid ${P.accent}40`,
-                  color: P.accent, cursor: 'pointer', fontFamily: 'inherit',
-                  display: 'flex', alignItems: 'center', gap: '0.3rem',
-                }}
-              >
-                <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor">
-                  <path d="M18 16a3 3 0 0 0-2.02.79L8.9 12.7A3 3 0 0 0 9 12a3 3 0 0 0-.1-.7l7-4.05A3 3 0 1 0 15 5a3 3 0 0 0 .1.7L8.1 9.75A3 3 0 1 0 8 15a3 3 0 0 0 1.98-.79l7.1 4.12A3 3 0 1 0 18 16Z" />
-                </svg>
-                {shareMsg || t.share}
-              </button>
-            </div>
-          </motion.div>
-
           {/* Swatch + başlık */}
           <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '1.1rem', alignItems: 'start' }}>
 
@@ -411,25 +358,6 @@ const PublicMamulPage = () => {
             </div>
           </div>
 
-          {/* CTA */}
-          <motion.button
-            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.42, duration: 0.55, ease: EASE }}
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-            style={{
-              marginTop: '1.75rem', width: '100%',
-              padding: '0.95rem 1.25rem', borderRadius: '999px',
-              background: `linear-gradient(135deg, ${P.accent}, ${P.accentDeep})`,
-              color: 'white', border: 'none', cursor: 'pointer',
-              fontSize: '0.88rem', fontWeight: 800, letterSpacing: '0.03em',
-              boxShadow: `0 14px 36px ${P.glow}`,
-              fontFamily: 'inherit',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-            }}
-          >
-            <span style={{ fontSize: '0.7rem' }}>✦</span>
-            <span>{t.order}</span>
-          </motion.button>
         </motion.section>
 
         {/* ╔╔ GÖRSEL (büyük – varsa) ╔╔ */}
