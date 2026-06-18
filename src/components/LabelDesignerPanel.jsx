@@ -255,6 +255,7 @@ const LabelDesignerPanel = () => {
               <NumericControl label="Başlık sütunu" value={template.labelColumnMm} min={6} max={30} step={0.5} onChange={v => updateTemplate({ labelColumnMm: v })} />
               <NumericControl label="QR sütunu" value={template.qrColumnWidthMm} min={8} max={30} step={0.5} onChange={v => updateTemplate({ qrColumnWidthMm: v })} />
               <NumericControl label="Marka şeridi" value={template.railWidthMm} min={2} max={16} step={0.5} onChange={v => updateTemplate({ railWidthMm: v })} />
+              <NumericControl label="Marka font" value={template.brandFontPt} min={3} max={16} step={0.1} onChange={v => updateTemplate({ brandFontPt: v })} />
               <NumericControl label="QR boyutu" value={template.qrSizeMm} min={8} max={24} step={0.5} onChange={v => updateTemplate({ qrSizeMm: v })} />
               <NumericControl label="Ana font" value={template.bodyFontPt} min={3} max={12} step={0.1} onChange={v => updateTemplate({ bodyFontPt: v })} />
               <NumericControl label="Kompakt font" value={template.compactFontPt} min={3} max={11} step={0.1} onChange={v => updateTemplate({ compactFontPt: v })} />

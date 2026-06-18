@@ -143,6 +143,11 @@ const PublicMamulPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lang, setLang] = useState('TR');
+  const [genelAyarlar, setGenelAyarlar] = useState({ publicProsesGoster: false, publicFiyatGoster: false });
+
+  useEffect(() => {
+    fetch('/api/genel-ayarlar').then(r => r.json()).then(d => { if (d.success) setGenelAyarlar(d.data); }).catch(() => {});
+  }, []);
   const [shareMsg, setShareMsg] = useState('');
   const pageRef = useRef(null);
   const t = T[lang];
@@ -186,6 +191,7 @@ const PublicMamulPage = () => {
   const story       = v(mamul?.tanitim_hikayesi) || v(mamul?.aciklama) || v(mamul?.materyal_notlari);
   const hasYarn     = mamul?.iplikler?.length > 0;
   const hasRelated  = mamul?.benzer_urunler?.length > 0;
+  const hasProsesler = genelAyarlar.publicProsesGoster && mamul?.prosesler?.length > 0;
   const careItems   = useMemo(() => parseCare(mamul?.bakim_talimatlari), [mamul?.bakim_talimatlari]);
   const gorselUrl   = v(mamul?.gorsel_url);
 

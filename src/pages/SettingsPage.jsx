@@ -8,6 +8,7 @@ import { clearSession } from '../utils/auth';
 import { X, Menu } from '../components/icons.jsx';
 
 const tabs = [
+  { id: 'genel', label: 'Genel Ayarlar' },
   { id: 'excel', label: 'Excel Senkron' },
   { id: 'email', label: 'Sipariş E-posta' },
   { id: 'theme', label: 'Marka Varlıkları' },
@@ -75,7 +76,31 @@ const SettingsPage = () => {
   const [themeStatus, setThemeStatus] = useState('');
   const [brandingForm, setBrandingForm] = useState({ appLogo: '/nevres.png', appBackground: '/showroom-bg.png' });
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [genelAyarlar, setGenelAyarlar] = useState({ publicProsesGoster: false, publicFiyatGoster: false });
+  const [genelAyarlarStatus, setGenelAyarlarStatus] = useState('');
   const [drawerVisible, setDrawerVisible] = useState(false);
+
+  const loadGenelAyarlar = async () => {
+    try {
+      const r = await fetch('/api/genel-ayarlar');
+      const d = await r.json();
+      if (d.success) setGenelAyarlar(d.data);
+    } catch {}
+  };
+
+  const saveGenelAyarlar = async (next) => {
+    try {
+      const r = await fetch('/api/genel-ayarlar', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(next)
+      });
+      const d = await r.json();
+      if (d.success) { setGenelAyarlar(d.data); setGenelAyarlarStatus('Kaydedildi.'); }
+      else setGenelAyarlarStatus('Kayıt başarısız.');
+    } catch { setGenelAyarlarStatus('Hata oluştu.'); }
+    setTimeout(() => setGenelAyarlarStatus(''), 2500);
+  };
 
   const loadSystemStats = async () => {
     try {
@@ -145,6 +170,7 @@ const SettingsPage = () => {
     loadDefinitions();
     loadExcelSettings();
     loadOrderEmailSettings();
+    loadGenelAyarlar();
   }, []);
 
   useEffect(() => {
@@ -974,6 +1000,44 @@ const SettingsPage = () => {
       description: 'Baskı düzenini örnek içerikle ayarlayabileceğiniz sade tasarım alanı.',
       fullWidth: true,
       content: <LabelDesignerPanel />
+    },
+    genel: {
+      title: 'Genel Ayarlar',
+      description: 'Müşteri görünümü ve uygulama geneli davranış ayarları.',
+      form: (
+        <div className="space-y-4">
+          <div className="app-soft-panel p-4 space-y-4">
+            <div className="text-sm font-semibold text-[color:var(--app-text)]">Müşteri (public) görünümü</div>
+            <label className="flex items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-medium text-[color:var(--app-text)]">Proses bilgisini göster</div>
+                <div className="mt-0.5 text-xs text-slate-500">Müşteri QR/link sayfasında üretim prosesleri görünsün.</div>
+              </div>
+              <input type="checkbox" checked={genelAyarlar.publicProsesGoster}
+                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicProsesGoster: e.target.checked })} />
+            </label>
+            <label className="flex items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-medium text-[color:var(--app-text)]">1 kg satış fiyatını göster</div>
+                <div className="mt-0.5 text-xs text-slate-500">Müşteri QR/link sayfasında ve arama sonucunda satış fiyatı görünsün.</div>
+              </div>
+              <input type="checkbox" checked={genelAyarlar.publicFiyatGoster}
+                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicFiyatGoster: e.target.checked })} />
+            </label>
+          </div>
+          {genelAyarlarStatus ? <div className="app-soft-panel px-4 py-3 text-sm">{genelAyarlarStatus}</div> : null}
+        </div>
+      ),
+      list: (
+        <div className="mt-4 space-y-3">
+          {[
+            `Proses görünürlüğü: ${genelAyarlar.publicProsesGoster ? 'Açık' : 'Kapalı'}`,
+            `Fiyat görünürlüğü: ${genelAyarlar.publicFiyatGoster ? 'Açık' : 'Kapalı'}`
+          ].map((item, i) => (
+            <div key={i} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">{item}</div>
+          ))}
+        </div>
+      )
     },
     system: {
       title: 'Operasyon merkezi',

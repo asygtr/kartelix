@@ -54,6 +54,7 @@ export const defaultLabelTemplate = {
   showQr: true,
   showCareIcons: true,
   brandLetterSpacing: 0.06,
+  brandFontPt: 5.4,
   bodyFontPt: 5.2,
   bodyLineHeight: 1.04,
   compactFontPt: 4.8,
@@ -208,6 +209,7 @@ export const mergeLabelTemplate = (incomingTemplate = {}) => {
     compactFontPt: coerceNumber(incomingTemplate.compactFontPt, defaultLabelTemplate.compactFontPt),
     bodyLineHeight: coerceNumber(incomingTemplate.bodyLineHeight, defaultLabelTemplate.bodyLineHeight),
     brandLetterSpacing: coerceNumber(incomingTemplate.brandLetterSpacing, defaultLabelTemplate.brandLetterSpacing),
+    brandFontPt: coerceNumber(incomingTemplate.brandFontPt, defaultLabelTemplate.brandFontPt),
     brandPosition: ['left', 'right', 'top', 'bottom'].includes(incomingTemplate.brandPosition) ? incomingTemplate.brandPosition : defaultLabelTemplate.brandPosition,
     qrVerticalAlign: ['top', 'center', 'bottom'].includes(incomingTemplate.qrVerticalAlign) ? incomingTemplate.qrVerticalAlign : defaultLabelTemplate.qrVerticalAlign,
     frameStyle: ['none', 'solid', 'double', 'dashed', 'corners'].includes(incomingTemplate.frameStyle) ? incomingTemplate.frameStyle : defaultLabelTemplate.frameStyle,
@@ -587,7 +589,7 @@ export const buildLabelPrintDocument = (records, templateInput, lang = 'tr') => 
         .frame-corner.bottom-left { bottom:0; left:0; border-right:none; border-top:none; }
         .frame-corner.bottom-right { bottom:0; right:0; border-left:none; border-top:none; }
         .brand-rail { display:flex; padding-left:.1mm; padding-right:.1mm; }
-        .brand { font-size: 5.4pt; font-weight: 800; letter-spacing: ${template.brandLetterSpacing}em; }
+        .brand { font-size: ${template.brandFontPt}pt; font-weight: 800; letter-spacing: ${template.brandLetterSpacing}em; }
         .left { min-width: 0; align-self: start; }
         .grid {
           display:grid;

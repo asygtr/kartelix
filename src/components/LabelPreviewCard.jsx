@@ -61,7 +61,7 @@ const LabelPreviewCard = ({ record, template: templateInput, lang = 'tr', classN
   const careTopGapPx = template.careTopGapMm * PX_PER_MM;
   const bodyFontPx = template.bodyFontPt * PX_PER_PT;
   const compactFontPx = template.compactFontPt * PX_PER_PT;
-  const brandFontPx = 5.4 * PX_PER_PT;
+  const brandFontPx = template.brandFontPt * PX_PER_PT;
   const scanFontPx = 4.2 * PX_PER_PT;
   const careFontPx = 2.65 * PX_PER_PT;
   const qrSizePx = template.qrSizeMm * PX_PER_MM;

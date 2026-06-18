@@ -137,6 +137,11 @@ const AppNavbar = ({ title, action, onLogout }) => {
   };
 
   const canSeeSearchPrices = role === 'admin';
+  const [genelAyarlar, setGenelAyarlar] = React.useState({ publicProsesGoster: false, publicFiyatGoster: false });
+
+  useEffect(() => {
+    fetch('/api/genel-ayarlar').then(r => r.json()).then(d => { if (d.success) setGenelAyarlar(d.data); }).catch(() => {});
+  }, []);
 
   return (
     <>
@@ -269,7 +274,20 @@ const AppNavbar = ({ title, action, onLogout }) => {
                 </div>
               </div>
 
-              {canSeeSearchPrices ? (
+              {searchResult.prosesler?.length > 0 ? (
+                <div className="app-soft-panel mt-3 p-3">
+                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--app-text-muted)] mb-2">Prosesler</div>
+                  <div className="space-y-1">
+                    {searchResult.prosesler.map((p, i) => (
+                      <div key={i} className="text-sm text-[color:var(--app-text)]">
+                        {p.proses_adi}{p.proses_tipi ? <span className="text-[color:var(--app-text-muted)]"> / {p.proses_tipi}</span> : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {(canSeeSearchPrices || genelAyarlar.publicFiyatGoster) ? (
                 <div className="app-mobile-search-pricing">
                   <div className="app-mobile-search-price-card">
                     <div className="app-mobile-search-summary-label">1 kg satış</div>

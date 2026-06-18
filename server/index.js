@@ -4168,6 +4168,31 @@ app.get('/api/qr-scan/:kod', (req, res, next) => {
   );
 });
 
+
+// --- GENEL AYARLAR ---
+const defaultGenelAyarlar = { publicProsesGoster: false, publicFiyatGoster: false };
+
+app.get('/api/genel-ayarlar', async (req, res, next) => {
+  try {
+    const row = await dbGetAsync('SELECT deger FROM ui_ayarlari WHERE anahtar = ?', ['genel_ayarlar']);
+    const parsed = row ? JSON.parse(row.deger || '{}') : {};
+    res.json({ success: true, data: { ...defaultGenelAyarlar, ...parsed } });
+  } catch (err) { next(err); }
+});
+
+app.put('/api/genel-ayarlar', async (req, res, next) => {
+  try {
+    const existing = await dbGetAsync('SELECT deger FROM ui_ayarlari WHERE anahtar = ?', ['genel_ayarlar']);
+    const parsed = existing ? JSON.parse(existing.deger || '{}') : {};
+    const nextVal = { ...defaultGenelAyarlar, ...parsed, ...req.body };
+    await dbRunAsync(
+      'INSERT INTO ui_ayarlari (anahtar, deger) VALUES (?, ?) ON CONFLICT(anahtar) DO UPDATE SET deger = excluded.deger, updated_at = CURRENT_TIMESTAMP',
+      ['genel_ayarlar', JSON.stringify(nextVal)]
+    );
+    res.json({ success: true, data: nextVal });
+  } catch (err) { next(err); }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   db.get('SELECT 1 as status', (err) => {
