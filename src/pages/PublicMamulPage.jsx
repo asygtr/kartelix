@@ -146,8 +146,16 @@ const PublicMamulPage = () => {
   const [genelAyarlar, setGenelAyarlar] = useState(null);
 
   useEffect(() => {
-    fetch('/api/genel-ayarlar').then(r => r.json()).then(d => { if (d.success) setGenelAyarlar(d.data); })  .catch(() => setGenelAyarlar({ publicProsesGoster: false, publicFiyatGoster: false }));
-  }, []);
+    Promise.all([
+      fetch(`/api/public/mamuller/${slug}`).then(r => r.json()),
+      fetch('/api/genel-ayarlar').then(r => r.json()).catch(() => ({ success: false }))
+    ]).then(([mamulRes, ayarRes]) => {
+      if (!mamulRes.success) throw new Error(mamulRes.error || 'Bulunamadı');
+      setMamul(mamulRes.data);
+      setGenelAyarlar(ayarRes.success ? ayarRes.data : { publicProsesGoster: false, publicFiyatGoster: false });
+    }).catch(err => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [slug]);
   const [shareMsg, setShareMsg] = useState('');
   const pageRef = useRef(null);
   const t = T[lang];
@@ -189,7 +197,7 @@ const PublicMamulPage = () => {
 
   const composition = v(mamul?.kompozisyon_ozeti);
   const prosesAcik  = genelAyarlar?.publicProsesGoster === true;
-  const story       = v(mamul?.tanitim_hikayesi) || (prosesAcik ? (v(mamul?.aciklama) || v(mamul?.materyal_notlari)) : null);
+  const story       = prosesAcik ? (v(mamul?.tanitim_hikayesi) || v(mamul?.aciklama) || v(mamul?.materyal_notlari)) : null;
   const hasYarn     = mamul?.iplikler?.length > 0;
   const hasRelated  = mamul?.benzer_urunler?.length > 0;
   const hasProsesler = prosesAcik && mamul?.prosesler?.length > 0;
@@ -246,7 +254,45 @@ const PublicMamulPage = () => {
       </div>
 
       {/* â”€â”€ İçerik â”€â”€ */}
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: '36rem', margin: '0 auto', padding: '0 1rem 5rem' }}>
+      {/* ── Fixed üst bar ── */}
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+        background: dark ? 'rgba(20,18,15,0.88)' : 'rgba(250,248,245,0.88)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        borderBottom: `1px solid ${P.border}`,
+        padding: '0.6rem 1rem',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem',
+        maxWidth: '36rem', margin: '0 auto',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+          <img src="/nevres.png" alt="Logo" style={{ height: '1.5rem', width: 'auto', objectFit: 'contain' }} />
+          <span style={{ fontSize: '0.58rem', fontWeight: 900, letterSpacing: '0.28em', textTransform: 'uppercase', color: P.accent }}>KARTELIX</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+          <button onClick={() => setLang(l => l === 'TR' ? 'EN' : 'TR')} style={{
+            fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.12em',
+            padding: '0.22rem 0.5rem', borderRadius: '999px',
+            background: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+            border: `1px solid ${P.border}`, color: P.textMuted, cursor: 'pointer', fontFamily: 'inherit',
+          }}>{lang === 'TR' ? 'EN' : 'TR'}</button>
+          <button onClick={handleShare} style={{
+            fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.1em',
+            padding: '0.22rem 0.6rem', borderRadius: '999px',
+            background: `${P.accent}18`, border: `1px solid ${P.accent}40`,
+            color: P.accent, cursor: 'pointer', fontFamily: 'inherit',
+            display: 'flex', alignItems: 'center', gap: '0.3rem',
+          }}>
+            <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor">
+              <path d="M18 16a3 3 0 0 0-2.02.79L8.9 12.7A3 3 0 0 0 9 12a3 3 0 0 0-.1-.7l7-4.05A3 3 0 1 0 15 5a3 3 0 0 0 .1.7L8.1 9.75A3 3 0 1 0 8 15a3 3 0 0 0 1.98-.79l7.1 4.12A3 3 0 1 0 18 16Z" />
+            </svg>
+            {shareMsg || t.share}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Scrollable içerik ── */}
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: '36rem', margin: '0 auto', padding: '3.5rem 1rem 5rem' }}>
 
         {/* ╔╔ HERO ╔╔ */}
         <motion.section style={{ y: heroY, opacity: heroOpacity, scale: heroScale, paddingTop: '3.5rem', paddingBottom: '1.5rem', willChange: 'transform' }}>
@@ -485,15 +531,34 @@ const PublicMamulPage = () => {
           </Reveal>
         )}
 
-        {/* Footer */}
-        <motion.div
-          initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
-          transition={{ delay: 0.15 }}
-          style={{ textAlign: 'center', paddingTop: '1.75rem' }}
+  
+      {/* ── Fixed alt bar ── */}
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
+        background: dark ? 'rgba(20,18,15,0.92)' : 'rgba(250,248,245,0.92)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        borderTop: `1px solid ${P.border}`,
+        padding: '0.65rem 1rem',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <motion.button
+          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+          style={{
+            width: '100%', maxWidth: '32rem',
+            padding: '0.85rem 1.25rem', borderRadius: '999px',
+            background: `linear-gradient(135deg, ${P.accent}, ${P.accentDeep})`,
+            color: 'white', border: 'none', cursor: 'pointer',
+            fontSize: '0.88rem', fontWeight: 800, letterSpacing: '0.03em',
+            boxShadow: `0 8px 24px ${P.glow}`,
+            fontFamily: 'inherit',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+          }}
         >
-          <div style={{ fontSize: '0.6rem', fontWeight: 900, letterSpacing: '0.28em', textTransform: 'uppercase', color: P.accent, opacity: 0.55 }}>KARTELIX</div>
-          <div style={{ fontSize: '0.58rem', color: P.textMuted, marginTop: '0.25rem', letterSpacing: '0.06em' }}>Tekstil Showroom</div>
-        </motion.div>
+          <span style={{ fontSize: '0.7rem' }}>✦</span>
+          <span>{t.order}</span>
+        </motion.button>
+      </div>
 
       </div>
     </div>
