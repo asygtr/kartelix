@@ -143,6 +143,7 @@ const PublicMamulPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lang, setLang] = useState('TR');
+  const [genelAyarlar, setGenelAyarlar] = useState(null);
   const [shareMsg, setShareMsg] = useState('');
   const pageRef = useRef(null);
   const t = T[lang];
@@ -156,13 +157,14 @@ const PublicMamulPage = () => {
   const orbY3       = useTransform(scrollY, [0, 800], [0, -180]);
 
   useEffect(() => {
-    fetch(`/api/public/mamuller/${slug}`)
-      .then(r => r.json())
-      .then(res => {
-        if (!res.success) throw new Error(res.error || 'Bulunamadı');
-        setMamul(res.data);
-      })
-      .catch(err => setError(err.message))
+    Promise.all([
+      fetch(`/api/public/mamuller/${slug}`).then(r => r.json()),
+      fetch('/api/genel-ayarlar').then(r => r.json()).catch(() => ({ success: false }))
+    ]).then(([mamulRes, ayarRes]) => {
+      if (!mamulRes.success) throw new Error(mamulRes.error || 'Bulunamadı');
+      setMamul(mamulRes.data);
+      setGenelAyarlar(ayarRes.success ? ayarRes.data : { publicProsesGoster: false, publicFiyatGoster: false });
+    }).catch(err => setError(err.message))
       .finally(() => setLoading(false));
   }, [slug]);
 
@@ -182,14 +184,16 @@ const PublicMamulPage = () => {
     }
   };
 
-  const composition = v(mamul?.kompozisyon_ozeti);
-  const story       = v(mamul?.tanitim_hikayesi) || v(mamul?.aciklama) || v(mamul?.materyal_notlari);
-  const hasYarn     = mamul?.iplikler?.length > 0;
-  const hasRelated  = mamul?.benzer_urunler?.length > 0;
-  const careItems   = useMemo(() => parseCare(mamul?.bakim_talimatlari), [mamul?.bakim_talimatlari]);
-  const gorselUrl   = v(mamul?.gorsel_url);
+  const composition  = v(mamul?.kompozisyon_ozeti);
+  const prosesAcik   = genelAyarlar?.publicProsesGoster === true;
+  const story        = v(mamul?.tanitim_hikayesi) || v(mamul?.aciklama) || v(mamul?.materyal_notlari);
+  const hasYarn      = mamul?.iplikler?.length > 0;
+  const hasRelated   = mamul?.benzer_urunler?.length > 0;
+  const hasProsesler = prosesAcik && mamul?.prosesler?.length > 0;
+  const careItems    = useMemo(() => parseCare(mamul?.bakim_talimatlari), [mamul?.bakim_talimatlari]);
+  const gorselUrl    = v(mamul?.gorsel_url);
 
-  if (loading) return (
+  if (loading || genelAyarlar === null) return (
     <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3efe7' }}>
       <div style={{ display: 'flex', gap: '0.5rem' }}>
         {[0,1,2].map(i => (
@@ -426,6 +430,17 @@ const PublicMamulPage = () => {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+          </Reveal>
+        )}
+
+        {hasProsesler && (
+          <Reveal delay={0.055}>
+            <div style={{ ...cardStyle(P, dark), marginBottom: "0.85rem" }}>
+              <SectionLabel P={P}>{t.process}</SectionLabel>
+              <div style={{ marginTop: "0.9rem" }}>
+                {mamul.prosesler.map((item, i) => (<ProcessRow key={item.id} item={item} index={i} P={P} dark={dark} total={mamul.prosesler.length} />))}
               </div>
             </div>
           </Reveal>
