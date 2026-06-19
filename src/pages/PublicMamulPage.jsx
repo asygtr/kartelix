@@ -186,7 +186,8 @@ const PublicMamulPage = () => {
 
   const composition  = v(mamul?.kompozisyon_ozeti);
   const prosesAcik   = genelAyarlar?.publicProsesGoster === true;
-  const story        = v(mamul?.tanitim_hikayesi) || v(mamul?.aciklama) || v(mamul?.materyal_notlari);
+  const hikayeAcik   = genelAyarlar?.publicHikayeGoster !== false;
+  const story        = hikayeAcik ? (v(mamul?.tanitim_hikayesi) || v(mamul?.aciklama) || v(mamul?.materyal_notlari)) : null;
   const hasYarn      = mamul?.iplikler?.length > 0;
   const hasRelated   = mamul?.benzer_urunler?.length > 0;
   const hasProsesler = prosesAcik && mamul?.prosesler?.length > 0;
