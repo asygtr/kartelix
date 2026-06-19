@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import PageSearchBar from '../components/PageSearchBar';
 import { extractColorName, resolveColorHex } from '../utils/labelTemplate';
-import { Upload } from '../components/icons.jsx';
+import { Upload, Trash2 } from '../components/icons.jsx';
 import { useHaptic } from '../utils/useHaptic';
 import PullToRefresh from '../components/PullToRefresh';
 import { SkeletonList } from '../components/Skeleton';
@@ -183,6 +183,10 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
     setForm((prev) => ({ ...prev, [field]: [...prev[field], { ...template }] }));
   };
 
+  const removeArrayItem = (field, index) => {
+    setForm((prev) => ({ ...prev, [field]: prev[field].filter((_, i) => i !== index) }));
+  };
+
   const applyYarnDefinition = (index, definitionId) => {
     const selected = yarnDefinitions.find((item) => String(item.id) === String(definitionId));
     updateArrayItem('iplikler', index, 'iplik_tanim_id', definitionId);
@@ -226,6 +230,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
       setMessage(isEditing
         ? `Mamül güncellendi. Article Code: ${result.data.articleCode}`
         : `Mamül kaydedildi. Makale No: ${result.data.articleCode}`);
+      setTimeout(() => setMessage(''), 4000);
       haptic.success();
       setSelectedMamulId(null);
       setForm(createEmptyForm());
@@ -233,6 +238,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
       fetchInitial();
     } catch (err) {
       setMessage(err.message);
+      setTimeout(() => setMessage(''), 4000);
     } finally {
       setLoading(false);
     }
@@ -410,14 +416,17 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
 
               <div className="mt-5 space-y-3">
                 {form.iplikler.map((item, index) => (
-                  <div key={`iplik-${index}`} className="grid gap-3 md:grid-cols-4">
+                  <div key={`iplik-${index}`} className="grid gap-3 md:grid-cols-4" style={{ alignItems: 'center' }}>
                     <select className="app-select" value={item.iplik_tanim_id} onChange={(e) => applyYarnDefinition(index, e.target.value)}>
                       <option value="">Tanımlı iplik seçin</option>
                       {yarnDefinitions.map((definition) => <option key={definition.id} value={definition.id}>{definition.ad}</option>)}
                     </select>
                     <input className="app-input" placeholder="İplik adı" value={item.iplik_adi} onChange={(e) => updateArrayItem('iplikler', index, 'iplik_adi', e.target.value)} />
                     <input className="app-input" placeholder="Oran %" value={item.oran_yuzde} onChange={(e) => updateArrayItem('iplikler', index, 'oran_yuzde', e.target.value)} />
-                    <input className="app-input" placeholder="Birim fiyat" value={item.birim_fiyat} onChange={(e) => updateArrayItem('iplikler', index, 'birim_fiyat', e.target.value)} />
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <input className="app-input" placeholder="Birim fiyat" value={item.birim_fiyat} onChange={(e) => updateArrayItem('iplikler', index, 'birim_fiyat', e.target.value)} />
+                      {form.iplikler.length > 1 && <button type="button" onClick={() => removeArrayItem('iplikler', index)} className="app-btn-danger" style={{ flexShrink: 0, padding: '0 0.6rem' }} aria-label="Satırı sil"><Trash2 size={14} /></button>}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -433,7 +442,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
 
               <div className="mt-5 space-y-3">
                 {form.prosesler.map((item, index) => (
-                  <div key={`proses-${index}`} className="grid gap-3 md:grid-cols-5">
+                  <div key={`proses-${index}`} className="grid gap-3 md:grid-cols-5" style={{ alignItems: 'center' }}>
                     <select className="app-select" value={item.proses_tanim_id} onChange={(e) => applyProcessDefinition(index, e.target.value)}>
                       <option value="">Tanımlı proses seçin</option>
                       {processDefinitions.map((definition) => <option key={definition.id} value={definition.id}>{definition.ad}</option>)}
@@ -441,7 +450,10 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                     <input className="app-input" placeholder="Proses adı" value={item.proses_adi} onChange={(e) => updateArrayItem('prosesler', index, 'proses_adi', e.target.value)} />
                     <input className="app-input" placeholder="Proses tipi" value={item.proses_tipi} onChange={(e) => updateArrayItem('prosesler', index, 'proses_tipi', e.target.value)} />
                     <input className="app-input" placeholder="Birim maliyet" value={item.birim_maliyet} onChange={(e) => updateArrayItem('prosesler', index, 'birim_maliyet', e.target.value)} />
-                    <input className="app-input" placeholder="Açıklama" value={item.aciklama} onChange={(e) => updateArrayItem('prosesler', index, 'aciklama', e.target.value)} />
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <input className="app-input" placeholder="Açıklama" value={item.aciklama} onChange={(e) => updateArrayItem('prosesler', index, 'aciklama', e.target.value)} />
+                      {form.prosesler.length > 1 && <button type="button" onClick={() => removeArrayItem('prosesler', index)} className="app-btn-danger" style={{ flexShrink: 0, padding: '0 0.6rem' }} aria-label="Satırı sil"><Trash2 size={14} /></button>}
+                    </div>
                   </div>
                 ))}
               </div>

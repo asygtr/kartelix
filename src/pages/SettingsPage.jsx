@@ -7,6 +7,7 @@ import { palettes } from '../theme/palettes';
 import LabelDesignerPanel from '../components/LabelDesignerPanel';
 import DesktopOnlyGuard from '../components/DesktopOnlyGuard';
 import { X } from '../components/icons.jsx';
+import { useToast } from '../components/Toast';
 
 const tabs = [
   { id: 'genel', label: 'Genel Ayarlar' },
@@ -79,6 +80,7 @@ const SettingsPage = () => {
   const [drawerVisible, setDrawerVisible] = useState(false);
 
   const { genelAyarlar, loadGenelAyarlar, saveGenelAyarlar } = useGenelAyarlar();
+  const { show: showToast } = useToast();
 
   const loadSystemStats = async () => {
     try {
@@ -986,7 +988,7 @@ const SettingsPage = () => {
                 <div className="mt-0.5 text-xs text-slate-500">Müşteri QR/link sayfasında üretim prosesleri görünsün.</div>
               </div>
               <input type="checkbox" checked={genelAyarlar.publicProsesGoster}
-                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicProsesGoster: e.target.checked })} />
+                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicProsesGoster: e.target.checked }, () => showToast('Ayar kaydedildi.', 'success'), (err) => showToast(err, 'error'))} />
             </label>
             <label className="flex items-center justify-between gap-4">
               <div>
@@ -994,7 +996,7 @@ const SettingsPage = () => {
                 <div className="mt-0.5 text-xs text-slate-500">Müşteri QR/link sayfasında ve arama sonucunda satış fiyatı görünsün.</div>
               </div>
               <input type="checkbox" checked={genelAyarlar.publicFiyatGoster}
-                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicFiyatGoster: e.target.checked })} />
+                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicFiyatGoster: e.target.checked }, () => showToast('Ayar kaydedildi.', 'success'), (err) => showToast(err, 'error'))} />
             </label>
             <label className="flex items-center justify-between gap-4">
               <div>
@@ -1002,7 +1004,7 @@ const SettingsPage = () => {
                 <div className="mt-0.5 text-xs text-slate-500">Müşteri QR/link sayfasında Kumaş Hikayesi bölümü görünsün.</div>
               </div>
               <input type="checkbox" checked={genelAyarlar.publicHikayeGoster !== false}
-                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicHikayeGoster: e.target.checked })} />
+                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicHikayeGoster: e.target.checked }, () => showToast('Ayar kaydedildi.', 'success'), (err) => showToast(err, 'error'))} />
             </label>
           </div>
         </div>

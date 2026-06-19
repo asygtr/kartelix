@@ -91,7 +91,7 @@ export const GenelAyarlarProvider = ({ children }) => {
     } catch {}
   };
 
-  const saveGenelAyarlar = async (next) => {
+  const saveGenelAyarlar = async (next, onSuccess, onError) => {
     try {
       const r = await fetch('/api/genel-ayarlar', {
         method: 'PUT',
@@ -101,12 +101,12 @@ export const GenelAyarlarProvider = ({ children }) => {
       const d = await r.json();
       if (d.success) {
         setGenelAyarlar(d.data);
-        // showToast('Genel ayarlar kaydedildi.', 'success'); // Toast eklemek istenirse
+        onSuccess?.();
       } else {
-        // showToast(d.error || 'Genel ayarlar kaydedilemedi.', 'error'); // Toast eklemek istenirse
+        onError?.(d.error || 'Genel ayarlar kaydedilemedi.');
       }
     } catch {
-      // showToast('Genel ayarlar kaydedilirken hata oluştu.', 'error'); // Toast eklemek istenirse
+      onError?.('Genel ayarlar kaydedilirken hata oluştu.');
     }
   };
 
