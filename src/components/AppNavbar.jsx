@@ -5,7 +5,7 @@ import { getSession } from '../utils/auth';
 import QrCameraModal from './QrCameraModal';
 import MobileBottomNav from './MobileBottomNav';
 import { isMobileCameraDevice } from '../utils/qr';
-import { Home, Search, ClipboardList, Tag, Layers, BarChart2, Settings, LogOut, X, QrCode } from './icons.jsx';
+import { Home, Search, ClipboardList, Tag, Layers, BarChart2, Settings, LogOut, X, QrCode, Menu } from './icons.jsx';
 
 const navSets = {
   admin: [
@@ -42,6 +42,7 @@ const AppNavbar = ({ title, action, onLogout }) => {
   const role = session?.yetki || 'guest';
   const primaryLinks = navSets[role] || navSets.guest;
   const showSettings = role === 'admin' && location.pathname !== '/admin/settings';
+  const showSettingsMenu = role === 'admin' && location.pathname === '/admin/settings';
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
@@ -175,6 +176,17 @@ const AppNavbar = ({ title, action, onLogout }) => {
         ) : null}
 
         <div className="app-nav-actions">
+          {showSettingsMenu ? (
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('settings-menu:open'))}
+              className="app-nav-icon-button"
+              aria-label="Ayar bölümlerini aç"
+              title="Ayar bölümlerini aç"
+            >
+              <Menu className="app-nav-icon-svg" />
+            </button>
+          ) : null}
           {showSettings ? (
             <Link to="/admin/settings?menu=1" className="app-nav-icon-button" aria-label="Ayarlar" title="Ayarlar">
               <Settings className="app-nav-icon-svg" />

@@ -1,0 +1,10 @@
+
+const tabs = [
+  { id: 'genel', label: 'Genel Ayarlar' },
+  { id: 'excel', label: 'Excel Senkron' },
+  { id: 'email', label: 'Sipariş E-posta' },
+  { id: 'theme', label: 'Marka Varlıkları' },
+  { id: 'labels', label: 'Etiket Tasarımcısı' },
+  { id: 'system', label: 'Operasyon' }
+];
+

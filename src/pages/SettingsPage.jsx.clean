@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../theme/ThemeProvider';
 import { palettes } from '../theme/palettes';
+import AppNavbar from '../components/AppNavbar';
 import LabelDesignerPanel from '../components/LabelDesignerPanel';
-import DesktopOnlyGuard from '../components/DesktopOnlyGuard';
-import { X } from '../components/icons.jsx';
+import { clearSession } from '../utils/auth';
+import { X, Menu } from '../components/icons.jsx';
 
 const tabs = [
   { id: 'genel', label: 'Genel Ayarlar' },
@@ -38,6 +38,7 @@ const initialEmailForm = {
 };
 
 const CloseIcon = () => <X className="app-nav-icon-svg" />;
+const MenuIcon  = () => <Menu className="app-nav-icon-svg" />;
 
 const SettingsPage = () => {
   const location = useLocation();
@@ -206,12 +207,6 @@ const SettingsPage = () => {
     );
   }, [location.pathname, location.search, navigate]);
 
-  useEffect(() => {
-    const openSettingsMenu = () => setDrawerOpen(true);
-    window.addEventListener('settings-menu:open', openSettingsMenu);
-    return () => window.removeEventListener('settings-menu:open', openSettingsMenu);
-  }, []);
-
   const resetTypeForm = () => {
     setTypeForm(initialTypeForm);
     setEditingTypeId(null);
@@ -259,6 +254,11 @@ const SettingsPage = () => {
         })
         .finally(() => setLoading(false));
     }
+  };
+
+  const handleLogout = () => {
+    clearSession();
+    window.location.href = '/';
   };
 
   const createDefinition = async (url, payload, onSuccess) => {
@@ -999,7 +999,7 @@ const SettingsPage = () => {
       title: 'Etiket Tasarımcısı',
       description: 'Baskı düzenini örnek içerikle ayarlayabileceğiniz sade tasarım alanı.',
       fullWidth: true,
-      content: <DesktopOnlyGuard pageName="Etiket Tasarımcısı"><LabelDesignerPanel /></DesktopOnlyGuard>
+      content: <LabelDesignerPanel />
     },
     genel: {
       title: 'Genel Ayarlar',
@@ -1070,45 +1070,62 @@ const SettingsPage = () => {
     }
   })[activeTab];
 
-
   return (
-    <div className="space-y-6">
+    <div className="app-page">
+      <div className="app-container space-y-6">
+        <AppNavbar
+          title="Ayarlar"
+          action={(
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              className="app-nav-icon-button"
+aria-label="Ayar bölümlerini aç"
+               title="Ayar bölümlerini aç"
+            >
+              <MenuIcon />
+            </button>
+          )}
+          onLogout={handleLogout}
+        />
 
-      {activeTab !== 'labels' ? (
-        <section className="app-hero app-page-hero app-reveal-up">
-          <div className="app-page-hero-grid">
-            <div>
-              <div className="app-chip">{tabs.find((tab) => tab.id === activeTab)?.label}</div>
-              <h1 className="mt-4 text-3xl font-semibold text-[color:var(--app-text)]">{current.title}</h1>
+        {activeTab !== 'labels' ? (
+          <section className="app-hero app-page-hero app-reveal-up">
+            <div className="app-page-hero-grid">
+              <div>
+                <div className="app-chip">{tabs.find((tab) => tab.id === activeTab)?.label}</div>
+                <h1 className="mt-4 text-3xl font-semibold text-[color:var(--app-text)]">{current.title}</h1>
+              </div>
+              <div className="app-page-hero-actions" />
             </div>
-          </div>
-        </section>
-      ) : null}
+          </section>
+        ) : null}
 
-      {current.fullWidth ? (
-        <section className="app-reveal-up app-reveal-delay-1">
-          {current.content}
-        </section>
-      ) : (
-        <section className="app-panel p-6 app-reveal-up app-reveal-delay-1">
-          <div className="grid gap-8 xl:grid-cols-[0.95fr,1.05fr]">
-            <div>
-              <div className="app-chip">{tabs.find((tab) => tab.id === activeTab)?.label}</div>
-              <h2 className="mt-4 text-2xl font-semibold text-slate-900">{current.title}</h2>
-              <div className="mt-6">{current.form}</div>
+        {current.fullWidth ? (
+          <section className="app-reveal-up app-reveal-delay-1">
+            {current.content}
+          </section>
+        ) : (
+          <section className="app-panel p-6 app-reveal-up app-reveal-delay-1">
+            <div className="grid gap-8 xl:grid-cols-[0.95fr,1.05fr]">
+              <div>
+                <div className="app-chip">{tabs.find((tab) => tab.id === activeTab)?.label}</div>
+                <h2 className="mt-4 text-2xl font-semibold text-slate-900">{current.title}</h2>
+                <div className="mt-6">{current.form}</div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">
+                  {activeTab === 'excel' ? 'Kayıtlar ve son senkronlar' : activeTab === 'email' ? 'Bağlantı özeti' : 'Mevcut tanımlar'}
+                </h3>
+                {current.list}
+              </div>
             </div>
+          </section>
+        )}
+      </div>
 
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900">
-                {activeTab === 'excel' ? 'Kayıtlar ve son senkronlar' : activeTab === 'email' ? 'Bağlantı özeti' : 'Mevcut tanımlar'}
-              </h3>
-              {current.list}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {drawerVisible ? createPortal(
+      {drawerVisible ? (
         <div
           className={`app-drawer-overlay ${drawerOpen ? 'is-open' : 'is-closing'}`}
           onClick={(event) => {
@@ -1147,8 +1164,7 @@ const SettingsPage = () => {
               ))}
             </div>
           </div>
-        </div>,
-        document.body
+        </div>
       ) : null}
     </div>
   );
