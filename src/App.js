@@ -10,6 +10,7 @@ import AdminMamulPage from './pages/AdminMamulPage';
 import MamulLandingPage from './pages/MamulLandingPage';
 import MamulLabelPage from './pages/MamulLabelPage';
 import { ThemeProvider } from './theme/ThemeProvider';
+import { GenelAyarlarProvider } from './theme/ThemeProvider';
 import ScrollToTop from './components/ScrollToTop';
 import ReportsPage from './pages/ReportsPage';
 import AppLayout from './components/AppLayout';
@@ -19,7 +20,8 @@ import { ToastProvider } from './components/Toast';
 function App() {
   return (
     <ThemeProvider>
-      <ToastProvider>
+      <GenelAyarlarProvider>
+        <ToastProvider>
       <Router>
         <ScrollToTop />
         <Routes>
@@ -53,6 +55,7 @@ function App() {
         </Routes>
       </Router>
       </ToastProvider>
+      </GenelAyarlarProvider>
     </ThemeProvider>
   );
 }

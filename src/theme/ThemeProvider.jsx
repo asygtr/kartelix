@@ -70,3 +70,61 @@ export const ThemeProvider = ({ children }) => {
 };
 
 export const useTheme = () => useContext(ThemeContext);
+
+
+const DEFAULT_GENEL_AYARLAR = { publicProsesGoster: false, publicFiyatGoster: false, publicHikayeGoster: true };
+
+const GenelAyarlarContext = createContext({
+  genelAyarlar: DEFAULT_GENEL_AYARLAR,
+  loadGenelAyarlar: () => {},
+  saveGenelAyarlar: () => {}
+});
+
+export const GenelAyarlarProvider = ({ children }) => {
+  const [genelAyarlar, setGenelAyarlar] = useState(DEFAULT_GENEL_AYARLAR);
+
+  const loadGenelAyarlar = async () => {
+    try {
+      const r = await fetch('/api/genel-ayarlar');
+      const d = await r.json();
+      if (d.success) setGenelAyarlar(d.data);
+    } catch {}
+  };
+
+  const saveGenelAyarlar = async (next) => {
+    try {
+      const r = await fetch('/api/genel-ayarlar', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(next)
+      });
+      const d = await r.json();
+      if (d.success) {
+        setGenelAyarlar(d.data);
+        // showToast('Genel ayarlar kaydedildi.', 'success'); // Toast eklemek istenirse
+      } else {
+        // showToast(d.error || 'Genel ayarlar kaydedilemedi.', 'error'); // Toast eklemek istenirse
+      }
+    } catch {
+      // showToast('Genel ayarlar kaydedilirken hata oluştu.', 'error'); // Toast eklemek istenirse
+    }
+  };
+
+  useEffect(() => {
+    loadGenelAyarlar();
+  }, []);
+
+  return (
+    <GenelAyarlarContext.Provider
+      value={{
+        genelAyarlar,
+        loadGenelAyarlar,
+        saveGenelAyarlar
+      }}
+    >
+      {children}
+    </GenelAyarlarContext.Provider>
+  );
+};
+
+export const useGenelAyarlar = () => useContext(GenelAyarlarContext);

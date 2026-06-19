@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../theme/ThemeProvider';
+import { useGenelAyarlar } from '../theme/ThemeProvider';
 import { getSession } from '../utils/auth';
 import QrCameraModal from './QrCameraModal';
 import MobileBottomNav from './MobileBottomNav';
@@ -140,11 +141,7 @@ const AppNavbar = ({ title, action, onLogout }) => {
   };
 
   const canSeeSearchPrices = role === 'admin';
-  const [genelAyarlar, setGenelAyarlar] = React.useState({ publicProsesGoster: false, publicFiyatGoster: false });
-
-  useEffect(() => {
-    fetch('/api/genel-ayarlar').then(r => r.json()).then(d => { if (d.success) setGenelAyarlar(d.data); }).catch(() => {});
-  }, []);
+  const { genelAyarlar } = useGenelAyarlar();
 
   return (
     <>

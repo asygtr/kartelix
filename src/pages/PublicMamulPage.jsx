@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { motion, useScroll, useTransform, useSpring, useInView } from 'framer-motion';
 import { resolveColorPalette, isDarkPalette } from '../utils/colorPalette';
@@ -6,17 +6,17 @@ import { resolveColorPalette, isDarkPalette } from '../utils/colorPalette';
 const v = (val) => String(val || '').trim() || null;
 const EASE = [0.16, 1, 0.3, 1];
 
-/* â”€â”€â”€ Çeviriler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── �eviriler ──────────────────────────────────────────────────────────── */
 const T = {
   TR: {
-    fabric: 'Kumaş Hikayesi', material: 'Hammadde', process: 'Üretim Süreci',
-    technical: 'Teknik', related: 'Aynı Gruptan', width: 'En', weight: 'Gramaj',
-    article: 'Article', color: 'Renk', order: 'Bu Kumaşı Sipariş Et',
-    care: 'Bakım Talimatları', notFound: 'Ürün bulunamadı', searching: 'Aranıyor...',
-    share: 'Paylaş', copied: 'Bağlantı kopyalandı!',
+    fabric: 'Kuma� Hikayesi', material: 'Hammadde', process: '�retim S�reci',
+    technical: 'Teknik', related: 'Ayn� Gruptan', width: 'En', weight: 'Gramaj',
+    article: 'Article', color: 'Renk', order: 'Bu Kuma�� Sipari� Et',
+    care: 'Bak�m Talimatlar�', notFound: '�r�n bulunamad�', searching: 'Aran�yor...',
+    share: 'Payla�', copied: 'Ba�lant� kopyaland�!',
     careLabels: {
-      yikama: 'Yıkama', kurutma: 'Kurutma', utuleme: 'Ütüleme',
-      kimyasal: 'Kuru Temizleme', agartma: 'Ağartma',
+      yikama: 'Y�kama', kurutma: 'Kurutma', utuleme: '�t�leme',
+      kimyasal: 'Kuru Temizleme', agartma: 'A�artma',
     },
   },
   EN: {
@@ -32,7 +32,7 @@ const T = {
   },
 };
 
-/* â”€â”€â”€ Bakım ikonları (SVG) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── Bak�m ikonlar� (SVG) ───────────────────────────────────────────────── */
 const CARE_ICONS = {
   yikama: (
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -66,16 +66,16 @@ const CARE_ICONS = {
   ),
 };
 
-/* â”€â”€â”€ Bakım talimatlarını parse et â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── Bak�m talimatlar�n� parse et ──────────────────────────────────────── */
 const parseCare = (raw) => {
   if (!raw) return [];
-  // "yikama:30,utuleme:orta,kurutma:yok" veya JSON veya düz metin
+  // "yikama:30,utuleme:orta,kurutma:yok" veya JSON veya d�z metin
   try {
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) return parsed;
     return Object.entries(parsed).map(([key, val]) => ({ key, val }));
   } catch {
-    // virgülle ayrılmış "key:val" formatı
+    // virg�lle ayr�lm�� "key:val" format�
     return raw.split(',').map(s => {
       const [key, ...rest] = s.trim().split(':');
       return { key: key.trim().toLowerCase(), val: rest.join(':').trim() };
@@ -83,7 +83,7 @@ const parseCare = (raw) => {
   }
 };
 
-/* â”€â”€â”€ SVG Weave Pattern (görsel yoksa fallback) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── SVG Weave Pattern (g�rsel yoksa fallback) ──────────────────────────── */
 const WeavePattern = ({ P, dark }) => (
   <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style={{ position: 'absolute', inset: 0 }}>
     <defs>
@@ -104,7 +104,7 @@ const WeavePattern = ({ P, dark }) => (
   </svg>
 );
 
-/* â”€â”€â”€ Scroll reveal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── Scroll reveal ──────────────────────────────────────────────────────── */
 const Reveal = ({ children, delay = 0, x = 0, y = 28 }) => {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: '-50px 0px' });
@@ -117,7 +117,7 @@ const Reveal = ({ children, delay = 0, x = 0, y = 28 }) => {
   );
 };
 
-/* â”€â”€â”€ 3D tilt (sadece mouse) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── 3D tilt (sadece mouse) ─────────────────────────────────────────────── */
 const TiltCard = ({ children, style }) => {
   const ref = useRef(null);
   const rotX = useSpring(0, { stiffness: 180, damping: 22 });
@@ -136,7 +136,7 @@ const TiltCard = ({ children, style }) => {
   );
 };
 
-/* â”€â”€â”€ Ana bileşen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── Ana bile�en ────────────────────────────────────────────────────────── */
 const PublicMamulPage = () => {
   const { slug } = useParams();
   const [mamul, setMamul] = useState(null);
@@ -150,7 +150,7 @@ const PublicMamulPage = () => {
       fetch(`/api/public/mamuller/${slug}`).then(r => r.json()),
       fetch('/api/genel-ayarlar').then(r => r.json()).catch(() => ({ success: false }))
     ]).then(([mamulRes, ayarRes]) => {
-      if (!mamulRes.success) throw new Error(mamulRes.error || 'Bulunamadı');
+      if (!mamulRes.success) throw new Error(mamulRes.error || 'Bulunamad�');
       setMamul(mamulRes.data);
       setGenelAyarlar(ayarRes.success ? ayarRes.data : { publicProsesGoster: false, publicFiyatGoster: false });
     }).catch(err => setError(err.message))
@@ -175,7 +175,7 @@ const PublicMamulPage = () => {
     const url = window.location.href;
     if (navigator.share) {
       try {
-        await navigator.share({ title: mamul?.mamul_adi || 'Kumaş', url });
+        await navigator.share({ title: mamul?.mamul_adi || 'Kuma�', url });
       } catch {}
     } else {
       await navigator.clipboard.writeText(url).catch(() => {});
@@ -186,7 +186,8 @@ const PublicMamulPage = () => {
 
   const composition = v(mamul?.kompozisyon_ozeti);
   const prosesAcik  = genelAyarlar?.publicProsesGoster === true;
-  const story       = prosesAcik ? (v(mamul?.tanitim_hikayesi) || v(mamul?.aciklama) || v(mamul?.materyal_notlari)) : null;
+  const hikayeAcik  = genelAyarlar?.publicHikayeGoster !== false;
+  const story       = hikayeAcik ? (v(mamul?.tanitim_hikayesi) || v(mamul?.aciklama) || v(mamul?.materyal_notlari)) : null;
   const hasYarn     = mamul?.iplikler?.length > 0;
   const hasRelated  = mamul?.benzer_urunler?.length > 0;
   const hasProsesler = prosesAcik && mamul?.prosesler?.length > 0;
@@ -210,7 +211,7 @@ const PublicMamulPage = () => {
   if (error) return (
     <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3efe7', padding: '2rem' }}>
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} style={{ textAlign: 'center', maxWidth: 340 }}>
-        <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>✦</div>
+        <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>?</div>
         <h1 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#172023', margin: 0 }}>{t.notFound}</h1>
         <p style={{ fontSize: '0.85rem', color: '#667178', marginTop: '0.5rem' }}>{error}</p>
       </motion.div>
@@ -231,7 +232,7 @@ const PublicMamulPage = () => {
       position: 'relative',
     }}>
 
-      {/* â”€â”€ Atmosfer â”€â”€ */}
+      {/* ── Atmosfer ── */}
       <div aria-hidden="true" style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(${P.grad}, ${P.bgDeep} 0%, ${P.bg} 55%, ${P.bgDeep} 100%)` }} />
         <motion.div style={{ position: 'absolute', top: '-8%', left: '-4%', width: '60vw', height: '60vw', maxWidth: 560, maxHeight: 560, borderRadius: '50%', background: P.glow, filter: 'blur(70px)', opacity: 0.65, y: orbY1 }} />
@@ -242,8 +243,8 @@ const PublicMamulPage = () => {
           backgroundSize: '180px' }} />
       </div>
 
-      {/* â”€â”€ İçerik â”€â”€ */}
-      {/* ── Fixed üst bar ── */}
+      {/* ── ��erik ── */}
+      {/* �� Fixed �st bar �� */}
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
         background: dark ? 'rgba(20,18,15,0.88)' : 'rgba(250,248,245,0.88)',
@@ -280,16 +281,16 @@ const PublicMamulPage = () => {
         </div>
       </div>
 
-      {/* ── Scrollable içerik ── */}
+      {/* �� Scrollable i�erik �� */}
       <div style={{ position: 'relative', zIndex: 1, maxWidth: '36rem', margin: '0 auto', padding: '3.5rem 1rem 5rem' }}>
 
-        {/* ╔╔ HERO ╔╔ */}
+        {/* -�-� HERO -�-� */}
         <motion.section style={{ y: heroY, opacity: heroOpacity, scale: heroScale, paddingTop: '3.5rem', paddingBottom: '1.5rem', willChange: 'transform' }}>
 
-          {/* Swatch + başlık */}
+          {/* Swatch + ba�l�k */}
           <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '1.1rem', alignItems: 'start' }}>
 
-            {/* Görsel / Swatch */}
+            {/* G�rsel / Swatch */}
             <TiltCard>
               <motion.div
                 initial={{ opacity: 0, scale: 0.72, rotate: -6 }}
@@ -323,12 +324,12 @@ const PublicMamulPage = () => {
                   textTransform: 'uppercase', color: 'rgba(255,255,255,0.9)',
                   textAlign: 'center', lineHeight: 1.4, textShadow: '0 1px 3px rgba(0,0,0,0.4)',
                 }}>
-                  {v(mamul.renk) || '–'}
+                  {v(mamul.renk) || '�'}
                 </div>
               </motion.div>
             </TiltCard>
 
-            {/* Başlık */}
+            {/* Ba�l�k */}
             <div style={{ paddingTop: '0.2rem' }}>
               <motion.div
                 initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }}
@@ -352,7 +353,7 @@ const PublicMamulPage = () => {
                 style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.75rem' }}
               >
                 {v(mamul.en)      && <Pill P={P} dark={dark}>{mamul.en} cm</Pill>}
-                {v(mamul.gramaj)  && <Pill P={P} dark={dark}>{mamul.gramaj} gr/m²</Pill>}
+                {v(mamul.gramaj)  && <Pill P={P} dark={dark}>{mamul.gramaj} gr/m�</Pill>}
                 {composition      && <Pill P={P} dark={dark} accent>{composition}</Pill>}
               </motion.div>
             </div>
@@ -360,7 +361,7 @@ const PublicMamulPage = () => {
 
         </motion.section>
 
-        {/* ╔╔ GÖRSEL (büyük – varsa) ╔╔ */}
+        {/* -�-� G�RSEL (b�y�k � varsa) -�-� */}
         {gorselUrl && (
           <Reveal delay={0.03}>
             <div style={{ marginBottom: '0.85rem', borderRadius: '1.1rem', overflow: 'hidden', boxShadow: `0 18px 48px ${P.glow}` }}>
@@ -373,7 +374,7 @@ const PublicMamulPage = () => {
           </Reveal>
         )}
 
-        {/* ╔╔ HİKAYE ╔╔ */}
+        {/* -�-� H�KAYE -�-� */}
         {story && (
           <Reveal delay={0.04}>
             <div style={{ ...cardStyle(P, dark), marginBottom: '0.85rem' }}>
@@ -383,7 +384,7 @@ const PublicMamulPage = () => {
           </Reveal>
         )}
 
-        {/* ╔╔ BAKIM TALİMATLARI ╔╔ */}
+        {/* -�-� BAKIM TAL�MATLARI -�-� */}
         {careItems.length > 0 && (
           <Reveal delay={0.05}>
             <div style={{ ...cardStyle(P, dark), marginBottom: '0.85rem' }}>
@@ -412,7 +413,7 @@ const PublicMamulPage = () => {
           </Reveal>
         )}
 
-        {/* ╔╔ İPLİK ╔╔ */}
+        {/* -�-� �PL�K -�-� */}
         {hasYarn && (
           <Reveal delay={0.06}>
             <div style={{ ...cardStyle(P, dark), marginBottom: '0.85rem' }}>
@@ -425,14 +426,14 @@ const PublicMamulPage = () => {
         )}
 
 
-        {/* ╔╔ TEKNİK ╔╔ */}
+        {/* -�-� TEKN�K -�-� */}
         <Reveal delay={0.05} x={20}>
           <div style={{ ...cardStyle(P, dark), marginBottom: '0.85rem' }}>
             <SectionLabel P={P}>{t.technical}</SectionLabel>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', marginTop: '0.9rem' }}>
               {[
                 { label: t.width,   val: mamul.en      ? `${mamul.en} cm`        : null },
-                { label: t.weight,  val: mamul.gramaj  ? `${mamul.gramaj} gr/m²` : null },
+                { label: t.weight,  val: mamul.gramaj  ? `${mamul.gramaj} gr/m�` : null },
                 { label: t.article, val: mamul.article_no || mamul.article_code },
                 { label: t.color,   val: mamul.renk },
               ].filter(r => r.val).map(({ label, val }) => (
@@ -445,7 +446,7 @@ const PublicMamulPage = () => {
           </div>
         </Reveal>
 
-        {/* ╔╔ BENZER ╔╔ */}
+        {/* -�-� BENZER -�-� */}
         {hasRelated && (
           <Reveal delay={0.04}>
             <div style={{ marginBottom: '0.85rem' }}>
@@ -460,7 +461,7 @@ const PublicMamulPage = () => {
         )}
 
   
-      {/* ── Fixed alt bar ── */}
+      {/* �� Fixed alt bar �� */}
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
         background: dark ? 'rgba(20,18,15,0.92)' : 'rgba(250,248,245,0.92)',
@@ -483,7 +484,7 @@ const PublicMamulPage = () => {
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
           }}
         >
-          <span style={{ fontSize: '0.7rem' }}>✦</span>
+          <span style={{ fontSize: '0.7rem' }}>?</span>
           <span>{t.order}</span>
         </motion.button>
       </div>
@@ -493,7 +494,7 @@ const PublicMamulPage = () => {
   );
 };
 
-/* â”€â”€â”€ Alt bileşenler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── Alt bile�enler ─────────────────────────────────────────────────────── */
 
 const Pill = ({ children, P, dark, accent }) => (
   <span style={{

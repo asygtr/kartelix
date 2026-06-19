@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../theme/ThemeProvider';
+import { useGenelAyarlar } from '../theme/ThemeProvider';
 import { palettes } from '../theme/palettes';
 import LabelDesignerPanel from '../components/LabelDesignerPanel';
 import DesktopOnlyGuard from '../components/DesktopOnlyGuard';
@@ -75,31 +76,9 @@ const SettingsPage = () => {
   const [themeStatus, setThemeStatus] = useState('');
   const [brandingForm, setBrandingForm] = useState({ appLogo: '/nevres.png', appBackground: '/showroom-bg.png' });
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [genelAyarlar, setGenelAyarlar] = useState({ publicProsesGoster: false, publicFiyatGoster: false });
-  const [genelAyarlarStatus, setGenelAyarlarStatus] = useState('');
   const [drawerVisible, setDrawerVisible] = useState(false);
 
-  const loadGenelAyarlar = async () => {
-    try {
-      const r = await fetch('/api/genel-ayarlar');
-      const d = await r.json();
-      if (d.success) setGenelAyarlar(d.data);
-    } catch {}
-  };
-
-  const saveGenelAyarlar = async (next) => {
-    try {
-      const r = await fetch('/api/genel-ayarlar', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(next)
-      });
-      const d = await r.json();
-      if (d.success) { setGenelAyarlar(d.data); setGenelAyarlarStatus('Kaydedildi.'); }
-      else setGenelAyarlarStatus('Kayıt başarısız.');
-    } catch { setGenelAyarlarStatus('Hata oluştu.'); }
-    setTimeout(() => setGenelAyarlarStatus(''), 2500);
-  };
+  const { genelAyarlar, loadGenelAyarlar, saveGenelAyarlar } = useGenelAyarlar();
 
   const loadSystemStats = async () => {
     try {
@@ -169,7 +148,6 @@ const SettingsPage = () => {
     loadDefinitions();
     loadExcelSettings();
     loadOrderEmailSettings();
-    loadGenelAyarlar();
   }, []);
 
   useEffect(() => {
@@ -1019,7 +997,15 @@ const SettingsPage = () => {
                 onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicFiyatGoster: e.target.checked })} />
             </label>
           </div>
-          {genelAyarlarStatus ? <div className="app-soft-panel px-4 py-3 text-sm">{genelAyarlarStatus}</div> : null}
+            <label className="flex items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-medium text-[color:var(--app-text)]">Kumas Hikayesini goster</div>
+                <div className="mt-0.5 text-xs text-slate-500">Musteri QR/link sayfasinda Kumas Hikayesi bolumu gorunsun.</div>
+              </div>
+              <input type="checkbox" checked={genelAyarlar.publicHikayeGoster !== false}
+                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicHikayeGoster: e.target.checked })} />
+            </label>
+
         </div>
       ),
       list: (
