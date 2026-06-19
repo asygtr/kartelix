@@ -996,23 +996,23 @@ const SettingsPage = () => {
               <input type="checkbox" checked={genelAyarlar.publicFiyatGoster}
                 onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicFiyatGoster: e.target.checked })} />
             </label>
-          </div>
             <label className="flex items-center justify-between gap-4">
               <div>
-                <div className="text-sm font-medium text-[color:var(--app-text)]">Kumas Hikayesini goster</div>
-                <div className="mt-0.5 text-xs text-slate-500">Musteri QR/link sayfasinda Kumas Hikayesi bolumu gorunsun.</div>
+                <div className="text-sm font-medium text-[color:var(--app-text)]">Kumaş Hikayesini göster</div>
+                <div className="mt-0.5 text-xs text-slate-500">Müşteri QR/link sayfasında Kumaş Hikayesi bölümü görünsün.</div>
               </div>
               <input type="checkbox" checked={genelAyarlar.publicHikayeGoster !== false}
                 onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicHikayeGoster: e.target.checked })} />
             </label>
-
+          </div>
         </div>
       ),
       list: (
         <div className="mt-4 space-y-3">
           {[
             `Proses görünürlüğü: ${genelAyarlar.publicProsesGoster ? 'Açık' : 'Kapalı'}`,
-            `Fiyat görünürlüğü: ${genelAyarlar.publicFiyatGoster ? 'Açık' : 'Kapalı'}`
+            `Fiyat görünürlüğü: ${genelAyarlar.publicFiyatGoster ? 'Açık' : 'Kapalı'}`,
+            `Hikaye görünürlüğü: ${genelAyarlar.publicHikayeGoster !== false ? 'Açık' : 'Kapalı'}`
           ].map((item, i) => (
             <div key={i} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">{item}</div>
           ))}
