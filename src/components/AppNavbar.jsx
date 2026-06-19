@@ -179,7 +179,7 @@ const AppNavbar = ({ title, action, onLogout }) => {
             <button
               type="button"
               onClick={() => window.dispatchEvent(new CustomEvent('settings-menu:open'))}
-              className="app-nav-icon-button"
+              className="app-nav-icon-button md:hidden"
               aria-label="Ayar bölümlerini aç"
               title="Ayar bölümlerini aç"
             >

@@ -895,8 +895,49 @@ const SettingsPage = () => {
   })[activeTab];
 
 
+  // Mobilde (< 768px) landing yerine drawer aç
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    if (!activeTab && isMobile) {
+      setDrawerOpen(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const drawerPortal = drawerVisible ? createPortal(
+    <div
+      className={`app-drawer-overlay ${drawerOpen ? 'is-open' : 'is-closing'}`}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) setDrawerOpen(false);
+      }}
+    >
+      <div className={`app-drawer-panel ${drawerOpen ? 'is-open' : 'is-closing'}`}>
+        <div className="app-drawer-header">
+          <button type="button" onClick={() => setDrawerOpen(false)} className="app-nav-icon-button" aria-label="Menüyü kapat" title="Menüyü kapat">
+            <CloseIcon />
+          </button>
+        </div>
+        <div className="app-drawer-list">
+          {tabs.map((tab, index) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => { setActiveTab(tab.id); setDrawerOpen(false); }}
+              className={`app-drawer-link ${activeTab === tab.id ? 'is-active' : ''} ${drawerOpen ? 'is-open' : 'is-closing'}`}
+              style={{ animationDelay: `${80 + index * 55}ms` }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>,
+    document.body
+  ) : null;
+
   if (!activeTab) return (
     <div className="space-y-6">
+      {drawerPortal}
       <section className="app-panel p-6 app-reveal-up app-reveal-delay-1">
         <div className="app-chip mb-4">Ayarlar</div>
         <h2 className="text-2xl font-semibold text-slate-900 mb-6">Ne yapmak istiyorsun?</h2>
@@ -927,6 +968,7 @@ const SettingsPage = () => {
 
   return (
     <div className="space-y-6">
+      {drawerPortal}
       {current.fullWidth ? (
         <section className="app-reveal-up app-reveal-delay-1">
           <div className="flex items-center gap-3 mb-4">
@@ -956,49 +998,6 @@ const SettingsPage = () => {
           </div>
         </section>
       )}
-
-      {drawerVisible ? createPortal(
-        <div
-          className={`app-drawer-overlay ${drawerOpen ? 'is-open' : 'is-closing'}`}
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              setDrawerOpen(false);
-            }
-          }}
-        >
-          <div className={`app-drawer-panel ${drawerOpen ? 'is-open' : 'is-closing'}`}>
-            <div className="app-drawer-header">
-              <button
-                type="button"
-                onClick={() => setDrawerOpen(false)}
-                className="app-nav-icon-button"
-                aria-label="Menüyü kapat"
-                title="Menüyü kapat"
-              >
-                <CloseIcon />
-              </button>
-            </div>
-
-            <div className="app-drawer-list">
-              {tabs.map((tab, index) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => {
-                    setActiveTab(tab.id);
-                    setDrawerOpen(false);
-                  }}
-                  className={`app-drawer-link ${activeTab === tab.id ? 'is-active' : ''} ${drawerOpen ? 'is-open' : 'is-closing'}`}
-                  style={{ animationDelay: `${80 + (index * 55)}ms` }}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>,
-        document.body
-      ) : null}
     </div>
   );
 };
