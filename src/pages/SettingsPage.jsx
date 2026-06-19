@@ -1,18 +1,16 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../theme/ThemeProvider';
 import { palettes } from '../theme/palettes';
-import AppNavbar from '../components/AppNavbar';
 import LabelDesignerPanel from '../components/LabelDesignerPanel';
-import { clearSession } from '../utils/auth';
 import { X, Menu } from '../components/icons.jsx';
 
 const tabs = [
   { id: 'genel', label: 'Genel Ayarlar' },
   { id: 'excel', label: 'Excel Senkron' },
-  { id: 'email', label: 'Sipariş E-posta' },
-  { id: 'theme', label: 'Marka Varlıkları' },
-  { id: 'labels', label: 'Etiket Tasarımcısı' },
+  { id: 'email', label: 'SipariÅŸ E-posta' },
+  { id: 'theme', label: 'Marka VarlÄ±klarÄ±' },
+  { id: 'labels', label: 'Etiket TasarÄ±mcÄ±sÄ±' },
   { id: 'system', label: 'Operasyon' }
 ];
 
@@ -97,8 +95,8 @@ const SettingsPage = () => {
       });
       const d = await r.json();
       if (d.success) { setGenelAyarlar(d.data); setGenelAyarlarStatus('Kaydedildi.'); }
-      else setGenelAyarlarStatus('Kayıt başarısız.');
-    } catch { setGenelAyarlarStatus('Hata oluştu.'); }
+      else setGenelAyarlarStatus('KayÄ±t baÅŸarÄ±sÄ±z.');
+    } catch { setGenelAyarlarStatus('Hata oluÅŸtu.'); }
     setTimeout(() => setGenelAyarlarStatus(''), 2500);
   };
 
@@ -108,7 +106,7 @@ const SettingsPage = () => {
       const data = await response.json();
       setSystemStats(data);
     } catch (err) {
-      console.error('İstatistikler yüklenemedi:', err);
+      console.error('Ä°statistikler yÃ¼klenemedi:', err);
     }
   };
 
@@ -144,7 +142,7 @@ const SettingsPage = () => {
     setExcelSyncStatus({
       lastRunAt: '-',
       directory: '-',
-      lastError: 'Durum bilgisi bu ekranda gösterilmiyor',
+      lastError: 'Durum bilgisi bu ekranda gÃ¶sterilmiyor',
       urgeLastResult: null,
       latestSnapshots: []
     });
@@ -229,36 +227,31 @@ const SettingsPage = () => {
 
   const handleBackup = async () => {
     setLoading(true);
-    setBackupStatus('Yedekleme yapılıyor...');
+    setBackupStatus('Yedekleme yapÄ±lÄ±yor...');
     try {
       await fetch('/api/backup', { method: 'POST' });
-      setBackupStatus('Yedekleme başarılı.');
+      setBackupStatus('Yedekleme baÅŸarÄ±lÄ±.');
       setTimeout(() => setBackupStatus(''), 3000);
     } catch {
-      setBackupStatus('Yedekleme başarısız.');
+      setBackupStatus('Yedekleme baÅŸarÄ±sÄ±z.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleCleanDatabase = () => {
-    if (window.confirm('TÜM veriler silinecek. Emin misiniz?\nBu işlem geri alınamaz!')) {
+    if (window.confirm('TÃœM veriler silinecek. Emin misiniz?\nBu iÅŸlem geri alÄ±namaz!')) {
       setLoading(true);
       fetch('/api/clean-database', { method: 'POST' })
         .then(() => {
-          alert('Veritabanı temizlendi.');
+          alert('VeritabanÄ± temizlendi.');
           loadSystemStats();
         })
         .catch(() => {
-          alert('Temizleme başarısız.');
+          alert('Temizleme baÅŸarÄ±sÄ±z.');
         })
         .finally(() => setLoading(false));
     }
-  };
-
-  const handleLogout = () => {
-    clearSession();
-    window.location.href = '/';
   };
 
   const createDefinition = async (url, payload, onSuccess) => {
@@ -269,7 +262,7 @@ const SettingsPage = () => {
     });
     const result = await response.json();
     if (!response.ok || !result.success) {
-      throw new Error(result.error || 'Kayıt oluşturulamadı');
+      throw new Error(result.error || 'KayÄ±t oluÅŸturulamadÄ±');
     }
     await onSuccess();
   };
@@ -282,7 +275,7 @@ const SettingsPage = () => {
     });
     const result = await response.json();
     if (!response.ok || !result.success) {
-      throw new Error(result.error || 'Kayıt güncellenemedi');
+      throw new Error(result.error || 'KayÄ±t gÃ¼ncellenemedi');
     }
     await onSuccess();
   };
@@ -295,9 +288,9 @@ const SettingsPage = () => {
     });
     const result = await response.json();
     if (!response.ok || !result.success) {
-      throw new Error(result.error || 'Excel okuma sıklığı kaydedilemedi');
+      throw new Error(result.error || 'Excel okuma sÄ±klÄ±ÄŸÄ± kaydedilemedi');
     }
-    setExcelStatus('Excel okuma sıklığı kaydedildi.');
+    setExcelStatus('Excel okuma sÄ±klÄ±ÄŸÄ± kaydedildi.');
     await loadExcelSettings();
   };
 
@@ -305,9 +298,9 @@ const SettingsPage = () => {
     const response = await fetch('/api/admin/excel-sync/run', { method: 'POST' });
     const result = await response.json();
     if (!response.ok || !result.success) {
-      throw new Error(result.error || 'Excel senkronizasyonu çalıştırılamadı');
+      throw new Error(result.error || 'Excel senkronizasyonu Ã§alÄ±ÅŸtÄ±rÄ±lamadÄ±');
     }
-    setExcelStatus('Excel senkronizasyonu tamamlandı.');
+    setExcelStatus('Excel senkronizasyonu tamamlandÄ±.');
     setExcelSyncStatus(result.data);
     await loadDefinitions();
   };
@@ -334,7 +327,7 @@ const SettingsPage = () => {
     });
     const result = await response.json();
     if (!response.ok || !result.success) {
-      throw new Error(result.error || 'E-posta ayarları kaydedilemedi');
+      throw new Error(result.error || 'E-posta ayarlarÄ± kaydedilemedi');
     }
 
     setEmailForm((prev) => ({
@@ -343,7 +336,7 @@ const SettingsPage = () => {
       smtpPort: String(result.data.smtpPort || 587),
       smtpPassword: ''
     }));
-    setEmailStatus('E-posta ayarları kaydedildi.');
+    setEmailStatus('E-posta ayarlarÄ± kaydedildi.');
   };
 
   const sendTestOrderEmail = async () => {
@@ -358,17 +351,17 @@ const SettingsPage = () => {
       const codeSuffix = result.code ? ` [${result.code}]` : '';
       const stageSuffix = result.stage ? ` {${result.stage}}` : '';
       const responseSuffix = result.response ? ` - ${result.response}` : '';
-      throw new Error(`${prefix}${result.error || 'Test e-postası gönderilemedi'}${codeSuffix}${stageSuffix}${responseSuffix}`);
+      throw new Error(`${prefix}${result.error || 'Test e-postasÄ± gÃ¶nderilemedi'}${codeSuffix}${stageSuffix}${responseSuffix}`);
     }
 
     const accepted = result.data?.accepted?.join(', ') || emailForm.testRecipient || '-';
-    setEmailStatus(`Test e-postası gönderildi: ${accepted}`);
+    setEmailStatus(`Test e-postasÄ± gÃ¶nderildi: ${accepted}`);
   };
 
   const renderDefinitionList = (items, activeId, onSelect, renderText) => (
     <div className="mt-4 space-y-3 max-h-[560px] overflow-y-auto pr-1">
       {items.length === 0 ? (
-        <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-500">Henüz kayıt yok.</div>
+        <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-500">HenÃ¼z kayÄ±t yok.</div>
       ) : (
         items.map((item) => (
           <button
@@ -391,8 +384,8 @@ const SettingsPage = () => {
 
   const current = ({
     types: {
-      title: 'Ürün grupları',
-      description: 'Article no oluşurken kullanılan prefix yapısı burada tanımlanır. Listeden seçilen tanım aynı form içinde düzenlenir.',
+      title: 'ÃœrÃ¼n gruplarÄ±',
+      description: 'Article no oluÅŸurken kullanÄ±lan prefix yapÄ±sÄ± burada tanÄ±mlanÄ±r. Listeden seÃ§ilen tanÄ±m aynÄ± form iÃ§inde dÃ¼zenlenir.',
       form: (
         <form
           onSubmit={async (event) => {
@@ -414,15 +407,15 @@ const SettingsPage = () => {
         >
           <div className="flex items-center justify-between gap-3">
             <div className="text-sm font-semibold text-[color:var(--app-text)]">
-              {editingTypeId ? 'Ürün grubunu düzenle' : 'Yeni ürün grubu ekle'}
+              {editingTypeId ? 'ÃœrÃ¼n grubunu dÃ¼zenle' : 'Yeni Ã¼rÃ¼n grubu ekle'}
             </div>
-            {editingTypeId ? <button type="button" onClick={resetTypeForm} className="app-btn-secondary">İptal</button> : null}
+            {editingTypeId ? <button type="button" onClick={resetTypeForm} className="app-btn-secondary">Ä°ptal</button> : null}
           </div>
-          <input className="app-input" placeholder="Tür adı" value={typeForm.ad} onChange={(e) => setTypeForm((prev) => ({ ...prev, ad: e.target.value }))} />
+          <input className="app-input" placeholder="TÃ¼r adÄ±" value={typeForm.ad} onChange={(e) => setTypeForm((prev) => ({ ...prev, ad: e.target.value }))} />
           <input className="app-input" placeholder="Kod prefix (10, 20, 3 gibi)" value={typeForm.kodPrefix} onChange={(e) => setTypeForm((prev) => ({ ...prev, kodPrefix: e.target.value }))} />
-          <textarea className="app-textarea min-h-24" placeholder="Açıklama" value={typeForm.aciklama} onChange={(e) => setTypeForm((prev) => ({ ...prev, aciklama: e.target.value }))} />
+          <textarea className="app-textarea min-h-24" placeholder="AÃ§Ä±klama" value={typeForm.aciklama} onChange={(e) => setTypeForm((prev) => ({ ...prev, aciklama: e.target.value }))} />
           <button type="submit" className="app-btn-primary">
-            {editingTypeId ? 'Ürün grubunu güncelle' : 'Mamül türü ekle'}
+            {editingTypeId ? 'ÃœrÃ¼n grubunu gÃ¼ncelle' : 'MamÃ¼l tÃ¼rÃ¼ ekle'}
           </button>
         </form>
       ),
@@ -438,7 +431,7 @@ const SettingsPage = () => {
     },
     colors: {
       title: 'Renkler',
-      description: 'Mamül tanıtım ekranında seçilecek standart renk ve renk kodları burada tanımlanır. Listeden seçilen renk aynı formda düzenlenir.',
+      description: 'MamÃ¼l tanÄ±tÄ±m ekranÄ±nda seÃ§ilecek standart renk ve renk kodlarÄ± burada tanÄ±mlanÄ±r. Listeden seÃ§ilen renk aynÄ± formda dÃ¼zenlenir.',
       form: (
         <form
           onSubmit={async (event) => {
@@ -460,14 +453,14 @@ const SettingsPage = () => {
         >
           <div className="flex items-center justify-between gap-3">
             <div className="text-sm font-semibold text-[color:var(--app-text)]">
-              {editingColorId ? 'Rengi düzenle' : 'Yeni renk ekle'}
+              {editingColorId ? 'Rengi dÃ¼zenle' : 'Yeni renk ekle'}
             </div>
-            {editingColorId ? <button type="button" onClick={resetColorForm} className="app-btn-secondary">İptal</button> : null}
+            {editingColorId ? <button type="button" onClick={resetColorForm} className="app-btn-secondary">Ä°ptal</button> : null}
           </div>
-          <input className="app-input" placeholder="Renk adı" value={colorForm.ad} onChange={(e) => setColorForm((prev) => ({ ...prev, ad: e.target.value }))} />
+          <input className="app-input" placeholder="Renk adÄ±" value={colorForm.ad} onChange={(e) => setColorForm((prev) => ({ ...prev, ad: e.target.value }))} />
           <input className="app-input" placeholder="Renk kodu" value={colorForm.kod} onChange={(e) => setColorForm((prev) => ({ ...prev, kod: e.target.value }))} />
           <button type="submit" className="app-btn-primary">
-            {editingColorId ? 'Rengi güncelle' : 'Renk ekle'}
+            {editingColorId ? 'Rengi gÃ¼ncelle' : 'Renk ekle'}
           </button>
         </form>
       ),
@@ -482,8 +475,8 @@ const SettingsPage = () => {
       )
     },
     yarns: {
-      title: 'İplik tanımı',
-      description: 'İplik adı, kodu, birimi ve varsayılan fiyatı burada tanımlanır. Mamül reçetesinde bu hazır iplik kartları kullanılır.',
+      title: 'Ä°plik tanÄ±mÄ±',
+      description: 'Ä°plik adÄ±, kodu, birimi ve varsayÄ±lan fiyatÄ± burada tanÄ±mlanÄ±r. MamÃ¼l reÃ§etesinde bu hazÄ±r iplik kartlarÄ± kullanÄ±lÄ±r.',
       form: (
         <form
           onSubmit={async (event) => {
@@ -505,18 +498,18 @@ const SettingsPage = () => {
         >
           <div className="flex items-center justify-between gap-3">
             <div className="text-sm font-semibold text-[color:var(--app-text)]">
-              {editingYarnId ? 'İpliği düzenle' : 'Yeni iplik ekle'}
+              {editingYarnId ? 'Ä°pliÄŸi dÃ¼zenle' : 'Yeni iplik ekle'}
             </div>
-            {editingYarnId ? <button type="button" onClick={resetYarnForm} className="app-btn-secondary">İptal</button> : null}
+            {editingYarnId ? <button type="button" onClick={resetYarnForm} className="app-btn-secondary">Ä°ptal</button> : null}
           </div>
-          <input className="app-input" placeholder="İplik adı" value={yarnForm.ad} onChange={(e) => setYarnForm((prev) => ({ ...prev, ad: e.target.value }))} />
-          <input className="app-input" placeholder="İplik kodu" value={yarnForm.kod} onChange={(e) => setYarnForm((prev) => ({ ...prev, kod: e.target.value }))} />
+          <input className="app-input" placeholder="Ä°plik adÄ±" value={yarnForm.ad} onChange={(e) => setYarnForm((prev) => ({ ...prev, ad: e.target.value }))} />
+          <input className="app-input" placeholder="Ä°plik kodu" value={yarnForm.kod} onChange={(e) => setYarnForm((prev) => ({ ...prev, kod: e.target.value }))} />
           <div className="grid grid-cols-2 gap-3">
             <input className="app-input" placeholder="Birim" value={yarnForm.birim} onChange={(e) => setYarnForm((prev) => ({ ...prev, birim: e.target.value }))} />
             <input className="app-input" placeholder="Birim fiyat" value={yarnForm.birimFiyat} onChange={(e) => setYarnForm((prev) => ({ ...prev, birimFiyat: e.target.value }))} />
           </div>
           <button type="submit" className="app-btn-primary">
-            {editingYarnId ? 'İpliği güncelle' : 'İplik ekle'}
+            {editingYarnId ? 'Ä°pliÄŸi gÃ¼ncelle' : 'Ä°plik ekle'}
           </button>
         </form>
       ),
@@ -537,7 +530,7 @@ const SettingsPage = () => {
     },
     processes: {
       title: 'Proses',
-      description: 'Boyama, finisaj ve diğer üretim adımları burada tanımlanır; listeden seçilen proses aynı formda düzenlenir.',
+      description: 'Boyama, finisaj ve diÄŸer Ã¼retim adÄ±mlarÄ± burada tanÄ±mlanÄ±r; listeden seÃ§ilen proses aynÄ± formda dÃ¼zenlenir.',
       form: (
         <form
           onSubmit={async (event) => {
@@ -559,19 +552,19 @@ const SettingsPage = () => {
         >
           <div className="flex items-center justify-between gap-3">
             <div className="text-sm font-semibold text-[color:var(--app-text)]">
-              {editingProcessId ? 'Prosesi düzenle' : 'Yeni proses ekle'}
+              {editingProcessId ? 'Prosesi dÃ¼zenle' : 'Yeni proses ekle'}
             </div>
-            {editingProcessId ? <button type="button" onClick={resetProcessForm} className="app-btn-secondary">İptal</button> : null}
+            {editingProcessId ? <button type="button" onClick={resetProcessForm} className="app-btn-secondary">Ä°ptal</button> : null}
           </div>
-          <input className="app-input" placeholder="Proses adı" value={processForm.ad} onChange={(e) => setProcessForm((prev) => ({ ...prev, ad: e.target.value }))} />
+          <input className="app-input" placeholder="Proses adÄ±" value={processForm.ad} onChange={(e) => setProcessForm((prev) => ({ ...prev, ad: e.target.value }))} />
           <input className="app-input" placeholder="Proses tipi" value={processForm.tip} onChange={(e) => setProcessForm((prev) => ({ ...prev, tip: e.target.value }))} />
           <input className="app-input" placeholder="Birim maliyet" value={processForm.birimMaliyet} onChange={(e) => setProcessForm((prev) => ({ ...prev, birimMaliyet: e.target.value }))} />
           <label className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3">
             <input type="checkbox" checked={processForm.renkBazli} onChange={(e) => setProcessForm((prev) => ({ ...prev, renkBazli: e.target.checked }))} />
-            Renk bazlı proses
+            Renk bazlÄ± proses
           </label>
           <button type="submit" className="app-btn-primary">
-            {editingProcessId ? 'Prosesi güncelle' : 'Proses ekle'}
+            {editingProcessId ? 'Prosesi gÃ¼ncelle' : 'Proses ekle'}
           </button>
         </form>
       ),
@@ -592,19 +585,19 @@ const SettingsPage = () => {
     },
     excel: {
       title: 'Excel senkronizasyonu',
-      description: 'Mamül, ürün grubu, renk, iplik, proses ve fiyat verileri yalnızca xls klasöründeki ÜRGE Excel dosyalarından okunur.',
+      description: 'MamÃ¼l, Ã¼rÃ¼n grubu, renk, iplik, proses ve fiyat verileri yalnÄ±zca xls klasÃ¶rÃ¼ndeki ÃœRGE Excel dosyalarÄ±ndan okunur.',
       form: (
         <div className="space-y-4">
           <div className="app-soft-panel p-4 space-y-3">
             <div className="text-sm font-semibold text-[color:var(--app-text)]">Excel tek kaynak</div>
             <div className="text-sm text-slate-600">
-              Uygulama manuel tanım kabul etmez. Dosyalar otomatik olarak xls klasöründen okunur; article, ürün adı,
-              iplik yüzdeleri, iplik fiyatları, prosesler ve 1 kg fiyat hesapları Excel'den gelir.
+              Uygulama manuel tanÄ±m kabul etmez. Dosyalar otomatik olarak xls klasÃ¶rÃ¼nden okunur; article, Ã¼rÃ¼n adÄ±,
+              iplik yÃ¼zdeleri, iplik fiyatlarÄ±, prosesler ve 1 kg fiyat hesaplarÄ± Excel'den gelir.
             </div>
           </div>
 
           <div className="app-soft-panel p-4 space-y-3">
-            <div className="text-sm font-semibold text-[color:var(--app-text)]">Okuma sıklığı</div>
+            <div className="text-sm font-semibold text-[color:var(--app-text)]">Okuma sÄ±klÄ±ÄŸÄ±</div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr,auto]">
               <input className="app-input" placeholder="60000" value={excelPollMs} onChange={(e) => setExcelPollMs(e.target.value)} />
               <button
@@ -618,36 +611,36 @@ const SettingsPage = () => {
                   }
                 }}
               >
-                Sıklığı kaydet
+                SÄ±klÄ±ÄŸÄ± kaydet
               </button>
             </div>
-            <div className="text-xs text-slate-500">Milisaniye cinsinden yazın. Örnek: 60000 = 60 saniye.</div>
+            <div className="text-xs text-slate-500">Milisaniye cinsinden yazÄ±n. Ã–rnek: 60000 = 60 saniye.</div>
           </div>
 
           <div className="app-soft-panel p-4 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold text-[color:var(--app-text)]">Senkron durumu</div>
-                <div className="text-xs text-slate-500">Son çalışma: {excelSyncStatus?.lastRunAt || '-'}</div>
+                <div className="text-xs text-slate-500">Son Ã§alÄ±ÅŸma: {excelSyncStatus?.lastRunAt || '-'}</div>
               </div>
               <button
                 type="button"
                 className="app-btn-primary"
                 onClick={async () => {
                   try {
-                    setExcelStatus('Excel senkronizasyonu çalıştırılıyor...');
+                    setExcelStatus('Excel senkronizasyonu Ã§alÄ±ÅŸtÄ±rÄ±lÄ±yor...');
                     await runExcelSync();
                   } catch (err) {
                     setExcelStatus(err.message);
                   }
                 }}
               >
-                Şimdi oku
+                Åimdi oku
               </button>
             </div>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
-                Klasör: {excelSyncStatus?.directory || '-'}
+                KlasÃ¶r: {excelSyncStatus?.directory || '-'}
               </div>
               <div className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
                 Son hata: {excelSyncStatus?.lastError || 'Yok'}
@@ -661,20 +654,20 @@ const SettingsPage = () => {
         <div className="mt-4 space-y-3 max-h-[560px] overflow-y-auto pr-1">
           {excelSyncStatus?.urgeLastResult ? (
             <div className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
-              <div className="font-semibold text-[color:var(--app-text)]">Son ÜRGE okuması</div>
+              <div className="font-semibold text-[color:var(--app-text)]">Son ÃœRGE okumasÄ±</div>
               <div className="mt-1 text-slate-600">
-                Aktarılan satır: {excelSyncStatus.urgeLastResult.importedRows || 0} / Atlanan satır: {excelSyncStatus.urgeLastResult.skippedRows || 0}
+                AktarÄ±lan satÄ±r: {excelSyncStatus.urgeLastResult.importedRows || 0} / Atlanan satÄ±r: {excelSyncStatus.urgeLastResult.skippedRows || 0}
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-500">Henüz ÜRGE Excel okuma sonucu yok.</div>
+            <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-500">HenÃ¼z ÃœRGE Excel okuma sonucu yok.</div>
           )}
 
           {excelSyncStatus?.urgeLastResult?.files?.map((item) => (
             <div key={`urge-${item.fileName}`} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
               <div className="font-semibold text-[color:var(--app-text)]">{item.fileName}</div>
               <div className="mt-1 text-slate-600">
-                Prefix: {item.typePrefix || '-'} / Aktarılan: {item.importedRows || 0} / Atlanan: {item.skippedRows || 0}
+                Prefix: {item.typePrefix || '-'} / AktarÄ±lan: {item.importedRows || 0} / Atlanan: {item.skippedRows || 0}
               </div>
             </div>
           ))}
@@ -687,7 +680,7 @@ const SettingsPage = () => {
                 </div>
                 <div className="mt-1 break-all text-slate-600">{snapshot.filePath}</div>
                 <div className="mt-1 text-xs text-slate-500">
-                  {snapshot.summary?.message || '-'} / satır: {snapshot.summary?.importedRows ?? 0}
+                  {snapshot.summary?.message || '-'} / satÄ±r: {snapshot.summary?.importedRows ?? 0}
                 </div>
               </div>
             ))
@@ -696,13 +689,13 @@ const SettingsPage = () => {
       )
     },
     email: {
-      title: 'Sipariş e-postası',
-      description: 'Sipariş maili için Gmail SMTP ve alıcı listesi.',
+      title: 'SipariÅŸ e-postasÄ±',
+      description: 'SipariÅŸ maili iÃ§in Gmail SMTP ve alÄ±cÄ± listesi.',
       form: (
         <div className="space-y-4">
           <div className="app-soft-panel p-4">
             <label className="flex items-center justify-between gap-4">
-              <span className="text-sm font-semibold text-[color:var(--app-text)]">Otomatik sipariş e-postası</span>
+              <span className="text-sm font-semibold text-[color:var(--app-text)]">Otomatik sipariÅŸ e-postasÄ±</span>
               <input
                 type="checkbox"
                 checked={emailForm.enabled}
@@ -731,7 +724,7 @@ const SettingsPage = () => {
               />
             </label>
             <label className="block">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Güvenlik</div>
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">GÃ¼venlik</div>
               <select
                 className="app-select"
                 value={emailForm.smtpSecure ? 'ssl' : 'starttls'}
@@ -742,7 +735,7 @@ const SettingsPage = () => {
               </select>
             </label>
             <label className="block">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Gönderici adı</div>
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">GÃ¶nderici adÄ±</div>
               <input
                 className="app-input"
                 value={emailForm.senderName}
@@ -751,7 +744,7 @@ const SettingsPage = () => {
               />
             </label>
             <label className="block">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Gönderici e-posta</div>
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">GÃ¶nderici e-posta</div>
               <input
                 className="app-input"
                 value={emailForm.senderEmail}
@@ -760,7 +753,7 @@ const SettingsPage = () => {
               />
             </label>
             <label className="block">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">SMTP kullanıcı</div>
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">SMTP kullanÄ±cÄ±</div>
               <input
                 className="app-input"
                 value={emailForm.smtpUser}
@@ -769,17 +762,17 @@ const SettingsPage = () => {
               />
             </label>
             <label className="block lg:col-span-2">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">SMTP parola / uygulama parolası</div>
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">SMTP parola / uygulama parolasÄ±</div>
               <input
                 type="password"
                 className="app-input"
                 value={emailForm.smtpPassword}
                 onChange={(event) => setEmailForm((prev) => ({ ...prev, smtpPassword: event.target.value }))}
-                placeholder={emailForm.smtpPassword ? '' : 'Uygulama parolası'}
+                placeholder={emailForm.smtpPassword ? '' : 'Uygulama parolasÄ±'}
               />
             </label>
             <label className="block lg:col-span-2">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Siparişi alan e-posta adresleri</div>
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">SipariÅŸi alan e-posta adresleri</div>
               <textarea
                 className="app-input min-h-[96px]"
                 value={emailForm.recipientEmails}
@@ -788,20 +781,20 @@ const SettingsPage = () => {
               />
             </label>
             <label className="block lg:col-span-2">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Sipariş onay e-posta adresleri</div>
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">SipariÅŸ onay e-posta adresleri</div>
               <textarea
                 className="app-input min-h-[80px]"
                 value={emailForm.approvalEmails}
                 onChange={(event) => setEmailForm((prev) => ({ ...prev, approvalEmails: event.target.value }))}
                 placeholder="onay@firma.com; uretim@firma.com"
               />
-              <div className="mt-1 text-xs text-slate-500">Sipariş tamamlandığında bu adreslere kurumsal onay bildirimi gönderilir.</div>
+              <div className="mt-1 text-xs text-slate-500">SipariÅŸ tamamlandÄ±ÄŸÄ±nda bu adreslere kurumsal onay bildirimi gÃ¶nderilir.</div>
             </label>
             <div className="app-soft-panel p-4">
               <label className="flex items-center justify-between gap-4">
                 <div>
-                  <div className="text-sm font-semibold text-[color:var(--app-text)]">Onay mailinde fiyatları göster</div>
-                  <div className="mt-0.5 text-xs text-slate-500">Kapalıysa tutar ve birim fiyat sütunları onay mailinde yer almaz.</div>
+                  <div className="text-sm font-semibold text-[color:var(--app-text)]">Onay mailinde fiyatlarÄ± gÃ¶ster</div>
+                  <div className="mt-0.5 text-xs text-slate-500">KapalÄ±ysa tutar ve birim fiyat sÃ¼tunlarÄ± onay mailinde yer almaz.</div>
                 </div>
                 <input
                   type="checkbox"
@@ -811,16 +804,16 @@ const SettingsPage = () => {
               </label>
             </div>
             <label className="block lg:col-span-2">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Yanıt adresi</div>
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">YanÄ±t adresi</div>
               <input
                 className="app-input"
                 value={emailForm.replyTo}
                 onChange={(event) => setEmailForm((prev) => ({ ...prev, replyTo: event.target.value }))}
-                placeholder="Boşsa gönderici kullanılır"
+                placeholder="BoÅŸsa gÃ¶nderici kullanÄ±lÄ±r"
               />
             </label>
             <label className="block lg:col-span-2">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Test alıcısı</div>
+              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Test alÄ±cÄ±sÄ±</div>
               <input
                 className="app-input"
                 value={emailForm.testRecipient}
@@ -840,19 +833,19 @@ const SettingsPage = () => {
               onClick={async () => {
                 try {
                   await saveOrderEmailSettings();
-                  setEmailStatus('Test e-postası gönderiliyor...');
+                  setEmailStatus('Test e-postasÄ± gÃ¶nderiliyor...');
                   await sendTestOrderEmail();
                 } catch (err) {
                   setEmailStatus(err.message);
                 }
               }}
             >
-              Test gönder
+              Test gÃ¶nder
             </button>
           </div>
 
           <div className="app-soft-panel p-4 text-sm">
-            Gmail için 2 adımlı doğrulama açıp uygulama parolası kullanman gerekir.
+            Gmail iÃ§in 2 adÄ±mlÄ± doÄŸrulama aÃ§Ä±p uygulama parolasÄ± kullanman gerekir.
           </div>
 
           {emailStatus ? <div className="app-soft-panel px-4 py-3 text-sm">{emailStatus}</div> : null}
@@ -863,8 +856,8 @@ const SettingsPage = () => {
           {[
             `Durum: ${emailForm.enabled ? 'Aktif' : 'Pasif'}`,
             `SMTP: ${emailForm.smtpHost || '-'}:${emailForm.smtpPort || '-'}`,
-            `Gönderici: ${emailForm.senderEmail || emailForm.smtpUser || '-'}`,
-            `Alıcılar: ${emailForm.recipientEmails || '-'}`
+            `GÃ¶nderici: ${emailForm.senderEmail || emailForm.smtpUser || '-'}`,
+            `AlÄ±cÄ±lar: ${emailForm.recipientEmails || '-'}`
           ].map((item, index) => (
             <div key={`email-${index}`} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
               {item}
@@ -874,8 +867,8 @@ const SettingsPage = () => {
       )
     },
     theme: {
-      title: 'Marka varlıkları',
-      description: 'Login ekranı, navbar ve tüm uygulama zemini için kullanılan logo ve arka plan görselleri ile kurumsal renk paleti burada belirlenir.',
+      title: 'Marka varlÄ±klarÄ±',
+      description: 'Login ekranÄ±, navbar ve tÃ¼m uygulama zemini iÃ§in kullanÄ±lan logo ve arka plan gÃ¶rselleri ile kurumsal renk paleti burada belirlenir.',
       form: (
         <div className="space-y-4">
           <div className="app-soft-panel p-4">
@@ -902,15 +895,15 @@ const SettingsPage = () => {
 
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <div className="rounded-3xl border border-[color:var(--app-border)] bg-white/70 p-4">
-                <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--app-text-muted)]">Logo önizleme</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--app-text-muted)]">Logo Ã¶nizleme</div>
                 <div className="mt-4 flex items-center gap-4">
                   <div className="app-login-logo-wrap h-16 w-16">
-                    <img src={brandingForm.appLogo || '/nevres.png'} alt="Logo önizleme" className="app-login-logo" />
+                    <img src={brandingForm.appLogo || '/nevres.png'} alt="Logo Ã¶nizleme" className="app-login-logo" />
                   </div>
                 </div>
               </div>
               <div className="rounded-3xl border border-[color:var(--app-border)] bg-white/70 p-4">
-                <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--app-text-muted)]">Arka plan önizleme</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--app-text-muted)]">Arka plan Ã¶nizleme</div>
                 <div
                   className="mt-4 h-24 rounded-2xl border border-[color:var(--app-border)] bg-cover bg-center"
                   style={{ backgroundImage: `url('${brandingForm.appBackground || '/showroom-bg.png'}')` }}
@@ -938,7 +931,7 @@ const SettingsPage = () => {
                   setActivePalette(palette.id);
                   setAppLogo(result.data.appLogo);
                   setAppBackground(result.data.appBackground);
-                  setThemeStatus(`${palette.name} etkinleştirildi.`);
+                  setThemeStatus(`${palette.name} etkinleÅŸtirildi.`);
                 }
               }}
               className="w-full rounded-3xl border p-4 text-left"
@@ -976,11 +969,11 @@ const SettingsPage = () => {
               if (response.ok && result.success) {
                 setAppLogo(result.data.appLogo);
                 setAppBackground(result.data.appBackground);
-                setThemeStatus('Logo ve arka plan güncellendi.');
+                setThemeStatus('Logo ve arka plan gÃ¼ncellendi.');
               }
             }}
           >
-            Logo ve arka planı kaydet
+            Logo ve arka planÄ± kaydet
           </button>
           {themeStatus ? <div className="app-soft-panel px-4 py-3 text-sm">{themeStatus}</div> : null}
         </div>
@@ -996,30 +989,30 @@ const SettingsPage = () => {
       )
     },
     labels: {
-      title: 'Etiket Tasarımcısı',
-      description: 'Baskı düzenini örnek içerikle ayarlayabileceğiniz sade tasarım alanı.',
+      title: 'Etiket TasarÄ±mcÄ±sÄ±',
+      description: 'BaskÄ± dÃ¼zenini Ã¶rnek iÃ§erikle ayarlayabileceÄŸiniz sade tasarÄ±m alanÄ±.',
       fullWidth: true,
       content: <LabelDesignerPanel />
     },
     genel: {
       title: 'Genel Ayarlar',
-      description: 'Müşteri görünümü ve uygulama geneli davranış ayarları.',
+      description: 'MÃ¼ÅŸteri gÃ¶rÃ¼nÃ¼mÃ¼ ve uygulama geneli davranÄ±ÅŸ ayarlarÄ±.',
       form: (
         <div className="space-y-4">
           <div className="app-soft-panel p-4 space-y-4">
-            <div className="text-sm font-semibold text-[color:var(--app-text)]">Müşteri (public) görünümü</div>
+            <div className="text-sm font-semibold text-[color:var(--app-text)]">MÃ¼ÅŸteri (public) gÃ¶rÃ¼nÃ¼mÃ¼</div>
             <label className="flex items-center justify-between gap-4">
               <div>
-                <div className="text-sm font-medium text-[color:var(--app-text)]">Proses bilgisini göster</div>
-                <div className="mt-0.5 text-xs text-slate-500">Müşteri QR/link sayfasında üretim prosesleri görünsün.</div>
+                <div className="text-sm font-medium text-[color:var(--app-text)]">Proses bilgisini gÃ¶ster</div>
+                <div className="mt-0.5 text-xs text-slate-500">MÃ¼ÅŸteri QR/link sayfasÄ±nda Ã¼retim prosesleri gÃ¶rÃ¼nsÃ¼n.</div>
               </div>
               <input type="checkbox" checked={genelAyarlar.publicProsesGoster}
                 onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicProsesGoster: e.target.checked })} />
             </label>
             <label className="flex items-center justify-between gap-4">
               <div>
-                <div className="text-sm font-medium text-[color:var(--app-text)]">1 kg satış fiyatını göster</div>
-                <div className="mt-0.5 text-xs text-slate-500">Müşteri QR/link sayfasında ve arama sonucunda satış fiyatı görünsün.</div>
+                <div className="text-sm font-medium text-[color:var(--app-text)]">1 kg satÄ±ÅŸ fiyatÄ±nÄ± gÃ¶ster</div>
+                <div className="mt-0.5 text-xs text-slate-500">MÃ¼ÅŸteri QR/link sayfasÄ±nda ve arama sonucunda satÄ±ÅŸ fiyatÄ± gÃ¶rÃ¼nsÃ¼n.</div>
               </div>
               <input type="checkbox" checked={genelAyarlar.publicFiyatGoster}
                 onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicFiyatGoster: e.target.checked })} />
@@ -1031,8 +1024,8 @@ const SettingsPage = () => {
       list: (
         <div className="mt-4 space-y-3">
           {[
-            `Proses görünürlüğü: ${genelAyarlar.publicProsesGoster ? 'Açık' : 'Kapalı'}`,
-            `Fiyat görünürlüğü: ${genelAyarlar.publicFiyatGoster ? 'Açık' : 'Kapalı'}`
+            `Proses gÃ¶rÃ¼nÃ¼rlÃ¼ÄŸÃ¼: ${genelAyarlar.publicProsesGoster ? 'AÃ§Ä±k' : 'KapalÄ±'}`,
+            `Fiyat gÃ¶rÃ¼nÃ¼rlÃ¼ÄŸÃ¼: ${genelAyarlar.publicFiyatGoster ? 'AÃ§Ä±k' : 'KapalÄ±'}`
           ].map((item, i) => (
             <div key={i} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">{item}</div>
           ))}
@@ -1041,14 +1034,14 @@ const SettingsPage = () => {
     },
     system: {
       title: 'Operasyon merkezi',
-      description: 'Yedekleme, veri temizleme ve temel operasyon göstergeleri.',
+      description: 'Yedekleme, veri temizleme ve temel operasyon gÃ¶stergeleri.',
       form: (
         <div className="space-y-3">
           <button onClick={handleBackup} disabled={loading} className="w-full rounded-2xl bg-green-500 px-4 py-3 text-white hover:bg-green-600 disabled:bg-gray-400">
-            Veritabanını yedekle
+            VeritabanÄ±nÄ± yedekle
           </button>
           <button onClick={handleCleanDatabase} disabled={loading} className="w-full rounded-2xl bg-red-500 px-4 py-3 text-white hover:bg-red-600 disabled:bg-gray-400">
-            Tüm verileri temizle
+            TÃ¼m verileri temizle
           </button>
           {backupStatus ? <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700">{backupStatus}</div> : null}
         </div>
@@ -1070,60 +1063,54 @@ const SettingsPage = () => {
     }
   })[activeTab];
 
+
   return (
-    <div className="app-page">
-      <div className="app-container space-y-6">
-        <AppNavbar
-          title="Ayarlar"
-          action={(
-            <button
-              type="button"
-              onClick={() => setDrawerOpen(true)}
-              className="app-nav-icon-button"
-aria-label="Ayar bölümlerini aç"
-               title="Ayar bölümlerini aç"
-            >
-              <MenuIcon />
-            </button>
-          )}
-          onLogout={handleLogout}
-        />
+    <div className="space-y-6">
 
-        {activeTab !== 'labels' ? (
-          <section className="app-hero app-page-hero app-reveal-up">
-            <div className="app-page-hero-grid">
-              <div>
-                <div className="app-chip">{tabs.find((tab) => tab.id === activeTab)?.label}</div>
-                <h1 className="mt-4 text-3xl font-semibold text-[color:var(--app-text)]">{current.title}</h1>
-              </div>
-              <div className="app-page-hero-actions" />
+      {activeTab !== 'labels' ? (
+        <section className="app-hero app-page-hero app-reveal-up">
+          <div className="app-page-hero-grid">
+            <div>
+              <div className="app-chip">{tabs.find((tab) => tab.id === activeTab)?.label}</div>
+              <h1 className="mt-4 text-3xl font-semibold text-[color:var(--app-text)]">{current.title}</h1>
             </div>
-          </section>
-        ) : null}
-
-        {current.fullWidth ? (
-          <section className="app-reveal-up app-reveal-delay-1">
-            {current.content}
-          </section>
-        ) : (
-          <section className="app-panel p-6 app-reveal-up app-reveal-delay-1">
-            <div className="grid gap-8 xl:grid-cols-[0.95fr,1.05fr]">
-              <div>
-                <div className="app-chip">{tabs.find((tab) => tab.id === activeTab)?.label}</div>
-                <h2 className="mt-4 text-2xl font-semibold text-slate-900">{current.title}</h2>
-                <div className="mt-6">{current.form}</div>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900">
-                  {activeTab === 'excel' ? 'Kayıtlar ve son senkronlar' : activeTab === 'email' ? 'Bağlantı özeti' : 'Mevcut tanımlar'}
-                </h3>
-                {current.list}
-              </div>
+            <div className="app-page-hero-actions">
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(true)}
+                className="app-nav-icon-button"
+                aria-label="Ayar bÃ¶lÃ¼mlerini aÃ§"
+                title="Ayar bÃ¶lÃ¼mlerini aÃ§"
+              >
+                <MenuIcon />
+              </button>
             </div>
-          </section>
-        )}
-      </div>
+          </div>
+        </section>
+      ) : null}
+
+      {current.fullWidth ? (
+        <section className="app-reveal-up app-reveal-delay-1">
+          {current.content}
+        </section>
+      ) : (
+        <section className="app-panel p-6 app-reveal-up app-reveal-delay-1">
+          <div className="grid gap-8 xl:grid-cols-[0.95fr,1.05fr]">
+            <div>
+              <div className="app-chip">{tabs.find((tab) => tab.id === activeTab)?.label}</div>
+              <h2 className="mt-4 text-2xl font-semibold text-slate-900">{current.title}</h2>
+              <div className="mt-6">{current.form}</div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">
+                {activeTab === 'excel' ? 'KayÄ±tlar ve son senkronlar' : activeTab === 'email' ? 'BaÄŸlantÄ± Ã¶zeti' : 'Mevcut tanÄ±mlar'}
+              </h3>
+              {current.list}
+            </div>
+          </div>
+        </section>
+      )}
 
       {drawerVisible ? (
         <div
@@ -1140,8 +1127,8 @@ aria-label="Ayar bölümlerini aç"
                 type="button"
                 onClick={() => setDrawerOpen(false)}
                 className="app-nav-icon-button"
-                aria-label="Menüyü kapat"
-                title="Menüyü kapat"
+                aria-label="MenÃ¼yÃ¼ kapat"
+                title="MenÃ¼yÃ¼ kapat"
               >
                 <CloseIcon />
               </button>
@@ -1171,4 +1158,3 @@ aria-label="Ayar bölümlerini aç"
 };
 
 export default SettingsPage;
-

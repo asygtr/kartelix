@@ -32,8 +32,8 @@ function App() {
               <Route path="/admin/mamuller" element={<AdminMamulPage />} />
               <Route path="/admin/orders" element={<StaffOrderPage mode="admin" />} />
               <Route path="/admin/reports" element={<ReportsPage />} />
+              <Route path="/admin/settings" element={<DesktopOnlyGuard pageName="Ayarlar"><SettingsPage /></DesktopOnlyGuard>} />
             </Route>
-            <Route path="/admin/settings" element={<DesktopOnlyGuard pageName="Ayarlar"><SettingsPage /></DesktopOnlyGuard>} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['staff', 'admin']} />}>

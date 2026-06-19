@@ -971,13 +971,14 @@ code {
   min-width: 0;
 }
 
-/* Sağ kolon: viewport'a fixed — app-page'nin overflow'undan bağımsız */
+/* Sağ kolon: sticky — hiçbir surette aşağı inmez */
 .app-label-designer-preview-column {
   position: sticky;
   top: 1rem;
   max-height: calc(100dvh - 7rem);
-  overflow-y: auto;
+  overflow: visible;
   min-width: 0;
+  align-self: start;
 }
 
 .app-label-preview-panel {
