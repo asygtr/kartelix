@@ -53,7 +53,7 @@ const SettingsPage = () => {
     setAppBackground
   } = useTheme();
 
-  const [activeTab, setActiveTab] = useState('excel');
+  const [activeTab, setActiveTab] = useState(null);
   const [systemStats, setSystemStats] = useState({});
   const [backupStatus, setBackupStatus] = useState('');
   const [loading, setLoading] = useState(false);
@@ -672,166 +672,7 @@ const SettingsPage = () => {
     email: {
       title: 'Sipariş e-postası',
       description: 'Sipariş maili için Gmail SMTP ve alıcı listesi.',
-      form: (
-        <div className="space-y-4">
-          <div className="app-soft-panel p-4">
-            <label className="flex items-center justify-between gap-4">
-              <span className="text-sm font-semibold text-[color:var(--app-text)]">Otomatik sipariş e-postası</span>
-              <input
-                type="checkbox"
-                checked={emailForm.enabled}
-                onChange={(event) => setEmailForm((prev) => ({ ...prev, enabled: event.target.checked }))}
-              />
-            </label>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <label className="block">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">SMTP sunucusu</div>
-              <input
-                className="app-input"
-                value={emailForm.smtpHost}
-                onChange={(event) => setEmailForm((prev) => ({ ...prev, smtpHost: event.target.value }))}
-                placeholder="smtp.gmail.com"
-              />
-            </label>
-            <label className="block">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">SMTP port</div>
-              <input
-                className="app-input"
-                value={emailForm.smtpPort}
-                onChange={(event) => setEmailForm((prev) => ({ ...prev, smtpPort: event.target.value }))}
-                placeholder="587"
-              />
-            </label>
-            <label className="block">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Güvenlik</div>
-              <select
-                className="app-select"
-                value={emailForm.smtpSecure ? 'ssl' : 'starttls'}
-                onChange={(event) => setEmailForm((prev) => ({ ...prev, smtpSecure: event.target.value === 'ssl' }))}
-              >
-                <option value="starttls">STARTTLS / 587</option>
-                <option value="ssl">SSL / 465</option>
-              </select>
-            </label>
-            <label className="block">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Gönderici adı</div>
-              <input
-                className="app-input"
-                value={emailForm.senderName}
-                onChange={(event) => setEmailForm((prev) => ({ ...prev, senderName: event.target.value }))}
-                placeholder="Kartelix Siparis"
-              />
-            </label>
-            <label className="block">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Gönderici e-posta</div>
-              <input
-                className="app-input"
-                value={emailForm.senderEmail}
-                onChange={(event) => setEmailForm((prev) => ({ ...prev, senderEmail: event.target.value }))}
-                placeholder="adres@gmail.com"
-              />
-            </label>
-            <label className="block">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">SMTP kullanıcı</div>
-              <input
-                className="app-input"
-                value={emailForm.smtpUser}
-                onChange={(event) => setEmailForm((prev) => ({ ...prev, smtpUser: event.target.value }))}
-                placeholder="adres@gmail.com"
-              />
-            </label>
-            <label className="block lg:col-span-2">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">SMTP parola / uygulama parolası</div>
-              <input
-                type="password"
-                className="app-input"
-                value={emailForm.smtpPassword}
-                onChange={(event) => setEmailForm((prev) => ({ ...prev, smtpPassword: event.target.value }))}
-                placeholder={emailForm.smtpPassword ? '' : 'Uygulama parolası'}
-              />
-            </label>
-            <label className="block lg:col-span-2">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Siparişi alan e-posta adresleri</div>
-              <textarea
-                className="app-input min-h-[96px]"
-                value={emailForm.recipientEmails}
-                onChange={(event) => setEmailForm((prev) => ({ ...prev, recipientEmails: event.target.value }))}
-                placeholder="siparis@firma.com; ikinci@firma.com"
-              />
-            </label>
-            <label className="block lg:col-span-2">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Sipariş onay e-posta adresleri</div>
-              <textarea
-                className="app-input min-h-[80px]"
-                value={emailForm.approvalEmails}
-                onChange={(event) => setEmailForm((prev) => ({ ...prev, approvalEmails: event.target.value }))}
-                placeholder="onay@firma.com; uretim@firma.com"
-              />
-              <div className="mt-1 text-xs text-slate-500">Sipariş tamamlandığında bu adreslere kurumsal onay bildirimi gönderilir.</div>
-            </label>
-            <div className="app-soft-panel p-4">
-              <label className="flex items-center justify-between gap-4">
-                <div>
-                  <div className="text-sm font-semibold text-[color:var(--app-text)]">Onay mailinde fiyatları göster</div>
-                  <div className="mt-0.5 text-xs text-slate-500">Kapalıysa tutar ve birim fiyat sütunları onay mailinde yer almaz.</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={emailForm.approvalShowPrices}
-                  onChange={(event) => setEmailForm((prev) => ({ ...prev, approvalShowPrices: event.target.checked }))}
-                />
-              </label>
-            </div>
-            <label className="block lg:col-span-2">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Yanıt adresi</div>
-              <input
-                className="app-input"
-                value={emailForm.replyTo}
-                onChange={(event) => setEmailForm((prev) => ({ ...prev, replyTo: event.target.value }))}
-                placeholder="Boşsa gönderici kullanılır"
-              />
-            </label>
-            <label className="block lg:col-span-2">
-              <div className="mb-2 text-sm font-medium text-[color:var(--app-text)]">Test alıcısı</div>
-              <input
-                className="app-input"
-                value={emailForm.testRecipient}
-                onChange={(event) => setEmailForm((prev) => ({ ...prev, testRecipient: event.target.value }))}
-                placeholder="test@firma.com"
-              />
-            </label>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-[1fr,auto]">
-            <button type="button" className="app-btn-primary" onClick={saveOrderEmailSettings}>
-              Kaydet
-            </button>
-            <button
-              type="button"
-              className="app-btn-secondary"
-              onClick={async () => {
-                try {
-                  await saveOrderEmailSettings();
-                  setEmailStatus('Test e-postası gönderiliyor...');
-                  await sendTestOrderEmail();
-                } catch (err) {
-                  setEmailStatus(err.message);
-                }
-              }}
-            >
-              Test gönder
-            </button>
-          </div>
-
-          <div className="app-soft-panel p-4 text-sm">
-            Gmail için 2 adımlı doğrulama açıp uygulama parolası kullanman gerekir.
-          </div>
-
-          {emailStatus ? <div className="app-soft-panel px-4 py-3 text-sm">{emailStatus}</div> : null}
-        </div>
-      ),
+      form: <EmailForm emailForm={emailForm} setEmailForm={setEmailForm} emailStatus={emailStatus} setEmailStatus={setEmailStatus} saveOrderEmailSettings={saveOrderEmailSettings} sendTestOrderEmail={sendTestOrderEmail} />,
       list: (
         <div className="mt-4 space-y-3 max-h-[560px] overflow-y-auto pr-1">
           {[
@@ -977,6 +818,7 @@ const SettingsPage = () => {
     },
     genel: {
       title: 'Genel Ayarlar',
+
       description: 'Müşteri görünümü ve uygulama geneli davranış ayarları.',
       form: (
         <div className="space-y-4">
@@ -1053,21 +895,55 @@ const SettingsPage = () => {
   })[activeTab];
 
 
+  if (!activeTab) return (
+    <div className="space-y-6">
+      <section className="app-panel p-6 app-reveal-up app-reveal-delay-1">
+        <div className="app-chip mb-4">Ayarlar</div>
+        <h2 className="text-2xl font-semibold text-slate-900 mb-6">Ne yapmak istiyorsun?</h2>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className="text-left rounded-2xl border px-5 py-4 transition hover:border-[color:var(--app-accent)]"
+              style={{ borderColor: 'var(--app-border)', background: 'rgba(255,253,248,0.7)' }}
+            >
+              <div className="font-semibold text-[color:var(--app-text)]">{tab.label}</div>
+              <div className="mt-1 text-xs text-slate-500">
+                {tab.id === 'genel' && 'Public görünüm, hikaye, fiyat ve proses ayarları'}
+                {tab.id === 'excel' && 'Excel dosyası okuma sıklığı ve senkronizasyon'}
+                {tab.id === 'email' && 'SMTP, alıcılar ve otomatik sipariş bildirimi'}
+                {tab.id === 'theme' && 'Logo, arka plan ve renk paleti'}
+                {tab.id === 'labels' && 'Baskı düzeni ve etiket tasarımı'}
+                {tab.id === 'system' && 'Yedekleme, veri temizleme ve istatistikler'}
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
-
-
-
       {current.fullWidth ? (
         <section className="app-reveal-up app-reveal-delay-1">
+          <div className="flex items-center gap-3 mb-4">
+            <button type="button" onClick={() => setActiveTab(null)} className="app-btn-secondary" style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}>← Geri</button>
+            <div className="app-chip">{tabs.find((tab) => tab.id === activeTab)?.label}</div>
+          </div>
           {current.content}
         </section>
       ) : (
         <section className="app-panel p-6 app-reveal-up app-reveal-delay-1">
+          <div className="flex items-center gap-3 mb-6">
+            <button type="button" onClick={() => setActiveTab(null)} className="app-btn-secondary" style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}>← Geri</button>
+            <div className="app-chip">{tabs.find((tab) => tab.id === activeTab)?.label}</div>
+          </div>
           <div className="grid gap-8 xl:grid-cols-[0.95fr,1.05fr]">
             <div>
-              <div className="app-chip">{tabs.find((tab) => tab.id === activeTab)?.label}</div>
-              <h2 className="mt-4 text-2xl font-semibold text-slate-900">{current.title}</h2>
+              <h2 className="text-2xl font-semibold text-slate-900">{current.title}</h2>
               <div className="mt-6">{current.form}</div>
             </div>
 
@@ -1126,6 +1002,123 @@ const SettingsPage = () => {
     </div>
   );
 };
+
+const Accordion = ({ title, hint, children, defaultOpen = false }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--app-border)' }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left"
+        style={{ background: open ? 'color-mix(in srgb, var(--app-primary) 6%, white 94%)' : 'rgba(255,253,248,0.7)' }}
+      >
+        <div>
+          <div className="font-semibold text-sm text-[color:var(--app-text)]">{title}</div>
+          {hint && !open && <div className="mt-0.5 text-xs text-slate-400">{hint}</div>}
+        </div>
+        <span style={{ fontSize: '0.75rem', color: 'var(--app-text-muted)', flexShrink: 0 }}>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && <div className="px-5 pb-5 pt-3 space-y-3 border-t" style={{ borderColor: 'var(--app-border)' }}>{children}</div>}
+    </div>
+  );
+};
+
+const EmailForm = ({ emailForm, setEmailForm, emailStatus, setEmailStatus, saveOrderEmailSettings, sendTestOrderEmail }) => (
+  <div className="space-y-3">
+    <div className="app-soft-panel p-4">
+      <label className="flex items-center justify-between gap-4">
+        <span className="text-sm font-semibold text-[color:var(--app-text)]">Otomatik sipariş e-postası</span>
+        <input type="checkbox" checked={emailForm.enabled} onChange={(e) => setEmailForm(p => ({ ...p, enabled: e.target.checked }))} />
+      </label>
+    </div>
+
+    <Accordion title="SMTP Sunucu Ayarları" hint={`${emailForm.smtpHost || 'Tanımlanmadı'}:${emailForm.smtpPort || '-'}`}>
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="block">
+          <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Sunucu</div>
+          <input className="app-input" value={emailForm.smtpHost} onChange={(e) => setEmailForm(p => ({ ...p, smtpHost: e.target.value }))} placeholder="smtp.gmail.com" />
+        </label>
+        <label className="block">
+          <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Port</div>
+          <input className="app-input" value={emailForm.smtpPort} onChange={(e) => setEmailForm(p => ({ ...p, smtpPort: e.target.value }))} placeholder="587" />
+        </label>
+        <label className="block">
+          <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Güvenlik</div>
+          <select className="app-select" value={emailForm.smtpSecure ? 'ssl' : 'starttls'} onChange={(e) => setEmailForm(p => ({ ...p, smtpSecure: e.target.value === 'ssl' }))}>
+            <option value="starttls">STARTTLS / 587</option>
+            <option value="ssl">SSL / 465</option>
+          </select>
+        </label>
+        <label className="block">
+          <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">SMTP Kullanıcı</div>
+          <input className="app-input" value={emailForm.smtpUser} onChange={(e) => setEmailForm(p => ({ ...p, smtpUser: e.target.value }))} placeholder="adres@gmail.com" />
+        </label>
+        <label className="block md:col-span-2">
+          <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Uygulama Parolası</div>
+          <input type="password" className="app-input" value={emailForm.smtpPassword} onChange={(e) => setEmailForm(p => ({ ...p, smtpPassword: e.target.value }))} placeholder="Uygulama parolası" />
+        </label>
+      </div>
+      <div className="text-xs text-slate-500 pt-1">Gmail için 2 adımlı doğrulama açıp uygulama parolası kullanman gerekir.</div>
+    </Accordion>
+
+    <Accordion title="Gönderici Bilgileri" hint={emailForm.senderEmail || 'Tanımlanmadı'}>
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="block">
+          <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Gönderici Adı</div>
+          <input className="app-input" value={emailForm.senderName} onChange={(e) => setEmailForm(p => ({ ...p, senderName: e.target.value }))} placeholder="Kartelix Siparis" />
+        </label>
+        <label className="block">
+          <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Gönderici E-posta</div>
+          <input className="app-input" value={emailForm.senderEmail} onChange={(e) => setEmailForm(p => ({ ...p, senderEmail: e.target.value }))} placeholder="adres@gmail.com" />
+        </label>
+        <label className="block md:col-span-2">
+          <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Yanıt Adresi</div>
+          <input className="app-input" value={emailForm.replyTo} onChange={(e) => setEmailForm(p => ({ ...p, replyTo: e.target.value }))} placeholder="Boşsa gönderici kullanılır" />
+        </label>
+      </div>
+    </Accordion>
+
+    <Accordion title="Alıcı Listesi" hint={emailForm.recipientEmails ? `${emailForm.recipientEmails.split(/[;,]/).filter(Boolean).length} adres` : 'Tanımlanmadı'}>
+      <label className="block">
+        <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Siparişi Alan Adresler</div>
+        <textarea className="app-input min-h-[80px]" value={emailForm.recipientEmails} onChange={(e) => setEmailForm(p => ({ ...p, recipientEmails: e.target.value }))} placeholder="siparis@firma.com; ikinci@firma.com" />
+      </label>
+      <label className="block">
+        <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Onay Bildirimi Adresleri</div>
+        <textarea className="app-input min-h-[72px]" value={emailForm.approvalEmails} onChange={(e) => setEmailForm(p => ({ ...p, approvalEmails: e.target.value }))} placeholder="onay@firma.com; uretim@firma.com" />
+        <div className="mt-1 text-xs text-slate-500">Sipariş tamamlandığında bu adreslere kurumsal onay bildirimi gönderilir.</div>
+      </label>
+      <div className="app-soft-panel p-3">
+        <label className="flex items-center justify-between gap-4">
+          <div>
+            <div className="text-sm font-medium text-[color:var(--app-text)]">Onay mailinde fiyatları göster</div>
+            <div className="mt-0.5 text-xs text-slate-500">Kapalıysa tutar ve birim fiyat sütunları yer almaz.</div>
+          </div>
+          <input type="checkbox" checked={emailForm.approvalShowPrices} onChange={(e) => setEmailForm(p => ({ ...p, approvalShowPrices: e.target.checked }))} />
+        </label>
+      </div>
+    </Accordion>
+
+    <Accordion title="Test & Kaydet" hint="Bağlantıyı doğrula">
+      <label className="block">
+        <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Test Alıcısı</div>
+        <input className="app-input" value={emailForm.testRecipient} onChange={(e) => setEmailForm(p => ({ ...p, testRecipient: e.target.value }))} placeholder="test@firma.com" />
+      </label>
+      <div className="grid gap-3 md:grid-cols-[1fr,auto]">
+        <button type="button" className="app-btn-primary" onClick={saveOrderEmailSettings}>Kaydet</button>
+        <button type="button" className="app-btn-secondary" onClick={async () => {
+          try {
+            await saveOrderEmailSettings();
+            setEmailStatus('Test e-postası gönderiliyor...');
+            await sendTestOrderEmail();
+          } catch (err) { setEmailStatus(err.message); }
+        }}>Test gönder</button>
+      </div>
+      {emailStatus ? <div className="app-soft-panel px-4 py-3 text-sm">{emailStatus}</div> : null}
+    </Accordion>
+  </div>
+);
 
 export default SettingsPage;
 
