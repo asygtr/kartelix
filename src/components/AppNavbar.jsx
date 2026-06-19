@@ -55,6 +55,8 @@ const AppNavbar = ({ title, action, onLogout }) => {
     if (searchOpen) {
       setSearchMessage('');
       setSearchResult(null);
+    } else {
+      setSearchValue(''); // Clear search input when popup is closed
     }
   }, [searchOpen]);
 
@@ -275,16 +277,7 @@ const AppNavbar = ({ title, action, onLogout }) => {
                 <div>Kompozisyon: <span className="font-semibold text-[color:var(--app-text)]">{searchResult.kompozisyon_ozeti || '-'}</span></div>
               </div>
 
-              <div className="app-mobile-search-summary">
-                <div className="app-mobile-search-summary-card">
-                  <div className="app-mobile-search-summary-label">Yayın</div>
-                  <div className="app-mobile-search-summary-value">{searchResult.yayin_durumu || '-'}</div>
-                </div>
-                <div className="app-mobile-search-summary-card">
-                  <div className="app-mobile-search-summary-label">Ölçü</div>
-                  <div className="app-mobile-search-summary-value">{searchResult.en || '-'} EN / {searchResult.gramaj || '-'} GR</div>
-                </div>
-              </div>
+
 
               {searchResult.prosesler?.length > 0 ? (
                 <div className="app-soft-panel mt-3 p-3">
@@ -314,7 +307,7 @@ const AppNavbar = ({ title, action, onLogout }) => {
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <a href={`/u/${searchResult.qr_slug}`} className="app-btn-secondary text-center" onClick={() => setSearchOpen(false)}>
-                  Ürün bilgisi
+                  Müşteri görünümü
                 </a>
                 {(role === 'admin' || role === 'mamul') ? (
                   <button
@@ -322,7 +315,7 @@ const AppNavbar = ({ title, action, onLogout }) => {
                     className="app-btn-secondary"
                     onClick={() => {
                       setSearchOpen(false);
-                      navigate(role === 'admin' ? '/admin/mamuller' : '/mamul');
+                      navigate(role === 'admin' ? `/admin/mamuller?id=${searchResult.mamul_id}` : `/mamul?id=${searchResult.mamul_id}`);
                     }}
                   >
                     Mamüle git
@@ -346,7 +339,7 @@ const AppNavbar = ({ title, action, onLogout }) => {
                     className="app-btn-secondary"
                     onClick={() => {
                       setSearchOpen(false);
-                      navigate('/mamul/labels');
+                      navigate(`/mamul/labels?mamulId=${searchResult.mamul_id}`);
                     }}
                   >
                     Etikete git

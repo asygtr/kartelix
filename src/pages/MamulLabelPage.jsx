@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import MamulEtiketModal from '../components/MamulEtiketModal';
 import PageSearchBar from '../components/PageSearchBar';
 import { defaultLabelTemplate, mergeLabelTemplate, printLabels } from '../utils/labelTemplate';
@@ -6,6 +7,7 @@ import { defaultLabelTemplate, mergeLabelTemplate, printLabels } from '../utils/
 const normalizeSearchValue = (value) => String(value || '').trim().toLowerCase();
 
 const MamulLabelPage = () => {
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [records, setRecords] = useState([]);
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -15,6 +17,29 @@ const MamulLabelPage = () => {
   const [templates, setTemplates] = useState([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState(null);
+
+  // Load mamul from URL parameter if present
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const mamulId = params.get('mamulId');
+    if (mamulId) {
+      const fetchMamul = async () => {
+        try {
+          const response = await fetch(`/api/mamul/${mamulId}`);
+          const result = await response.json();
+          if (result.success && result.data) {
+            setSelectedRecord(result.data);
+            setSelectedIds([result.data.id]);
+            setSelectedRecordsMap({ [result.data.id]: result.data });
+            setSearchTerm(result.data.article_code || result.data.mamul_adi);
+          }
+        } catch (error) {
+          console.error('Failed to fetch mamul for pre-selection:', error);
+        }
+      };
+      fetchMamul();
+    }
+  }, [location.search]);
 
   useEffect(() => {
     const loadTemplates = async () => {

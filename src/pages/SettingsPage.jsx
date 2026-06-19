@@ -595,13 +595,7 @@ const SettingsPage = () => {
       description: 'Mamül, ürün grubu, renk, iplik, proses ve fiyat verileri yalnızca xls klasöründeki ÜRGE Excel dosyalarından okunur.',
       form: (
         <div className="space-y-4">
-          <div className="app-soft-panel p-4 space-y-3">
-            <div className="text-sm font-semibold text-[color:var(--app-text)]">Excel tek kaynak</div>
-            <div className="text-sm text-slate-600">
-              Uygulama manuel tanım kabul etmez. Dosyalar otomatik olarak xls klasöründen okunur; article, ürün adı,
-              iplik yüzdeleri, iplik fiyatları, prosesler ve 1 kg fiyat hesapları Excel'den gelir.
-            </div>
-          </div>
+
 
           <div className="app-soft-panel p-4 space-y-3">
             <div className="text-sm font-semibold text-[color:var(--app-text)]">Okuma sıklığı</div>
@@ -1074,16 +1068,7 @@ const SettingsPage = () => {
   return (
     <div className="space-y-6">
 
-      {activeTab !== 'labels' ? (
-        <section className="app-hero app-page-hero app-reveal-up">
-          <div className="app-page-hero-grid">
-            <div>
-              <div className="app-chip">{tabs.find((tab) => tab.id === activeTab)?.label}</div>
-              <h1 className="mt-4 text-3xl font-semibold text-[color:var(--app-text)]">{current.title}</h1>
-            </div>
-          </div>
-        </section>
-      ) : null}
+
 
       {current.fullWidth ? (
         <section className="app-reveal-up app-reveal-delay-1">
