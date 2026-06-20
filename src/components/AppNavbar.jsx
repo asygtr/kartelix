@@ -187,7 +187,13 @@ const AppNavbar = ({ title, action, onLogout }) => {
             </button>
           ) : null}
           {showSettings ? (
-            <Link to="/admin/settings" className="app-nav-icon-button" aria-label="Ayarlar" title="Ayarlar">
+            <Link
+              to="/admin/settings"
+              className="app-nav-icon-button"
+              aria-label="Ayarlar"
+              title="Ayarlar"
+              onClick={() => setTimeout(() => window.dispatchEvent(new CustomEvent('settings-menu:open')), 80)}
+            >
               <Settings className="app-nav-icon-svg" />
             </Link>
           ) : null}

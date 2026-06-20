@@ -304,7 +304,7 @@ const SettingsPage = () => {
       ...prev,
       ...result.data,
       smtpPort: String(result.data.smtpPort || 587),
-      smtpPassword: ''
+      smtpPassword: prev.smtpPassword  // parolayı state'den silme
     }));
     setEmailStatus('E-posta ayarları kaydedildi.');
   };
@@ -878,14 +878,7 @@ const SettingsPage = () => {
   })[activeTab];
 
 
-  // Mobilde (< 768px) landing yerine drawer aç
-  useEffect(() => {
-    const isMobile = window.innerWidth < 768;
-    if (!activeTab && isMobile) {
-      setDrawerOpen(true);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Mobilde (< 768px) landing yerine drawer aç — sadece event ile tetiklenir, auto-open yok
 
   const drawerPortal = drawerVisible ? createPortal(
     <div
