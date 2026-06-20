@@ -48,6 +48,7 @@ function App() {
             <Route element={<AppLayout />}>
               <Route path="/mamul" element={<MamulLandingPage />} />
               <Route path="/mamul/labels" element={<MamulLabelPage />} />
+              <Route path="/mamul/preview/:slug" element={<PublicMamulPage mode="internal" />} />
             </Route>
           </Route>
 

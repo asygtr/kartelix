@@ -643,7 +643,7 @@ async function saveOrderEmailSettings(incomingSettings) {
     enabled: Boolean(incomingSettings.enabled),
     smtpHost: String(incomingSettings.smtpHost || existing.smtpHost || defaultOrderEmailSettings.smtpHost).trim() || defaultOrderEmailSettings.smtpHost,
     smtpPort: Number(incomingSettings.smtpPort || existing.smtpPort || defaultOrderEmailSettings.smtpPort),
-    smtpSecure: incomingSettings.smtpSecure !== undefined ? Boolean(incomingSettings.smtpSecure) : (existing.smtpSecure !== undefined ? Boolean(existing.smtpSecure) : false),
+    smtpSecure: Boolean(incomingSettings.smtpSecure),
     senderName: String(incomingSettings.senderName || existing.senderName || defaultOrderEmailSettings.senderName).trim(),
     senderEmail: String(incomingSettings.senderEmail || existing.senderEmail || '').trim(),
     smtpUser: String(incomingSettings.smtpUser || existing.smtpUser || '').trim(),
@@ -697,11 +697,7 @@ function createOrderEmailTransport(settings) {
       user,
       pass
     },
-    requireTLS: !secure && port === 587,
-    connectionTimeout: 15000,
-    greetingTimeout: 10000,
-    socketTimeout: 20000,
-    dnsTimeout: 10000
+    requireTLS: !secure && port === 587
   });
 }
 
@@ -4174,7 +4170,7 @@ app.get('/api/qr-scan/:kod', (req, res, next) => {
 
 
 // --- GENEL AYARLAR ---
-const defaultGenelAyarlar = { publicProsesGoster: false, publicFiyatGoster: false, publicHikayeGoster: true };
+const defaultGenelAyarlar = { publicProsesGoster: false, publicFiyatGoster: false };
 
 app.get('/api/genel-ayarlar', async (req, res, next) => {
   try {

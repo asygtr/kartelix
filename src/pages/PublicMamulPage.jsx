@@ -1,5 +1,5 @@
-﻿import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { motion, useScroll, useTransform, useSpring, useInView } from 'framer-motion';
 import { resolveColorPalette, isDarkPalette } from '../utils/colorPalette';
 
@@ -13,6 +13,7 @@ const T = {
     technical: 'Teknik', related: 'Aynı Gruptan', width: 'En', weight: 'Gramaj',
     article: 'Article', color: 'Renk', order: 'Bu Kumaşı Sipariş Et',
     care: 'Bakım Talimatları', notFound: 'Ürün bulunamadı', searching: 'Aranıyor...',
+    price: 'Fiyat', salesPrice: '1 kg satış', costPrice: '1 kg maliyet',
     share: 'Paylaş', copied: 'Bağlantı kopyalandı!',
     careLabels: {
       yikama: 'Yıkama', kurutma: 'Kurutma', utuleme: 'Ütüleme',
@@ -24,6 +25,7 @@ const T = {
     technical: 'Technical', related: 'From Same Group', width: 'Width', weight: 'Weight',
     article: 'Article', color: 'Color', order: 'Order This Fabric',
     care: 'Care Instructions', notFound: 'Product not found', searching: 'Loading...',
+    price: 'Pricing', salesPrice: '1 kg sales', costPrice: '1 kg cost',
     share: 'Share', copied: 'Link copied!',
     careLabels: {
       yikama: 'Washing', kurutma: 'Drying', utuleme: 'Ironing',
@@ -137,8 +139,10 @@ const TiltCard = ({ children, style }) => {
 };
 
 /* â”€â”€â”€ Ana bileşen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-const PublicMamulPage = () => {
+const PublicMamulPage = ({ mode = 'public' }) => {
   const { slug } = useParams();
+  const navigate = useNavigate();
+  const isInternal = mode === 'internal';
   const [mamul, setMamul] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -157,16 +161,24 @@ const PublicMamulPage = () => {
   const orbY3       = useTransform(scrollY, [0, 800], [0, -180]);
 
   useEffect(() => {
+    const mamulRequest = isInternal
+      ? fetch(`/api/admin/mamul-lookup?code=${encodeURIComponent(slug)}`).then(r => r.json())
+      : fetch(`/api/public/mamuller/${slug}`).then(r => r.json());
+
+    const ayarRequest = !isInternal
+      ? fetch('/api/genel-ayarlar').then(r => r.json()).catch(() => ({ success: false }))
+      : Promise.resolve({ success: false });
+
     Promise.all([
-      fetch(`/api/public/mamuller/${slug}`).then(r => r.json()),
-      fetch('/api/genel-ayarlar').then(r => r.json()).catch(() => ({ success: false }))
+      mamulRequest,
+      ayarRequest
     ]).then(([mamulRes, ayarRes]) => {
       if (!mamulRes.success) throw new Error(mamulRes.error || 'Bulunamadı');
       setMamul(mamulRes.data);
-      setGenelAyarlar(ayarRes.success ? ayarRes.data : { publicProsesGoster: false, publicFiyatGoster: false });
+      setGenelAyarlar(!isInternal ? (ayarRes.success ? ayarRes.data : { publicProsesGoster: false, publicFiyatGoster: false }) : null);
     }).catch(err => setError(err.message))
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, isInternal]);
 
   const P    = useMemo(() => resolveColorPalette(mamul?.renk), [mamul?.renk]);
   const dark = isDarkPalette(P);
@@ -185,17 +197,18 @@ const PublicMamulPage = () => {
   };
 
   const composition  = v(mamul?.kompozisyon_ozeti);
-  const prosesAcik   = genelAyarlar?.publicProsesGoster === true;
-  const hikayeAcik   = genelAyarlar?.publicHikayeGoster !== false;
+  const prosesAcik   = isInternal || genelAyarlar?.publicProsesGoster === true;
+  const hikayeAcik   = isInternal || genelAyarlar?.publicHikayeGoster !== false;
   const story        = hikayeAcik ? (v(mamul?.tanitim_hikayesi) || v(mamul?.aciklama) || v(mamul?.materyal_notlari)) : null;
   const hasYarn      = mamul?.iplikler?.length > 0;
   const hasRelated   = mamul?.benzer_urunler?.length > 0;
   const hasProsesler = prosesAcik && mamul?.prosesler?.length > 0;
   const careItems    = useMemo(() => parseCare(mamul?.bakim_talimatlari), [mamul?.bakim_talimatlari]);
   const gorselUrl    = v(mamul?.gorsel_url);
+  const hasPrice     = isInternal && (Number(mamul?.bir_kg_satis_fiyati || 0) > 0 || Number(mamul?.bir_kg_maliyet || 0) > 0);
 
-  if (loading || genelAyarlar === null) return (
-    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3efe7' }}>
+  if (loading || (!isInternal && genelAyarlar === null)) return (
+    <div style={{ minHeight: isInternal ? '60vh' : '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isInternal ? 'transparent' : '#f3efe7' }}>
       <div style={{ display: 'flex', gap: '0.5rem' }}>
         {[0,1,2].map(i => (
           <motion.div key={i}
@@ -209,7 +222,7 @@ const PublicMamulPage = () => {
   );
 
   if (error) return (
-    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3efe7', padding: '2rem' }}>
+    <div style={{ minHeight: isInternal ? '60vh' : '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isInternal ? 'transparent' : '#f3efe7', padding: '2rem' }}>
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} style={{ textAlign: 'center', maxWidth: 340 }}>
         <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>✦</div>
         <h1 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#172023', margin: 0 }}>{t.notFound}</h1>
@@ -225,15 +238,12 @@ const PublicMamulPage = () => {
       fontFamily: 'Manrope, Inter, sans-serif',
       color: P.text,
       background: P.bg,
-      height: '100dvh',
-      overflowY: 'auto',
-      overflowX: 'hidden',
-      WebkitOverflowScrolling: 'touch',
+      ...(isInternal ? { minHeight: '100%' } : { height: '100dvh', overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch' }),
       position: 'relative',
     }}>
 
       {/* â”€â”€ Atmosfer â”€â”€ */}
-      <div aria-hidden="true" style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+      <div aria-hidden="true" style={{ position: isInternal ? 'absolute' : 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(${P.grad}, ${P.bgDeep} 0%, ${P.bg} 55%, ${P.bgDeep} 100%)` }} />
         <motion.div style={{ position: 'absolute', top: '-8%', left: '-4%', width: '60vw', height: '60vw', maxWidth: 560, maxHeight: 560, borderRadius: '50%', background: P.glow, filter: 'blur(70px)', opacity: 0.65, y: orbY1 }} />
         <motion.div style={{ position: 'absolute', top: '18%', right: '-8%', width: '45vw', height: '45vw', maxWidth: 440, maxHeight: 440, borderRadius: '50%', background: P.glow, filter: 'blur(90px)', opacity: 0.4, y: orbY2 }} />
@@ -249,46 +259,68 @@ const PublicMamulPage = () => {
         {/* ╔╔ HERO ╔╔ */}
         <motion.section style={{ y: heroY, opacity: heroOpacity, scale: heroScale, paddingTop: '3.5rem', paddingBottom: '1.5rem', willChange: 'transform' }}>
 
-          {/* Üst bar: marka + dil toggle + paylaş */}
+          {/* Ust bar: geri / marka + dil toggle + paylas */}
           <motion.div
             initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: EASE }}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', gap: '0.5rem' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isInternal ? '1.25rem' : '2rem', gap: '0.5rem' }}
           >
-            <span style={{ fontSize: '0.6rem', fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase', color: P.accent, opacity: 0.75 }}>KARTELIX</span>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              {/* Dil toggle */}
+            {isInternal ? (
               <button
-                onClick={() => setLang(l => l === 'TR' ? 'EN' : 'TR')}
+                type='button'
+                onClick={() => navigate(-1)}
+                aria-label='Geri'
+                title='Geri'
                 style={{
-                  fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.12em',
-                  padding: '0.25rem 0.55rem', borderRadius: '999px',
+                  display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                  padding: '0.4rem 0.7rem 0.4rem 0.55rem', borderRadius: '999px',
                   background: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-                  border: `1px solid ${P.border}`, color: P.textMuted, cursor: 'pointer',
-                  fontFamily: 'inherit',
+                  border: '1px solid ' + P.border, color: P.text,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.04em',
                 }}
               >
-                {lang === 'TR' ? 'EN' : 'TR'}
-              </button>
-
-              {/* Paylaş butonu */}
-              <button
-                onClick={handleShare}
-                style={{
-                  fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.1em',
-                  padding: '0.25rem 0.65rem', borderRadius: '999px',
-                  background: `${P.accent}18`, border: `1px solid ${P.accent}40`,
-                  color: P.accent, cursor: 'pointer', fontFamily: 'inherit',
-                  display: 'flex', alignItems: 'center', gap: '0.3rem',
-                }}
-              >
-                <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor">
-                  <path d="M18 16a3 3 0 0 0-2.02.79L8.9 12.7A3 3 0 0 0 9 12a3 3 0 0 0-.1-.7l7-4.05A3 3 0 1 0 15 5a3 3 0 0 0 .1.7L8.1 9.75A3 3 0 1 0 8 15a3 3 0 0 0 1.98-.79l7.1 4.12A3 3 0 1 0 18 16Z" />
+                <svg viewBox='0 0 24 24' width='14' height='14' fill='none' stroke='currentColor' strokeWidth='2.2' strokeLinecap='round' strokeLinejoin='round'>
+                  <path d='M15 18l-6-6 6-6' />
                 </svg>
-                {shareMsg || t.share}
+                <span>Geri</span>
               </button>
-            </div>
+            ) : (
+              <span style={{ fontSize: '0.6rem', fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase', color: P.accent, opacity: 0.75 }}>KARTELIX</span>
+            )}
+
+            {!isInternal ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button
+                  onClick={() => setLang(l => l === 'TR' ? 'EN' : 'TR')}
+                  style={{
+                    fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.12em',
+                    padding: '0.25rem 0.55rem', borderRadius: '999px',
+                    background: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                    border: '1px solid ' + P.border, color: P.textMuted, cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  {lang === 'TR' ? 'EN' : 'TR'}
+                </button>
+
+                <button
+                  onClick={handleShare}
+                  style={{
+                    fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.1em',
+                    padding: '0.25rem 0.65rem', borderRadius: '999px',
+                    background: P.accent + '18', border: '1px solid ' + P.accent + '40',
+                    color: P.accent, cursor: 'pointer', fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', gap: '0.3rem',
+                  }}
+                >
+                  <svg viewBox='0 0 24 24' width='11' height='11' fill='currentColor'>
+                    <path d='M18 16a3 3 0 0 0-2.02.79L8.9 12.7A3 3 0 0 0 9 12a3 3 0 0 0-.1-.7l7-4.05A3 3 0 1 0 15 5a3 3 0 0 0 .1.7L8.1 9.75A3 3 0 1 0 8 15a3 3 0 0 0 1.98-.79l7.1 4.12A3 3 0 1 0 18 16Z' />
+                  </svg>
+                  {shareMsg || t.share}
+                </button>
+              </div>
+            ) : null}
           </motion.div>
 
           {/* Swatch + başlık */}
@@ -363,25 +395,26 @@ const PublicMamulPage = () => {
             </div>
           </div>
 
-          {/* CTA */}
-          <motion.button
-            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.42, duration: 0.55, ease: EASE }}
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-            style={{
-              marginTop: '1.75rem', width: '100%',
-              padding: '0.95rem 1.25rem', borderRadius: '999px',
-              background: `linear-gradient(135deg, ${P.accent}, ${P.accentDeep})`,
-              color: 'white', border: 'none', cursor: 'pointer',
-              fontSize: '0.88rem', fontWeight: 800, letterSpacing: '0.03em',
-              boxShadow: `0 14px 36px ${P.glow}`,
-              fontFamily: 'inherit',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-            }}
-          >
-            <span style={{ fontSize: '0.7rem' }}>✦</span>
-            <span>{t.order}</span>
-          </motion.button>
+          {!isInternal && (
+            <motion.button
+              initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.42, duration: 0.55, ease: EASE }}
+              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+              style={{
+                marginTop: '1.75rem', width: '100%',
+                padding: '0.95rem 1.25rem', borderRadius: '999px',
+                background: `linear-gradient(135deg, ${P.accent}, ${P.accentDeep})`,
+                color: 'white', border: 'none',
+                fontSize: '0.88rem', fontWeight: 800, letterSpacing: '0.03em',
+                boxShadow: `0 14px 36px ${P.glow}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              <span style={{ fontSize: '0.7rem' }}>✦</span>
+              <span>{t.order}</span>
+            </motion.button>
+          )}
         </motion.section>
 
         {/* ╔╔ GÖRSEL (büyük – varsa) ╔╔ */}
@@ -480,29 +513,50 @@ const PublicMamulPage = () => {
           </div>
         </Reveal>
 
+        {/* ╔╔ FİYAT ╔╔ */}
+        {hasPrice && (
+          <Reveal delay={0.045}>
+            <div style={{ ...cardStyle(P, dark), marginBottom: '0.85rem' }}>
+              <SectionLabel P={P}>{t.price}</SectionLabel>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', marginTop: '0.9rem' }}>
+                <div style={{ padding: '0.7rem 0.8rem', borderRadius: '0.7rem', background: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', border: `1px solid ${P.border}` }}>
+                  <div style={{ fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: P.textMuted, marginBottom: '0.28rem' }}>{t.salesPrice}</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 900, color: P.accent }}>{Number(mamul.bir_kg_satis_fiyati || 0).toFixed(2)} TRY</div>
+                </div>
+                <div style={{ padding: '0.7rem 0.8rem', borderRadius: '0.7rem', background: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', border: `1px solid ${P.border}` }}>
+                  <div style={{ fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: P.textMuted, marginBottom: '0.28rem' }}>{t.costPrice}</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 900, color: P.accent }}>{Number(mamul.bir_kg_maliyet || 0).toFixed(2)} TRY</div>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+        )}
+
         {/* ╔╔ BENZER ╔╔ */}
-        {hasRelated && (
+        {!isInternal && hasRelated && (
           <Reveal delay={0.04}>
             <div style={{ marginBottom: '0.85rem' }}>
               <div style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: P.textMuted, marginBottom: '0.75rem', paddingLeft: '0.2rem' }}>
                 {t.related}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(8.5rem,1fr))', gap: '0.6rem' }}>
-                {mamul.benzer_urunler.map((item, i) => <RelatedCard key={item.id} item={item} index={i} />)}
+                {mamul.benzer_urunler.map((item, i) => <RelatedCard key={item.id} item={item} index={i} isInternal={isInternal} />)}
               </div>
             </div>
           </Reveal>
         )}
 
         {/* Footer */}
-        <motion.div
-          initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
-          transition={{ delay: 0.15 }}
-          style={{ textAlign: 'center', paddingTop: '1.75rem' }}
-        >
-          <div style={{ fontSize: '0.6rem', fontWeight: 900, letterSpacing: '0.28em', textTransform: 'uppercase', color: P.accent, opacity: 0.55 }}>KARTELIX</div>
-          <div style={{ fontSize: '0.58rem', color: P.textMuted, marginTop: '0.25rem', letterSpacing: '0.06em' }}>Tekstil Showroom</div>
-        </motion.div>
+        {!isInternal && (
+          <motion.div
+            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
+            transition={{ delay: 0.15 }}
+            style={{ textAlign: 'center', paddingTop: '1.75rem' }}
+          >
+            <div style={{ fontSize: '0.6rem', fontWeight: 900, letterSpacing: '0.28em', textTransform: 'uppercase', color: P.accent, opacity: 0.55 }}>KARTELIX</div>
+            <div style={{ fontSize: '0.58rem', color: P.textMuted, marginTop: '0.25rem', letterSpacing: '0.06em' }}>Tekstil Showroom</div>
+          </motion.div>
+        )}
 
       </div>
     </div>
@@ -574,11 +628,12 @@ const ProcessRow = ({ item, index, P, dark, total }) => {
   );
 };
 
-const RelatedCard = ({ item, index }) => {
+const RelatedCard = ({ item, index, isInternal }) => {
   const P2     = resolveColorPalette(item.renk);
   const ref    = useRef(null);
   const inView = useInView(ref, { once: true, margin: '-20px 0px' });
   const hasImg = v(item.gorsel_url);
+  const href   = isInternal ? `/mamul/preview/${item.qr_slug}` : `/u/${item.qr_slug}`;
   return (
     <motion.div ref={ref}
       initial={{ opacity: 0, y: 16 }}
@@ -586,7 +641,7 @@ const RelatedCard = ({ item, index }) => {
       transition={{ duration: 0.5, delay: 0.04 + index * 0.05, ease: EASE }}
       whileHover={{ y: -3 }}
     >
-      <Link to={`/u/${item.qr_slug}`} style={{ display: 'block', textDecoration: 'none' }}>
+      <Link to={href} style={{ display: 'block', textDecoration: 'none' }}>
         <div style={{ borderRadius: '0.9rem', overflow: 'hidden', border: `1px solid ${P2.border}`, background: P2.surface, boxShadow: `0 6px 20px ${P2.glow}` }}>
           <div style={{ height: '3.2rem', background: `linear-gradient(135deg,${P2.accent},${P2.accentDeep})`, position: 'relative', overflow: 'hidden' }}>
             {hasImg

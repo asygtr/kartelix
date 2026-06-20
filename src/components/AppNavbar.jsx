@@ -130,8 +130,9 @@ const AppNavbar = ({ title, action, onLogout }) => {
         throw new Error(result.error || 'Ürün bulunamadı');
       }
 
-      setSearchValue(lookupCode);
-      setSearchResult(result.data);
+      setSearchOpen(false);
+      setSearchValue('');
+      navigate(`/mamul/preview/${result.data.qr_slug}`);
     } catch (error) {
       setSearchResult(null);
       setSearchMessage(error.message);
@@ -361,8 +362,11 @@ const AppNavbar = ({ title, action, onLogout }) => {
         onClose={() => setScannerOpen(false)}
         onDetected={(value) => {
           setScannerOpen(false);
-          setSearchValue(value);
-          runGlobalSearch(value);
+          setSearchOpen(false);
+          setSearchValue('');
+          // QR slug veya tam URL'den slug çıkar
+          const slug = value.includes('/u/') ? value.split('/u/')[1].split(/[?#]/)[0] : value.trim();
+          navigate(`/mamul/preview/${slug}`);
         }}
       />
     ) : null}
