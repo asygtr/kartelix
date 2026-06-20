@@ -170,23 +170,6 @@ const SettingsPage = () => {
   }, [drawerOpen]);
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search || '');
-    const shouldOpen = params.get('menu') === '1';
-    if (!shouldOpen) return;
-
-    // Open the animated drawer when arriving from navbar settings icon.
-    setDrawerOpen(true);
-
-    // Clean the URL to avoid reopening on refresh/back in odd ways.
-    params.delete('menu');
-    const nextSearch = params.toString();
-    navigate(
-      { pathname: location.pathname, search: nextSearch ? `?${nextSearch}` : '' },
-      { replace: true }
-    );
-  }, [location.pathname, location.search, navigate]);
-
-  useEffect(() => {
     const openSettingsMenu = () => setDrawerOpen(true);
     window.addEventListener('settings-menu:open', openSettingsMenu);
     return () => window.removeEventListener('settings-menu:open', openSettingsMenu);

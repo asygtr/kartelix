@@ -179,7 +179,7 @@ const AppNavbar = ({ title, action, onLogout }) => {
             <button
               type="button"
               onClick={() => window.dispatchEvent(new CustomEvent('settings-menu:open'))}
-              className="app-nav-icon-button md:hidden"
+              className="app-nav-icon-button"
               aria-label="Ayar bölümlerini aç"
               title="Ayar bölümlerini aç"
             >
@@ -187,7 +187,7 @@ const AppNavbar = ({ title, action, onLogout }) => {
             </button>
           ) : null}
           {showSettings ? (
-            <Link to="/admin/settings?menu=1" className="app-nav-icon-button" aria-label="Ayarlar" title="Ayarlar">
+            <Link to="/admin/settings" className="app-nav-icon-button" aria-label="Ayarlar" title="Ayarlar">
               <Settings className="app-nav-icon-svg" />
             </Link>
           ) : null}
