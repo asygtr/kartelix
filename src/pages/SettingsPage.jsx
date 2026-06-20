@@ -283,7 +283,7 @@ const SettingsPage = () => {
         enabled: emailForm.enabled,
         smtpHost: emailForm.smtpHost,
         smtpPort: Number(emailForm.smtpPort || 587),
-        smtpSecure: Boolean(emailForm.smtpSecure),
+        smtpSecure: emailForm.smtpSecure,
         senderName: emailForm.senderName,
         senderEmail: emailForm.senderEmail,
         smtpUser: emailForm.smtpUser,
@@ -310,11 +310,24 @@ const SettingsPage = () => {
   };
 
   const sendTestOrderEmail = async () => {
-    const response = await fetch('/api/admin/order-email-settings/test', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ testRecipient: emailForm.testRecipient })
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
+    let response;
+    try {
+      response = await fetch('/api/admin/order-email-settings/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ testRecipient: emailForm.testRecipient }),
+        signal: controller.signal
+      });
+    } catch (err) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        throw new Error('(504) Gmail yanıt vermedi (25 sn zaman aşımı). SMTP erişimini veya App Password’u kontrol edin.');
+      }
+      throw new Error('Test e-postası gönderilemedi - ' + (err.message || 'ağ hatası'));
+    }
+    clearTimeout(timeoutId);
     const result = await response.json();
     if (!response.ok || !result.success) {
       const prefix = response.status ? `(${response.status}) ` : '';

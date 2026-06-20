@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const path = require('path');
@@ -643,7 +643,7 @@ async function saveOrderEmailSettings(incomingSettings) {
     enabled: Boolean(incomingSettings.enabled),
     smtpHost: String(incomingSettings.smtpHost || existing.smtpHost || defaultOrderEmailSettings.smtpHost).trim() || defaultOrderEmailSettings.smtpHost,
     smtpPort: Number(incomingSettings.smtpPort || existing.smtpPort || defaultOrderEmailSettings.smtpPort),
-    smtpSecure: Boolean(incomingSettings.smtpSecure),
+    smtpSecure: incomingSettings.smtpSecure !== undefined ? Boolean(incomingSettings.smtpSecure) : (existing.smtpSecure !== undefined ? Boolean(existing.smtpSecure) : false),
     senderName: String(incomingSettings.senderName || existing.senderName || defaultOrderEmailSettings.senderName).trim(),
     senderEmail: String(incomingSettings.senderEmail || existing.senderEmail || '').trim(),
     smtpUser: String(incomingSettings.smtpUser || existing.smtpUser || '').trim(),
@@ -697,7 +697,11 @@ function createOrderEmailTransport(settings) {
       user,
       pass
     },
-    requireTLS: !secure && port === 587
+    requireTLS: !secure && port === 587,
+    connectionTimeout: 15000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
+    dnsTimeout: 10000
   });
 }
 
