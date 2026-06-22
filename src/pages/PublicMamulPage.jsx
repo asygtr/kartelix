@@ -249,10 +249,10 @@ const PublicMamulPage = ({ mode = 'public' }) => {
       ? (((satis - maliyet) / maliyet) * 100).toFixed(1) : null;
     return (
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
-        style={{ fontFamily: 'Manrope, Inter, sans-serif', color: 'var(--app-text)', minHeight: '100%', overflowY: 'auto', paddingBottom: '3rem' }}>
+        style={{ fontFamily: 'Manrope, Inter, sans-serif', color: 'var(--app-text)', minHeight: '100%', overflowY: 'auto', paddingBottom: '2rem' }}>
         {/* Üst bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-          <button type="button" onClick={() => navigate(-1)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.8rem', borderRadius: '999px', background: 'var(--app-surface)', border: '1px solid var(--app-border)', color: 'var(--app-text)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 700 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <button type="button" onClick={() => navigate(-1)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.7rem', borderRadius: '999px', background: 'var(--app-surface)', border: '1px solid var(--app-border)', color: 'var(--app-text)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.75rem', fontWeight: 700 }}>
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6"/></svg>
             Geri
           </button>
@@ -265,7 +265,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
         </div>
 
         {/* Ana grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.65fr)', gap: '1.25rem', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.65fr)', gap: '1rem', alignItems: 'start' }}>
 
           {/* Sol */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -316,19 +316,19 @@ const PublicMamulPage = ({ mode = 'public' }) => {
           {/* Sağ */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {/* Fiyat */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <div style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: '1rem', padding: '1rem' }}>
-                <div style={{ fontSize: '0.54rem', fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--app-text-muted)', marginBottom: '0.4rem' }}>1 kg Maliyet</div>
-                <div style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--app-text)' }}>{maliyet.toFixed(2)}</div>
-                <div style={{ fontSize: '0.64rem', color: 'var(--app-text-muted)', marginTop: '0.12rem' }}>{pb}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+              <div style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: '1rem', padding: '0.75rem' }}>
+                <div style={{ fontSize: '0.5rem', fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--app-text-muted)', marginBottom: '0.3rem' }}>1 kg Maliyet</div>
+                <div style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--app-text)' }}>{maliyet.toFixed(2)}</div>
+                <div style={{ fontSize: '0.6rem', color: 'var(--app-text-muted)', marginTop: '0.1rem' }}>{pb}</div>
               </div>
-              <div style={{ background: `linear-gradient(135deg,${P.accent}18,${P.accentDeep}28)`, border: `1px solid ${P.accent}30`, borderRadius: '1rem', padding: '1rem' }}>
-                <div style={{ fontSize: '0.54rem', fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: P.accent, opacity: 0.75, marginBottom: '0.4rem' }}>1 kg Satış</div>
-                <div style={{ fontSize: '1.35rem', fontWeight: 900, color: P.accent }}>{satis.toFixed(2)}</div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.12rem' }}>
-                  <div style={{ fontSize: '0.64rem', color: P.accent, opacity: 0.7 }}>{pb}</div>
+              <div style={{ background: `linear-gradient(135deg,${P.accent}18,${P.accentDeep}28)`, border: `1px solid ${P.accent}30`, borderRadius: '1rem', padding: '0.75rem' }}>
+                <div style={{ fontSize: '0.5rem', fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', color: P.accent, opacity: 0.75, marginBottom: '0.3rem' }}>1 kg Satış</div>
+                <div style={{ fontSize: '1.15rem', fontWeight: 900, color: P.accent }}>{satis.toFixed(2)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.1rem', flexWrap: 'wrap', gap: '0.2rem' }}>
+                  <div style={{ fontSize: '0.6rem', color: P.accent, opacity: 0.7 }}>{pb}</div>
                   {kar !== null && (
-                    <div style={{ fontSize: '0.64rem', fontWeight: 800, padding: '0.15rem 0.45rem', borderRadius: '999px', background: Number(kar) >= 0 ? '#16a34a20' : '#dc262620', color: Number(kar) >= 0 ? '#16a34a' : '#dc2626', border: `1px solid ${Number(kar) >= 0 ? '#16a34a30' : '#dc262630'}` }}>%{kar}</div>
+                    <div style={{ fontSize: '0.58rem', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '999px', background: Number(kar) >= 0 ? '#16a34a20' : '#dc262620', color: Number(kar) >= 0 ? '#16a34a' : '#dc2626', border: `1px solid ${Number(kar) >= 0 ? '#16a34a30' : '#dc262630'}` }}>%{kar}</div>
                   )}
                 </div>
               </div>
