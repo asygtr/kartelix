@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import LabelPreviewCard from './LabelPreviewCard';
 import { defaultLabelTemplate, mergeLabelTemplate, printLabels } from '../utils/labelTemplate';
+import { authHeaders } from '../utils/auth';
 
 const CloseIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
@@ -16,12 +17,12 @@ const PrintIcon = () => (
 );
 
 const fetchTemplateById = async (id) => {
-  const res = await fetch(`/api/admin/label-templates/${id}`).then(r => r.json()).catch(() => ({ success: false }));
+  const res = await fetch(`/api/admin/label-templates/${id}`, { headers: authHeaders() }).then(r => r.json()).catch(() => ({ success: false }));
   return res.success ? mergeLabelTemplate(res.data) : null;
 };
 
 const fetchActiveTemplate = async () => {
-  const res = await fetch('/api/admin/label-templates/active').then(r => r.json()).catch(() => ({ success: false }));
+  const res = await fetch('/api/admin/label-templates/active', { headers: authHeaders() }).then(r => r.json()).catch(() => ({ success: false }));
   return res.success && res.data ? mergeLabelTemplate(res.data) : mergeLabelTemplate(defaultLabelTemplate);
 };
 
@@ -31,7 +32,7 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
   const [activeTemplateId, setActiveTemplateId] = useState(templateId || '');
 
   useEffect(() => {
-    fetch('/api/admin/label-templates')
+    fetch('/api/admin/label-templates', { headers: authHeaders() })
       .then(r => r.json())
       .then(res => {
         if (res.success) {
