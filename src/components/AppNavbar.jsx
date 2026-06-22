@@ -324,7 +324,6 @@ const AppNavbar = ({ title, action, onLogout, searchOpen, setSearchOpen }) => {
           setScannerOpen(false);
           setSearchOpen(false);
           setSearchValue('');
-          // QR slug veya tam URL'den slug çıkar
           const slug = value.includes('/u/') ? value.split('/u/')[1].split(/[?#]/)[0] : value.trim();
           navigate(`/mamul/preview/${slug}`);
         }}

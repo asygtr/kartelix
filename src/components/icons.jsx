@@ -20,4 +20,5 @@ export {
   Info,
   Upload,
   Minus,
+  KeyRound,
 } from 'lucide-react';

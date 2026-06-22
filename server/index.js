@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const path = require('path');
@@ -6,10 +6,19 @@ const fs = require('fs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const multer = require('multer');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const { startExcelSync, SOURCE_ORDER } = require('./excelSync');
 
+if (!process.env.JWT_SECRET) {
+  console.error('HATA: JWT_SECRET ortam değişkeni zorunludur. .env dosyasına ekleyin. Sunucu durduruluyor.');
+  process.exit(1);
+}
+const JWT_SECRET = process.env.JWT_SECRET;
+const BCRYPT_ROUNDS = 12;
+
 const app = express();
-app.use(cors());
+app.use(cors({ origin: process.env.ALLOWED_ORIGIN || 'http://localhost:3000' }));
 app.use(express.json());
 
 // Veritabanı bağlantısı
@@ -134,16 +143,6 @@ const initDatabase = () => {
       username TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       yetki TEXT DEFAULT 'admin',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
-
-    db.run(`CREATE TABLE IF NOT EXISTS mamuller (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      kod TEXT UNIQUE NOT NULL,
-      ad TEXT NOT NULL,
-      tip TEXT,
-      stok INTEGER DEFAULT 0,
-      kartela_hazir BOOLEAN DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
@@ -340,26 +339,33 @@ db.run(`CREATE TABLE IF NOT EXISTS ui_ayarlari (
     db.run(`DELETE FROM kullanicilar WHERE username NOT IN ('yonetici', 'satici', 'mamul')`);
     db.run(`DELETE FROM kullanicilar WHERE yetki NOT IN ('admin', 'staff', 'mamul')`);
 
-    db.run(
-      `INSERT INTO kullanicilar (username, password, yetki)
-       VALUES (?, ?, ?)
-       ON CONFLICT(username) DO UPDATE SET password = excluded.password, yetki = excluded.yetki`,
-      ['yonetici', '1234', 'admin']
-    );
+    // Varsayılan kullanıcıları sadece yoksa oluştur (şifrelerini ASLA sıfırlama)
+    const defaultUsers = [
+      { username: 'yonetici', password: '1234', yetki: 'admin' },
+      { username: 'satici',   password: '1234', yetki: 'staff' },
+      { username: 'mamul',    password: '1234', yetki: 'mamul' }
+    ];
 
-    db.run(
-      `INSERT INTO kullanicilar (username, password, yetki)
-       VALUES (?, ?, ?)
-       ON CONFLICT(username) DO UPDATE SET password = excluded.password, yetki = excluded.yetki`,
-      ['satici', '1234', 'staff']
-    );
-
-    db.run(
-      `INSERT INTO kullanicilar (username, password, yetki)
-       VALUES (?, ?, ?)
-       ON CONFLICT(username) DO UPDATE SET password = excluded.password, yetki = excluded.yetki`,
-      ['mamul', '1234', 'mamul']
-    );
+    defaultUsers.forEach(({ username, password, yetki }) => {
+      db.get(`SELECT id, password FROM kullanicilar WHERE username = ?`, [username], async (err, row) => {
+        if (err) return;
+        if (!row) {
+          // Kullanici yok — olustur
+          const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+          db.run(
+            `INSERT OR IGNORE INTO kullanicilar (username, password, yetki, password_length) VALUES (?, ?, ?, ?)`,
+            [username, hash, yetki, password.length]
+          );
+        } else if (!row.password.startsWith('$2')) {
+          // Sifre duz metin — hash'le
+          const hash = await bcrypt.hash(row.password, BCRYPT_ROUNDS);
+          db.run(
+            `UPDATE kullanicilar SET password = ?, password_length = ? WHERE username = ?`,
+            [hash, row.password.length, username]
+          );
+        }
+      });
+    });
 
   const defaultMamulTurleri = [
     { ad: 'Suprem', kod_prefix: '10', aciklama: 'Örnek varsayılan mamul türü' },
@@ -467,12 +473,30 @@ db.run(`CREATE TABLE IF NOT EXISTS ui_ayarlari (
     ensureColumnExists('mamul_kartlari', 'yayin_durumu', `TEXT DEFAULT 'taslak'`);
     ensureColumnExists('mamul_kartlari', 'bakim_talimatlari', `TEXT`);
 
-    console.log('✅ Veritabanı tabloları hazır');
+    ensureColumnExists('kullanicilar', 'password_length', 'INTEGER DEFAULT 4');
   });
 };
 
 // Veritabanı başlatma
 initDatabase();
+
+// --- AUTH MIDDLEWARE ---
+
+const requireAuth = (roles = []) => (req, res, next) => {
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) return res.status(401).json({ success: false, error: 'Kimlik doğrulaması gereklidir' });
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    req.user = payload;
+    if (roles.length && !roles.includes(payload.yetki) && payload.yetki !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Yetkisiz erişim' });
+    }
+    next();
+  } catch {
+    return res.status(401).json({ success: false, error: 'Geçersiz veya süresi dolmuş oturum' });
+  }
+};
 
 // --- YARDIMCI FONKSİYONLAR ---
 
@@ -518,15 +542,6 @@ const mapSiparisKalemi = (row) => ({
   birim_fiyat: Number(row.birim_fiyat || 0),
   tutar: Number(row.tutar || 0)
 });
-
-const GRAPH_SCOPES = [
-  'openid',
-  'profile',
-  'email',
-  'offline_access',
-  'https://graph.microsoft.com/User.Read',
-  'https://graph.microsoft.com/Mail.Send'
-];
 
 const defaultOrderEmailSettings = {
   enabled: false,
@@ -699,169 +714,6 @@ function createOrderEmailTransport(settings) {
     },
     requireTLS: !secure && port === 587
   });
-}
-
-const generatePkceCodeVerifier = () => crypto.randomBytes(32).toString('base64url');
-const sha256Base64Url = (value) => crypto.createHash('sha256').update(value).digest('base64url');
-
-const buildGraphAuthorizeUrl = ({ tenantId, clientId, redirectUri, state, codeChallenge }) => {
-  const authorizeUrl = new URL(`https://login.microsoftonline.com/${encodeURIComponent(tenantId)}/oauth2/v2.0/authorize`);
-  authorizeUrl.searchParams.set('client_id', clientId);
-  authorizeUrl.searchParams.set('response_type', 'code');
-  authorizeUrl.searchParams.set('redirect_uri', redirectUri);
-  authorizeUrl.searchParams.set('response_mode', 'query');
-  authorizeUrl.searchParams.set('scope', GRAPH_SCOPES.join(' '));
-  authorizeUrl.searchParams.set('state', state);
-  authorizeUrl.searchParams.set('code_challenge', codeChallenge);
-  authorizeUrl.searchParams.set('code_challenge_method', 'S256');
-  authorizeUrl.searchParams.set('prompt', 'consent');
-  return authorizeUrl.toString();
-};
-
-async function postGraphTokenForm(tenantId, params) {
-  const response = await fetch(`https://login.microsoftonline.com/${encodeURIComponent(tenantId)}/oauth2/v2.0/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams(params).toString()
-  });
-
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(payload.error_description || payload.error || 'Microsoft token işlemi başarısız oldu');
-    error.code = String(payload.error || '').toUpperCase() || 'TOKEN_ERROR';
-    error.responseCode = response.status;
-    error.response = payload.error_description || payload.error || '';
-    throw error;
-  }
-
-  return payload;
-}
-
-async function exchangeGraphAuthorizationCode({ tenantId, clientId, redirectUri, code, codeVerifier }) {
-  return postGraphTokenForm(tenantId, {
-    client_id: clientId,
-    grant_type: 'authorization_code',
-    code,
-    redirect_uri: redirectUri,
-    code_verifier: codeVerifier,
-    scope: GRAPH_SCOPES.join(' ')
-  });
-}
-
-async function refreshGraphAccessToken({ tenantId, clientId, refreshToken }) {
-  return postGraphTokenForm(tenantId, {
-    client_id: clientId,
-    grant_type: 'refresh_token',
-    refresh_token: refreshToken,
-    scope: GRAPH_SCOPES.join(' ')
-  });
-}
-
-async function fetchGraphMe(accessToken) {
-  const response = await fetch('https://graph.microsoft.com/v1.0/me?$select=id,displayName,mail,userPrincipalName', {
-    headers: { Authorization: `Bearer ${accessToken}` }
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(payload.error?.message || 'Microsoft profil bilgisi alınamadı');
-    error.code = String(payload.error?.code || '').toUpperCase() || 'GRAPH_ME_ERROR';
-    error.responseCode = response.status;
-    error.response = payload.error?.message || '';
-    throw error;
-  }
-
-  return payload;
-}
-
-async function connectOrderEmailAccount({ tenantId, clientId, redirectUri, code, codeVerifier }) {
-  const tokenPayload = await exchangeGraphAuthorizationCode({
-    tenantId,
-    clientId,
-    redirectUri,
-    code,
-    codeVerifier
-  });
-
-  const profile = await fetchGraphMe(tokenPayload.access_token);
-  const existing = await loadOrderEmailSettings(true);
-  const nextSettings = {
-    ...existing,
-    tenantId,
-    clientId,
-    redirectUri,
-    connectedEmail: String(profile.mail || profile.userPrincipalName || '').trim(),
-    connectedName: String(profile.displayName || '').trim(),
-    accessToken: String(tokenPayload.access_token || '').trim(),
-    refreshToken: String(tokenPayload.refresh_token || existing.refreshToken || '').trim(),
-    accessTokenExpiresAt: Date.now() + (Number(tokenPayload.expires_in || 3600) * 1000),
-    lastAuthAt: new Date().toISOString(),
-    lastAuthError: ''
-  };
-
-  return persistOrderEmailConnection(nextSettings);
-}
-
-async function persistOrderEmailConnection(nextSettings) {
-  await dbRunAsync(
-    `INSERT INTO ui_ayarlari (anahtar, deger)
-     VALUES ('order_email_settings', ?)
-     ON CONFLICT(anahtar) DO UPDATE SET deger = excluded.deger, updated_at = CURRENT_TIMESTAMP`,
-    [JSON.stringify(nextSettings)]
-  );
-  return sanitizeOrderEmailSettings(nextSettings);
-}
-
-async function disconnectOrderEmailConnection() {
-  const existing = await loadOrderEmailSettings(true);
-  const nextSettings = {
-    ...existing,
-    accessToken: '',
-    refreshToken: '',
-    accessTokenExpiresAt: 0,
-    connectedEmail: '',
-    connectedName: '',
-    lastAuthAt: '',
-    lastAuthError: 'Bağlantı kesildi'
-  };
-
-  await dbRunAsync(
-    `INSERT INTO ui_ayarlari (anahtar, deger)
-     VALUES ('order_email_settings', ?)
-     ON CONFLICT(anahtar) DO UPDATE SET deger = excluded.deger, updated_at = CURRENT_TIMESTAMP`,
-    [JSON.stringify(nextSettings)]
-  );
-
-  return sanitizeOrderEmailSettings(nextSettings);
-}
-
-async function ensureGraphAccessToken(settings) {
-  if (settings.accessToken && isFiniteTimestamp(settings.accessTokenExpiresAt) && Date.now() < (Number(settings.accessTokenExpiresAt) - 60_000)) {
-    return { accessToken: settings.accessToken, settings };
-  }
-
-  if (!settings.refreshToken) {
-    const error = new Error('Microsoft hesabı bağlanmamış');
-    error.code = 'NOT_CONNECTED';
-    error.responseCode = 400;
-    throw error;
-  }
-
-  const refreshed = await refreshGraphAccessToken({
-    tenantId: settings.tenantId || 'consumers',
-    clientId: settings.clientId,
-    refreshToken: settings.refreshToken
-  });
-
-  const nextSettings = {
-    ...settings,
-    accessToken: String(refreshed.access_token || '').trim(),
-    refreshToken: String(refreshed.refresh_token || settings.refreshToken || '').trim(),
-    accessTokenExpiresAt: Date.now() + (Number(refreshed.expires_in || 3600) * 1000),
-    lastAuthError: ''
-  };
-
-  await persistOrderEmailConnection(nextSettings);
-  return { accessToken: nextSettings.accessToken, settings: nextSettings };
 }
 
 function buildApprovalEmailContent(order, items = [], showPrices = true) {
@@ -1278,76 +1130,6 @@ app.use(excelOwnedMutationGuard);
 
 // --- MEVCUT API ROTLARI ---
 
-// Mamül Detayını Çekme
-app.get('/api/mamul/:kod', (req, res, next) => {
-  const mamulKod = req.params.kod;
-
-  if (!mamulKod || mamulKod.length < 2) {
-    return res.status(400).json({ error: 'Geçersiz mamul kodu' });
-  }
-
-  const sql = `
-    SELECT kod, ad, tip, stok AS stok_adet, kartela_hazir
-    FROM mamuller
-    WHERE kod = ?
-    LIMIT 1
-  `;
-
-  db.get(sql, [mamulKod], (err, row) => {
-    if (err) return next(err);
-    
-    if (!row) {
-      return res.status(404).json({ error: 'Mamül bulunamadı' });
-    }
-
-    res.json({ 
-      success: true,
-      data: {
-        ...row,
-        renkSayisi: row.renkSayisi || 6, 
-        sonGiris: row.sonGiris || '2025-10-15'
-      }
-    });
-  });
-});
-
-// Mamül Arama
-app.get('/api/search', (req, res, next) => {
-  const term = req.query.term ? String(req.query.term).trim() : '';
-  
-  if (term.length < 2) {
-    return res.json({ 
-      success: true, 
-      data: { mamuller: [] },
-      message: 'Arama için en az 2 karakter girin'
-    });
-  }
-
-  const searchTerm = `%${term}%`;
-  const sql = `
-    SELECT id, kod, ad, tip, stok, kartela_hazir
-    FROM mamuller
-    WHERE kod LIKE ? OR ad LIKE ? OR tip LIKE ?
-    ORDER BY 
-      CASE 
-        WHEN kod LIKE ? THEN 1
-        WHEN ad LIKE ? THEN 2
-        ELSE 3
-      END
-    LIMIT 20
-  `;
-  
-  db.all(sql, [searchTerm, searchTerm, searchTerm, `%${term}%`, `%${term}%`], (err, rows) => {
-    if (err) {
-      return next(err);
-    }
-    res.json({ 
-      success: true, 
-      data: { mamuller: rows } 
-    });
-  });
-});
-
 // Firma listesi
 app.get('/api/firmalar', (req, res, next) => {
   db.all(`SELECT * FROM firmalar ORDER BY ad ASC`, [], (err, rows) => {
@@ -1397,10 +1179,10 @@ app.post('/api/check-username', (req, res, next) => {
   const loginAliases = { admin: 'yonetici', staff: 'satici', yonetici: 'yonetici', satici: 'satici', mamul: 'mamul' };
   const finalUsername = loginAliases[normalizedUsername] || normalizedUsername;
 
-  db.get(`SELECT id, username FROM kullanicilar WHERE username = ?`, [finalUsername], (err, row) => {
+  db.get(`SELECT id, username, password_length FROM kullanicilar WHERE username = ?`, [finalUsername], (err, row) => {
     if (err) return next(err);
     if (!row) return res.json({ success: false, message: 'Kullanıcı bulunamadı' });
-    res.json({ success: true });
+    res.json({ success: true, passwordLength: row.password_length || 4 });
   });
 });
 
@@ -1426,9 +1208,9 @@ app.post('/api/login', (req, res, next) => {
   const finalUsername = loginAliases[normalizedUsername] || normalizedUsername;
 
   db.get(
-    `SELECT id, username, yetki FROM kullanicilar WHERE username = ? AND password = ?`,
-    [finalUsername, password],
-    (err, row) => {
+    `SELECT id, username, password, yetki FROM kullanicilar WHERE username = ?`,
+    [finalUsername],
+    async (err, row) => {
       if (err) return next(err);
       
       if (!row) {
@@ -1437,11 +1219,26 @@ app.post('/api/login', (req, res, next) => {
           message: 'Geçersiz kullanıcı adı veya şifre' 
         });
       }
+
+      const passwordMatch = await bcrypt.compare(String(password), row.password);
+      if (!passwordMatch) {
+        return res.json({ 
+          success: false, 
+          message: 'Geçersiz kullanıcı adı veya şifre' 
+        });
+      }
+
+      const token = jwt.sign(
+        { id: row.id, username: row.username, yetki: row.yetki },
+        JWT_SECRET,
+        { expiresIn: '12h' }
+      );
       
       res.json({ 
         success: true, 
         data: { 
-          user: row,
+          token,
+          user: { id: row.id, username: row.username, yetki: row.yetki },
           redirectTo: row.yetki === 'staff'
             ? '/staff/orders/new'
             : row.yetki === 'mamul'
@@ -1454,22 +1251,17 @@ app.post('/api/login', (req, res, next) => {
   );
 });
 
-app.get('/api/admin/mamul-turleri', (req, res, next) => {
-  db.all(
-    `SELECT * FROM mamul_turleri ORDER BY ad ASC`,
-    [],
-    (err, rows) => {
-      if (err) return next(err);
-
-      res.json({
-        success: true,
-        data: rows.map((row) => ({ ...row, aktif: Boolean(row.aktif) }))
-      });
-    }
-  );
+app.get('/api/admin/mamul-turleri', requireAuth(['admin']), (req, res, next) => {
+  db.all(`SELECT * FROM mamul_turleri ORDER BY ad ASC`, [], (err, rows) => {
+    if (err) return next(err);
+    res.json({
+      success: true,
+      data: rows.map((row) => ({ ...row, aktif: Boolean(row.aktif) }))
+    });
+  });
 });
 
-app.post('/api/admin/mamul-turleri', (req, res, next) => {
+app.post('/api/admin/mamul-turleri', requireAuth(['admin']), (req, res, next) => {
   const { ad, kodPrefix, aciklama, aktif = true } = req.body;
 
   if (!ad || !String(ad).trim()) {
@@ -1500,7 +1292,7 @@ app.post('/api/admin/mamul-turleri', (req, res, next) => {
   );
 });
 
-app.put('/api/admin/mamul-turleri/:id', (req, res, next) => {
+app.put('/api/admin/mamul-turleri/:id', requireAuth(['admin']), (req, res, next) => {
   const { ad, kodPrefix, aciklama, aktif = true } = req.body;
   const id = req.params.id;
 
@@ -1533,14 +1325,14 @@ app.put('/api/admin/mamul-turleri/:id', (req, res, next) => {
   );
 });
 
-app.get('/api/admin/renkler', (req, res, next) => {
+app.get('/api/admin/renkler', requireAuth(['admin']), (req, res, next) => {
   db.all(`SELECT * FROM renk_tanimlari ORDER BY ad ASC`, [], (err, rows) => {
     if (err) return next(err);
     res.json({ success: true, data: rows.map((row) => ({ ...row, aktif: Boolean(row.aktif) })) });
   });
 });
 
-app.post('/api/admin/renkler', (req, res, next) => {
+app.post('/api/admin/renkler', requireAuth(['admin']), (req, res, next) => {
   const { ad, kod, aktif = true } = req.body;
   if (!ad || !String(ad).trim()) {
     return res.status(400).json({ error: 'Renk adı zorunludur' });
@@ -1559,7 +1351,7 @@ app.post('/api/admin/renkler', (req, res, next) => {
   );
 });
 
-app.put('/api/admin/renkler/:id', (req, res, next) => {
+app.put('/api/admin/renkler/:id', requireAuth(['admin']), (req, res, next) => {
   const { ad, kod, aktif = true } = req.body;
   const id = req.params.id;
 
@@ -1583,14 +1375,14 @@ app.put('/api/admin/renkler/:id', (req, res, next) => {
   );
 });
 
-app.get('/api/admin/iplikler', (req, res, next) => {
+app.get('/api/admin/iplikler', requireAuth(['admin']), (req, res, next) => {
   db.all(`SELECT * FROM iplik_tanimlari ORDER BY ad ASC`, [], (err, rows) => {
     if (err) return next(err);
     res.json({ success: true, data: rows.map((row) => ({ ...row, aktif: Boolean(row.aktif), birim_fiyat: Number(row.birim_fiyat || 0) })) });
   });
 });
 
-app.post('/api/admin/iplikler', (req, res, next) => {
+app.post('/api/admin/iplikler', requireAuth(['admin']), (req, res, next) => {
   const { ad, kod, birim = 'kg', birimFiyat = 0, aktif = true } = req.body;
   if (!ad || !String(ad).trim()) {
     return res.status(400).json({ error: 'İplik adı zorunludur' });
@@ -1606,7 +1398,7 @@ app.post('/api/admin/iplikler', (req, res, next) => {
   );
 });
 
-app.put('/api/admin/iplikler/:id', (req, res, next) => {
+app.put('/api/admin/iplikler/:id', requireAuth(['admin']), (req, res, next) => {
   const { ad, kod, birim = 'kg', birimFiyat = 0, aktif = true } = req.body;
   const id = req.params.id;
 
@@ -1636,7 +1428,7 @@ app.put('/api/admin/iplikler/:id', (req, res, next) => {
   );
 });
 
-app.get('/api/admin/prosesler', (req, res, next) => {
+app.get('/api/admin/prosesler', requireAuth(['admin']), (req, res, next) => {
   db.all(`SELECT * FROM proses_tanimlari ORDER BY ad ASC`, [], (err, rows) => {
     if (err) return next(err);
     res.json({ success: true, data: rows.map((row) => ({ ...row, aktif: Boolean(row.aktif), renk_bazli: Boolean(row.renk_bazli), birim_maliyet: Number(row.birim_maliyet || 0) })) });
@@ -1667,7 +1459,7 @@ app.get('/api/theme-settings', (req, res, next) => {
   );
 });
 
-app.put('/api/admin/theme-settings', (req, res, next) => {
+app.put('/api/admin/theme-settings', requireAuth(['admin']), (req, res, next) => {
   const {
     activePalette,
     appLogo,
@@ -1728,7 +1520,7 @@ app.put('/api/admin/theme-settings', (req, res, next) => {
   });
 });
 
-app.get('/api/admin/order-email-settings', async (req, res, next) => {
+app.get('/api/admin/order-email-settings', requireAuth(['admin']), async (req, res, next) => {
   try {
     const settings = await loadOrderEmailSettings(false);
     res.json({ success: true, data: settings });
@@ -1737,7 +1529,7 @@ app.get('/api/admin/order-email-settings', async (req, res, next) => {
   }
 });
 
-app.put('/api/admin/order-email-settings', async (req, res, next) => {
+app.put('/api/admin/order-email-settings', requireAuth(['admin']), async (req, res, next) => {
   try {
     const settings = await saveOrderEmailSettings(req.body || {});
     res.json({ success: true, data: settings });
@@ -1746,7 +1538,7 @@ app.put('/api/admin/order-email-settings', async (req, res, next) => {
   }
 });
 
-app.post('/api/admin/order-email-settings/test', async (req, res) => {
+app.post('/api/admin/order-email-settings/test', requireAuth(['admin']), async (req, res) => {
   try {
     const settings = await loadOrderEmailSettings(true);
     const testRecipient = String(req.body?.testRecipient || '').trim();
@@ -1796,7 +1588,7 @@ app.post('/api/admin/order-email-settings/test', async (req, res) => {
   }
 });
 
-app.get('/api/admin/excel-settings', async (req, res, next) => {
+app.get('/api/admin/excel-settings', requireAuth(['admin']), async (req, res, next) => {
   try {
     const sources = await new Promise((resolve, reject) => {
       db.all(
@@ -1838,7 +1630,7 @@ app.get('/api/admin/excel-settings', async (req, res, next) => {
   }
 });
 
-app.put('/api/admin/excel-settings/poll', (req, res, next) => {
+app.put('/api/admin/excel-settings/poll', requireAuth(['admin']), (req, res, next) => {
   const pollMs = Number(req.body?.pollMs || 0);
   if (!Number.isFinite(pollMs) || pollMs < 5000) {
     return res.status(400).json({ error: 'Excel okuma sıklığı en az 5000 ms olmalıdır' });
@@ -1856,7 +1648,7 @@ app.put('/api/admin/excel-settings/poll', (req, res, next) => {
   );
 });
 
-app.post('/api/admin/excel-sources', (req, res, next) => {
+app.post('/api/admin/excel-sources', requireAuth(['admin']), (req, res, next) => {
   const { kaynakTipi, dosyaAdi, uzanti = '.xlsx', sheetAdi = '', aktif = true } = req.body;
 
   if (!kaynakTipi || !SOURCE_ORDER.includes(String(kaynakTipi).trim())) {
@@ -1896,7 +1688,7 @@ app.post('/api/admin/excel-sources', (req, res, next) => {
   );
 });
 
-app.put('/api/admin/excel-sources/:id', (req, res, next) => {
+app.put('/api/admin/excel-sources/:id', requireAuth(['admin']), (req, res, next) => {
   const { kaynakTipi, dosyaAdi, uzanti = '.xlsx', sheetAdi = '', aktif = true } = req.body;
   const id = req.params.id;
 
@@ -1939,14 +1731,14 @@ app.put('/api/admin/excel-sources/:id', (req, res, next) => {
   );
 });
 
-app.delete('/api/admin/excel-sources/:id', (req, res, next) => {
+app.delete('/api/admin/excel-sources/:id', requireAuth(['admin']), (req, res, next) => {
   db.run(`DELETE FROM excel_kaynaklari WHERE id = ?`, [req.params.id], function(err) {
     if (err) return next(err);
     res.json({ success: true, data: { deleted: this.changes > 0 } });
   });
 });
 
-app.post('/api/admin/excel-sync/run', async (req, res) => {
+app.post('/api/admin/excel-sync/run', requireAuth(['admin']), async (req, res) => {
   try {
     await excelSync.runNow();
     const status = await excelSync.getStatus();
@@ -1956,7 +1748,7 @@ app.post('/api/admin/excel-sync/run', async (req, res) => {
   }
 });
 
-app.post('/api/admin/prosesler', (req, res, next) => {
+app.post('/api/admin/prosesler', requireAuth(['admin']), (req, res, next) => {
   const { ad, tip, birimMaliyet = 0, renkBazli = false, aktif = true } = req.body;
   if (!ad || !String(ad).trim()) {
     return res.status(400).json({ error: 'Proses adı zorunludur' });
@@ -1972,7 +1764,7 @@ app.post('/api/admin/prosesler', (req, res, next) => {
   );
 });
 
-app.put('/api/admin/prosesler/:id', (req, res, next) => {
+app.put('/api/admin/prosesler/:id', requireAuth(['admin']), (req, res, next) => {
   const { ad, tip, birimMaliyet = 0, renkBazli = false, aktif = true } = req.body;
   const id = req.params.id;
 
@@ -2002,14 +1794,14 @@ app.put('/api/admin/prosesler/:id', (req, res, next) => {
   );
 });
 
-app.get('/api/admin/mamuller/next-article-no/:mamulTuruId', (req, res, next) => {
+app.get('/api/admin/mamuller/next-article-no/:mamulTuruId', requireAuth(['admin']), (req, res, next) => {
   generateNextArticleNoForType(req.params.mamulTuruId, (err, data) => {
     if (err) return next(err);
     res.json({ success: true, data });
   });
 });
 
-app.get('/api/admin/mamuller', (req, res, next) => {
+app.get('/api/admin/mamuller', requireAuth(['admin']), (req, res, next) => {
   const term = String(req.query.term || '').trim();
   const params = [];
   let sql = `
@@ -2036,7 +1828,7 @@ app.get('/api/admin/mamuller', (req, res, next) => {
   });
 });
 
-app.get('/api/admin/mamuller/:id', (req, res, next) => {
+app.get('/api/admin/mamuller/:id', requireAuth(['admin']), (req, res, next) => {
   const mamulId = req.params.id;
 
   loadMamulDetailByClause(`mk.id = ?`, [mamulId], (err, detail) => {
@@ -2046,7 +1838,7 @@ app.get('/api/admin/mamuller/:id', (req, res, next) => {
   });
 });
 
-app.get('/api/admin/mamul-lookup', (req, res, next) => {
+app.get('/api/admin/mamul-lookup', requireAuth(['admin', 'staff', 'mamul']), (req, res, next) => {
   const normalizedCode = normalizeLookupCode(req.query.code);
 
   if (!normalizedCode) {
@@ -2064,7 +1856,7 @@ app.get('/api/admin/mamul-lookup', (req, res, next) => {
   );
 });
 
-app.post('/api/admin/mamuller', (req, res, next) => {
+app.post('/api/admin/mamuller', requireAuth(['admin']), (req, res, next) => {
   const {
     mamulAdi,
     mamulTuruId,
@@ -2220,7 +2012,7 @@ app.post('/api/admin/mamuller', (req, res, next) => {
   });
 });
 
-app.put('/api/admin/mamuller/:id', (req, res, next) => {
+app.put('/api/admin/mamuller/:id', requireAuth(['admin']), (req, res, next) => {
   const mamulId = req.params.id;
   const {
     mamulAdi,
@@ -2533,7 +2325,7 @@ app.get('/api/public/mamuller/:slug', (req, res, next) => {
   );
 });
 
-app.put('/api/admin/mamuller/:id/showcase', (req, res, next) => {
+app.put('/api/admin/mamuller/:id/showcase', requireAuth(['admin']), (req, res, next) => {
   const mamulId = req.params.id;
   const {
     tanitimBasligi,
@@ -2571,7 +2363,7 @@ app.put('/api/admin/mamuller/:id/showcase', (req, res, next) => {
   );
 });
 
-app.post('/api/admin/mamuller/:id/duplicate', (req, res, next) => {
+app.post('/api/admin/mamuller/:id/duplicate', requireAuth(['admin']), (req, res, next) => {
   const mamulId = req.params.id;
 
   loadMamulDetailByClause(`mk.id = ?`, [mamulId], (err, detail) => {
@@ -2711,7 +2503,7 @@ app.get('/api/mamul-labels', (req, res, next) => {
   });
 });
 
-app.post('/api/orders', (req, res, next) => {
+app.post('/api/orders', requireAuth(['admin', 'staff']), (req, res, next) => {
   const {
     musteriAdi,
     firmaAdi,
@@ -2891,7 +2683,7 @@ app.post('/api/orders', (req, res, next) => {
   );
 });
 
-app.post('/api/orders/:id/complete', async (req, res, next) => {
+app.post('/api/orders/:id/complete', requireAuth(['admin']), async (req, res, next) => {
   const siparisId = req.params.id;
 
   try {
@@ -2924,7 +2716,7 @@ app.post('/api/orders/:id/complete', async (req, res, next) => {
   }
 });
 
-app.get('/api/orders', (req, res, next) => {
+app.get('/api/orders', requireAuth(['admin']), (req, res, next) => {
   db.all(
     `SELECT s.*,
             COUNT(sk.id) AS kalem_sayisi,
@@ -2946,7 +2738,7 @@ app.get('/api/orders', (req, res, next) => {
   );
 });
 
-app.get('/api/orders/:id', (req, res, next) => {
+app.get('/api/orders/:id', requireAuth(['admin', 'staff']), (req, res, next) => {
   const siparisId = req.params.id;
 
   db.get(`SELECT * FROM kartelix_orders WHERE id = ?`, [siparisId], (err, siparis) => {
@@ -2971,7 +2763,7 @@ app.get('/api/orders/:id', (req, res, next) => {
   });
 });
 
-app.delete('/api/orders/:id', (req, res, next) => {
+app.delete('/api/orders/:id', requireAuth(['admin']), (req, res, next) => {
   const siparisId = req.params.id;
 
   db.serialize(() => {
@@ -3009,7 +2801,7 @@ app.delete('/api/orders/:id', (req, res, next) => {
   });
 });
 
-app.put('/api/orders/:id', (req, res, next) => {
+app.put('/api/orders/:id', requireAuth(['admin', 'staff']), (req, res, next) => {
   const siparisId = req.params.id;
   const {
     musteriAdi,
@@ -3161,7 +2953,7 @@ app.put('/api/orders/:id', (req, res, next) => {
   });
 });
 
-app.get('/api/admin/reports/overview', (req, res, next) => {
+app.get('/api/admin/reports/overview', requireAuth(['admin']), (req, res, next) => {
   db.serialize(() => {
     db.get(`SELECT COUNT(*) AS count FROM mamul_kartlari`, [], (mamulErr, mamulRow) => {
       if (mamulErr) return next(mamulErr);
@@ -3293,7 +3085,7 @@ app.post('/api/yeni-siparis', validateSiparis, (req, res, next) => {
 });
 
 // Sipariş Listesi
-app.get('/api/siparisler', (req, res, next) => {
+app.get('/api/siparisler', requireAuth(['admin']), (req, res, next) => {
   const sql = `
     SELECT s.*, 
            COUNT(sk.id) as kartela_sayisi,
@@ -3317,7 +3109,7 @@ app.get('/api/siparisler', (req, res, next) => {
 });
 
 // Sipariş Detayı
-app.get('/api/siparis/:id', (req, res, next) => {
+app.get('/api/siparis/:id', requireAuth(['admin']), (req, res, next) => {
   const siparisId = req.params.id;
   
   const siparisSql = `SELECT * FROM siparisler WHERE id = ?`;
@@ -3341,7 +3133,7 @@ app.get('/api/siparis/:id', (req, res, next) => {
   });
 });
 
-app.delete('/api/siparis/:id', (req, res, next) => {
+app.delete('/api/siparis/:id', requireAuth(['admin']), (req, res, next) => {
   const siparisId = req.params.id;
 
   db.serialize(() => {
@@ -3367,7 +3159,7 @@ app.delete('/api/siparis/:id', (req, res, next) => {
 // --- ETİKET ŞABLONLARI API ROTLARI ---
 
 // Etiket şablonları - özel route'lar önce tanımlanmalı
-app.get('/api/admin/label-templates/export', async (req, res, next) => {
+app.get('/api/admin/label-templates/export', requireAuth(['admin']), async (req, res, next) => {
   try {
     const rows = await new Promise((resolve, reject) => {
       db.all(`SELECT template_id, name, template_json, is_active FROM label_templates ORDER BY created_at ASC`, [], (err, rows) => {
@@ -3404,7 +3196,7 @@ app.get('/api/admin/label-templates/export', async (req, res, next) => {
 });
 
 // Aktif etiket şablonunu getir
-app.get('/api/admin/label-templates/active', async (req, res, next) => {
+app.get('/api/admin/label-templates/active', requireAuth(['admin', 'mamul']), async (req, res, next) => {
   try {
     let row = await new Promise((resolve, reject) => {
       db.get(`SELECT * FROM label_templates WHERE is_active = 1 LIMIT 1`, [], (err, row) => {
@@ -3444,7 +3236,7 @@ app.get('/api/admin/label-templates/active', async (req, res, next) => {
 });
 
 // Tüm etiket şablonlarını getir
-app.get('/api/admin/label-templates', async (req, res, next) => {
+app.get('/api/admin/label-templates', requireAuth(['admin']), async (req, res, next) => {
   try {
     const rows = await new Promise((resolve, reject) => {
       db.all(`SELECT id, template_id, name, is_active FROM label_templates ORDER BY created_at ASC`, [], (err, rows) => {
@@ -3460,7 +3252,7 @@ app.get('/api/admin/label-templates', async (req, res, next) => {
 });
 
 // Belirli bir etiket şablonunu getir
-app.get('/api/admin/label-templates/:templateId', async (req, res, next) => {
+app.get('/api/admin/label-templates/:templateId', requireAuth(['admin']), async (req, res, next) => {
   const { templateId } = req.params;
   try {
     const row = await new Promise((resolve, reject) => {
@@ -3484,7 +3276,7 @@ app.get('/api/admin/label-templates/:templateId', async (req, res, next) => {
 });
 
 // Etiket şablonu oluştur/güncelle
-app.post('/api/admin/label-templates', async (req, res, next) => {
+app.post('/api/admin/label-templates', requireAuth(['admin']), async (req, res, next) => {
   const { templateId, name, template, setActive } = req.body;
 
   if (!template) {
@@ -3527,7 +3319,7 @@ app.post('/api/admin/label-templates', async (req, res, next) => {
 });
 
 // Etiket şablonu sil
-app.delete('/api/admin/label-templates/:templateId', async (req, res, next) => {
+app.delete('/api/admin/label-templates/:templateId', requireAuth(['admin']), async (req, res, next) => {
   const { templateId } = req.params;
 
   try {
@@ -3582,7 +3374,7 @@ const parseLabelTemplateCsv = (rawText) => {
   return rows;
 };
 
-app.post('/api/admin/label-templates/import', express.text({ type: 'text/csv', limit: '2mb' }), async (req, res, next) => {
+app.post('/api/admin/label-templates/import', requireAuth(['admin']), express.text({ type: 'text/csv', limit: '2mb' }), async (req, res, next) => {
   try {
     const raw = String(req.body || '').trim();
     if (!raw) {
@@ -3664,7 +3456,7 @@ app.post('/api/admin/label-templates/import', express.text({ type: 'text/csv', l
 // --- ETİKET AYARLARI API ROTLARI ---
 
 // Etiket ayarlarını getir
-app.get('/api/etiket-ayarlari', (req, res, next) => {
+app.get('/api/etiket-ayarlari', requireAuth(['admin', 'mamul']), (req, res, next) => {
   db.all(
     `SELECT * FROM etiket_ayarlari ORDER BY sira_no ASC`, 
     [], 
@@ -3680,7 +3472,7 @@ app.get('/api/etiket-ayarlari', (req, res, next) => {
 });
 
 // Etiket ayarlarını güncelle
-app.put('/api/etiket-ayarlari', (req, res, next) => {
+app.put('/api/etiket-ayarlari', requireAuth(['admin']), (req, res, next) => {
   const { ayarlar } = req.body;
   
   if (!Array.isArray(ayarlar)) {
@@ -3724,7 +3516,7 @@ app.put('/api/etiket-ayarlari', (req, res, next) => {
 // --- KARTELALAR API ROTLARI ---
 
 // Kartela oluştur
-app.post('/api/kartelalar', (req, res, next) => {
+app.post('/api/kartelalar', requireAuth(['admin']), (req, res, next) => {
   const { kod, mamul_adi, tip, kompozisyon, en, gramaj, prefix } = req.body;
   
   if (!kod || kod.trim().length === 0) {
@@ -3772,7 +3564,7 @@ app.post('/api/kartelalar', (req, res, next) => {
 });
 
 // Kartela listesi
-app.get('/api/kartelalar', (req, res, next) => {
+app.get('/api/kartelalar', requireAuth(['admin', 'staff']), (req, res, next) => {
   const { search, page = 1, limit = 10 } = req.query;
   const offset = (page - 1) * limit;
   
@@ -3812,7 +3604,7 @@ app.get('/api/kartelalar', (req, res, next) => {
 });
 
 // Kartela detayı
-app.get('/api/kartelalar/:id', (req, res, next) => {
+app.get('/api/kartelalar/:id', requireAuth(['admin']), (req, res, next) => {
   const kartelaId = req.params.id;
   
   db.get(
@@ -3834,7 +3626,7 @@ app.get('/api/kartelalar/:id', (req, res, next) => {
 });
 
 // Kartela sil
-app.delete('/api/kartelalar/:id', (req, res, next) => {
+app.delete('/api/kartelalar/:id', requireAuth(['admin']), (req, res, next) => {
   const kartelaId = req.params.id;
   
   db.run(
@@ -3854,7 +3646,7 @@ app.delete('/api/kartelalar/:id', (req, res, next) => {
 // --- PREFIX AYARLARI API ROTLARI ---
 
 // Prefix ayarlarını getir
-app.get('/api/prefix-ayarlari', (req, res, next) => {
+app.get('/api/prefix-ayarlari', requireAuth(['admin']), (req, res, next) => {
   db.all(
     `SELECT * FROM prefix_ayarlari ORDER BY prefix ASC`, 
     [], 
@@ -3870,7 +3662,7 @@ app.get('/api/prefix-ayarlari', (req, res, next) => {
 });
 
 // Yeni prefix ekle
-app.post('/api/prefix-ayarlari', (req, res, next) => {
+app.post('/api/prefix-ayarlari', requireAuth(['admin']), (req, res, next) => {
   const { prefix, aciklama } = req.body;
   
   if (!prefix || prefix.trim().length === 0) {
@@ -3893,7 +3685,7 @@ app.post('/api/prefix-ayarlari', (req, res, next) => {
 });
 
 // Prefix sil
-app.delete('/api/prefix-ayarlari/:id', (req, res, next) => {
+app.delete('/api/prefix-ayarlari/:id', requireAuth(['admin']), (req, res, next) => {
   const prefixId = req.params.id;
   
   db.run(
@@ -3911,7 +3703,7 @@ app.delete('/api/prefix-ayarlari/:id', (req, res, next) => {
 });
 
 // Prefix güncelle
-app.put('/api/prefix-ayarlari/:id', (req, res, next) => {
+app.put('/api/prefix-ayarlari/:id', requireAuth(['admin']), (req, res, next) => {
   const prefixId = req.params.id;
   const { prefix, aciklama } = req.body;
   
@@ -4019,7 +3811,7 @@ app.get('/api/kartela-kodu-kontrol/:kod', (req, res, next) => {
 });
 // --- EMAIL GÖNDERME API ROTU ---
 
-app.post('/api/siparis-email-gonder', async (req, res) => {
+app.post('/api/siparis-email-gonder', requireAuth(['admin']), async (req, res) => {
   const { siparisId, email } = req.body;
 
   try {
@@ -4037,7 +3829,7 @@ app.post('/api/siparis-email-gonder', async (req, res) => {
   }
 });
 
-app.get('/api/stats', (req, res, next) => {
+app.get('/api/stats', requireAuth(['admin']), (req, res, next) => {
   const stats = {
     totalSiparis: 0,
     totalFirma: 0,
@@ -4070,7 +3862,7 @@ app.get('/api/stats', (req, res, next) => {
   });
 });
 
-app.post('/api/backup', (req, res, next) => {
+app.post('/api/backup', requireAuth(['admin']), (req, res, next) => {
   try {
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
@@ -4090,7 +3882,7 @@ app.post('/api/backup', (req, res, next) => {
   }
 });
 
-app.post('/api/clean-database', (req, res, next) => {
+app.post('/api/clean-database', requireAuth(['admin']), (req, res, next) => {
   db.serialize(() => {
     db.run('BEGIN TRANSACTION');
     db.run(`DELETE FROM kartelix_order_items`);
@@ -4120,57 +3912,6 @@ app.post('/api/clean-database', (req, res, next) => {
   });
 });
 
-// --- QR KOD API ROTLARI ---
-
-// QR koddan mamül bilgisi getir
-app.get('/api/qr-scan/:kod', (req, res, next) => {
-  const qrKod = req.params.kod;
-  
-  // Önce mamuller tablosunda ara
-  db.get(
-    `SELECT kod, ad, tip, stok FROM mamuller WHERE kod = ?`,
-    [qrKod],
-    (err, mamul) => {
-      if (err) return next(err);
-      
-      if (mamul) {
-        return res.json({
-          success: true,
-          data: {
-            tip: 'mamul',
-            ...mamul
-          }
-        });
-      }
-      
-      // Mamul bulunamazsa, kartela kodlarına bak
-      db.get(
-        `SELECT kartela_kodu, mamul_adi, article_no FROM siparis_kartelalari WHERE kartela_kodu = ?`,
-        [qrKod],
-        (kartelaErr, kartela) => {
-          if (kartelaErr) return next(kartelaErr);
-          
-          if (kartela) {
-            return res.json({
-              success: true,
-              data: {
-                tip: 'kartela',
-                ...kartela
-              }
-            });
-          }
-          
-          res.status(404).json({
-            success: false,
-            error: 'QR kod ile eşleşen kayıt bulunamadı'
-          });
-        }
-      );
-    }
-  );
-});
-
-
 // --- GENEL AYARLAR ---
 const defaultGenelAyarlar = { publicProsesGoster: false, publicFiyatGoster: false };
 
@@ -4182,7 +3923,7 @@ app.get('/api/genel-ayarlar', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-app.put('/api/genel-ayarlar', async (req, res, next) => {
+app.put('/api/genel-ayarlar', requireAuth(['admin']), async (req, res, next) => {
   try {
     const existing = await dbGetAsync('SELECT deger FROM ui_ayarlari WHERE anahtar = ?', ['genel_ayarlar']);
     const parsed = existing ? JSON.parse(existing.deger || '{}') : {};
@@ -4193,6 +3934,53 @@ app.put('/api/genel-ayarlar', async (req, res, next) => {
     );
     res.json({ success: true, data: nextVal });
   } catch (err) { next(err); }
+});
+
+// Şifre değiştirme — oturum açmış kullanıcı kendi şifresini değiştirebilir
+app.put('/api/change-password', requireAuth(), async (req, res, next) => {
+  const { currentPassword, newPassword } = req.body;
+  const username = req.user.username;
+
+  if (!newPassword || String(newPassword).length < 4) {
+    return res.status(400).json({ success: false, error: 'Yeni şifre en az 4 karakter olmalıdır' });
+  }
+
+  db.get('SELECT * FROM kullanicilar WHERE username = ?', [username], async (err, row) => {
+    if (err) return next(err);
+    if (!row) return res.status(404).json({ success: false, error: 'Kullanıcı bulunamadı' });
+
+    const match = await bcrypt.compare(String(currentPassword || ''), row.password);
+    if (!match) return res.status(401).json({ success: false, error: 'Mevcut şifre hatalı' });
+
+    const hash = await bcrypt.hash(String(newPassword), BCRYPT_ROUNDS);
+    db.run('UPDATE kullanicilar SET password = ?, password_length = ? WHERE username = ?', [hash, String(newPassword).length, username], (updateErr) => {
+      if (updateErr) return next(updateErr);
+      res.json({ success: true, message: 'Şifre başarıyla güncellendi' });
+    });
+  });
+});
+
+// Admin — başka kullanıcının şifresini değiştirme
+app.put('/api/admin/change-password', requireAuth(['admin']), async (req, res, next) => {
+  const { username, newPassword } = req.body;
+
+  if (!username || !String(username).trim()) {
+    return res.status(400).json({ success: false, error: 'Kullanıcı adı zorunludur' });
+  }
+  if (!newPassword || String(newPassword).length < 4) {
+    return res.status(400).json({ success: false, error: 'Yeni şifre en az 4 karakter olmalıdır' });
+  }
+
+  db.get('SELECT id FROM kullanicilar WHERE username = ?', [String(username).trim()], async (err, row) => {
+    if (err) return next(err);
+    if (!row) return res.status(404).json({ success: false, error: 'Kullanıcı bulunamadı' });
+
+    const hash = await bcrypt.hash(String(newPassword), BCRYPT_ROUNDS);
+    db.run('UPDATE kullanicilar SET password = ?, password_length = ? WHERE username = ?', [hash, String(newPassword).length, String(username).trim()], (updateErr) => {
+      if (updateErr) return next(updateErr);
+      res.json({ success: true, message: 'Şifre güncellendi' });
+    });
+  });
 });
 
 // Health check endpoint
@@ -4233,7 +4021,7 @@ const gorselUpload = multer({
   }
 });
 
-app.post('/api/admin/mamuller/:id/gorsel', gorselUpload.single('gorsel'), (req, res, next) => {
+app.post('/api/admin/mamuller/:id/gorsel', requireAuth(['admin']), gorselUpload.single('gorsel'), (req, res, next) => {
   if (!req.file) return res.status(400).json({ error: 'Geçerli bir görsel dosyası seçin (jpg, png, webp)' });
 
   const mamulId = req.params.id;
@@ -4258,7 +4046,7 @@ app.post('/api/admin/mamuller/:id/gorsel', gorselUpload.single('gorsel'), (req, 
   });
 });
 
-app.delete('/api/admin/mamuller/:id/gorsel', (req, res, next) => {
+app.delete('/api/admin/mamuller/:id/gorsel', requireAuth(['admin']), (req, res, next) => {
   const mamulId = req.params.id;
   db.get(`SELECT gorsel_url FROM mamul_kartlari WHERE id = ?`, [mamulId], (err, row) => {
     if (err) return next(err);

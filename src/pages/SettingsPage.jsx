@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme, useGenelAyarlar } from '../theme/ThemeProvider';
+import { authHeaders, getSession } from '../utils/auth';
 import { palettes } from '../theme/palettes';
 import LabelDesignerPanel from '../components/LabelDesignerPanel';
 import { X } from '../components/icons.jsx';
@@ -11,6 +12,7 @@ const tabs = [
   { id: 'email', label: 'Sipariş E-posta' },
   { id: 'theme', label: 'Marka Varlıkları' },
   { id: 'labels', label: 'Etiket Tasarımcısı' },
+  { id: 'sifre', label: 'Şifre Değiştir' },
   { id: 'system', label: 'Operasyon' }
 ];
 
@@ -49,7 +51,7 @@ const SettingsPage = () => {
     setAppBackground
   } = useTheme();
 
-  const [activeTab, setActiveTab] = useState('excel');
+  const [activeTab, setActiveTab] = useState('genel');
   const [systemStats, setSystemStats] = useState({});
   const [backupStatus, setBackupStatus] = useState('');
   const [loading, setLoading] = useState(false);
@@ -77,6 +79,28 @@ const SettingsPage = () => {
   const [genelAyarlar, setGenelAyarlar] = useState({ publicProsesGoster: false, publicFiyatGoster: false, publicHikayeGoster: true, karYuzdesi: 0 });
   const [genelAyarlarStatus, setGenelAyarlarStatus] = useState('');
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
+  const [pwStatus, setPwStatus] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (pwForm.next !== pwForm.confirm) { setPwStatus('Yeni şifreler eşleşmiyor.'); return; }
+    if (pwForm.next.length < 4) { setPwStatus('Şifre en az 4 karakter olmalı.'); return; }
+    setPwLoading(true); setPwStatus('');
+    try {
+      const res = await fetch('/api/change-password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ currentPassword: pwForm.current, newPassword: pwForm.next })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) { setPwStatus(data.error || 'Hata oluştu.'); return; }
+      setPwStatus('✓ Şifre başarıyla güncellendi.');
+      setPwForm({ current: '', next: '', confirm: '' });
+    } catch { setPwStatus('Sunucuya bağlanılamadı.'); }
+    finally { setPwLoading(false); }
+  };
 
   const loadGenelAyarlar = async () => {
     try {
@@ -98,7 +122,7 @@ const SettingsPage = () => {
 
   const loadSystemStats = async () => {
     try {
-      const response = await fetch('/api/stats');
+      const response = await fetch('/api/stats', { headers: authHeaders() });
       const data = await response.json();
       setSystemStats(data);
     } catch (err) {
@@ -107,11 +131,12 @@ const SettingsPage = () => {
   };
 
   const loadDefinitions = async () => {
+    const hdrs = { headers: authHeaders() };
     const [typesResponse, colorsResponse, yarnsResponse, processesResponse] = await Promise.all([
-      fetch('/api/admin/mamul-turleri'),
-      fetch('/api/admin/renkler'),
-      fetch('/api/admin/iplikler'),
-      fetch('/api/admin/prosesler')
+      fetch('/api/admin/mamul-turleri', hdrs),
+      fetch('/api/admin/renkler', hdrs),
+      fetch('/api/admin/iplikler', hdrs),
+      fetch('/api/admin/prosesler', hdrs)
     ]);
 
     const [typesResult, colorsResult, yarnsResult, processesResult] = await Promise.all([
@@ -128,7 +153,7 @@ const SettingsPage = () => {
   };
 
   const loadExcelSettings = async () => {
-    const settingsResponse = await fetch('/api/admin/excel-settings');
+    const settingsResponse = await fetch('/api/admin/excel-settings', { headers: authHeaders() });
     const settingsResult = await settingsResponse.json();
 
     if (settingsResult.success) {
@@ -145,7 +170,7 @@ const SettingsPage = () => {
   };
 
   const loadOrderEmailSettings = async () => {
-    const response = await fetch('/api/admin/order-email-settings');
+    const response = await fetch('/api/admin/order-email-settings', { headers: authHeaders() });
     const result = await response.json();
 
     if (response.ok && result.success) {
@@ -236,7 +261,7 @@ const SettingsPage = () => {
     setLoading(true);
     setBackupStatus('Yedekleme yapılıyor...');
     try {
-      await fetch('/api/backup', { method: 'POST' });
+      await fetch('/api/backup', { method: 'POST', headers: authHeaders() });
       setBackupStatus('Yedekleme başarılı.');
       setTimeout(() => setBackupStatus(''), 3000);
     } catch {
@@ -249,7 +274,7 @@ const SettingsPage = () => {
   const handleCleanDatabase = () => {
     if (window.confirm('TÜM veriler silinecek. Emin misiniz?\nBu işlem geri alınamaz!')) {
       setLoading(true);
-      fetch('/api/clean-database', { method: 'POST' })
+      fetch('/api/clean-database', { method: 'POST', headers: authHeaders() })
         .then(() => {
           alert('Veritabanı temizlendi.');
           loadSystemStats();
@@ -264,7 +289,7 @@ const SettingsPage = () => {
   const createDefinition = async (url, payload, onSuccess) => {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(payload)
     });
     const result = await response.json();
@@ -277,7 +302,7 @@ const SettingsPage = () => {
   const updateDefinition = async (url, payload, onSuccess) => {
     const response = await fetch(url, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(payload)
     });
     const result = await response.json();
@@ -290,7 +315,7 @@ const SettingsPage = () => {
   const saveExcelPoll = async () => {
     const response = await fetch('/api/admin/excel-settings/poll', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ pollMs: Number(excelPollMs || 0) })
     });
     const result = await response.json();
@@ -302,7 +327,7 @@ const SettingsPage = () => {
   };
 
   const runExcelSync = async () => {
-    const response = await fetch('/api/admin/excel-sync/run', { method: 'POST' });
+    const response = await fetch('/api/admin/excel-sync/run', { method: 'POST', headers: authHeaders() });
     const result = await response.json();
     if (!response.ok || !result.success) {
       throw new Error(result.error || 'Senkronizasyon çalıştırılamadı');
@@ -315,7 +340,7 @@ const SettingsPage = () => {
   const saveOrderEmailSettings = async () => {
     const response = await fetch('/api/admin/order-email-settings', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({
         enabled: emailForm.enabled,
         smtpHost: emailForm.smtpHost,
@@ -349,7 +374,7 @@ const SettingsPage = () => {
   const sendTestOrderEmail = async () => {
     const response = await fetch('/api/admin/order-email-settings/test', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ testRecipient: emailForm.testRecipient })
     });
     const result = await response.json();
@@ -918,7 +943,7 @@ const SettingsPage = () => {
               onClick={async () => {
                 const response = await fetch('/api/admin/theme-settings', {
                   method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: { 'Content-Type': 'application/json', ...authHeaders() },
                   body: JSON.stringify({
                     activePalette: palette.id,
                     appLogo: brandingForm.appLogo,
@@ -957,7 +982,7 @@ const SettingsPage = () => {
             onClick={async () => {
               const response = await fetch('/api/admin/theme-settings', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...authHeaders() },
                 body: JSON.stringify({
                   activePalette,
                   appLogo: brandingForm.appLogo,
@@ -1051,6 +1076,41 @@ const SettingsPage = () => {
           ))}
         </div>
       ),
+    },
+    sifre: {
+      title: 'Şifre Değiştir',
+      description: 'Mevcut şifrenizi doğrulayıp yeni şifre belirleyin.',
+      form: (
+        <form onSubmit={handleChangePassword} className="space-y-3">
+          <div className="app-soft-panel p-4 text-sm text-[color:var(--app-text-muted)]">
+            Kullanıcı: <span className="font-semibold text-[color:var(--app-text)]">{getSession()?.username}</span>
+          </div>
+          <input type="password" className="app-input" placeholder="Mevcut şifre" required
+            value={pwForm.current} onChange={(e) => setPwForm(p => ({ ...p, current: e.target.value }))} />
+          <input type="password" className="app-input" placeholder="Yeni şifre (en az 4 karakter)" required
+            value={pwForm.next} onChange={(e) => setPwForm(p => ({ ...p, next: e.target.value }))} />
+          <input type="password" className="app-input" placeholder="Yeni şifre tekrar" required
+            value={pwForm.confirm} onChange={(e) => setPwForm(p => ({ ...p, confirm: e.target.value }))} />
+          {pwStatus && (
+            <div className="app-soft-panel px-4 py-3 text-sm" style={{ color: pwStatus.startsWith('✓') ? '#16a34a' : '#dc2626' }}>
+              {pwStatus}
+            </div>
+          )}
+          <button type="submit" className="app-btn-primary" disabled={pwLoading}>
+            {pwLoading ? 'Kaydediliyor...' : 'Şifreyi Güncelle'}
+          </button>
+        </form>
+      ),
+      list: (
+        <div className="mt-4 space-y-3">
+          <div className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600">
+            Yeni şifreniz en az 4 karakter olmalıdır.
+          </div>
+          <div className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600">
+            Şifrenizi değiştirdikten sonra giriş ekranında otomatik olarak yeni uzunlukta kutular görünecektir.
+          </div>
+        </div>
+      )
     },
     system: {
       title: 'Operasyon merkezi',

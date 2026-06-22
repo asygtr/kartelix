@@ -1,4 +1,4 @@
-const SESSION_KEY = 'showroomSession';
+const SESSION_KEY = 'showroomToken';
 
 export const defaultRouteByRole = (role) => {
   if (role === 'staff') return '/staff/orders/new';
@@ -6,14 +6,22 @@ export const defaultRouteByRole = (role) => {
   return '/admin';
 };
 
-export const saveSession = (user) => {
-  localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+export const saveSession = (token) => {
+  localStorage.setItem(SESSION_KEY, token);
 };
 
+export const getToken = () => localStorage.getItem(SESSION_KEY) || null;
+
 export const getSession = () => {
+  const token = getToken();
+  if (!token) return null;
   try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (payload.exp && Date.now() / 1000 > payload.exp) {
+      clearSession();
+      return null;
+    }
+    return payload;
   } catch {
     return null;
   }
@@ -21,7 +29,6 @@ export const getSession = () => {
 
 export const clearSession = () => {
   localStorage.removeItem(SESSION_KEY);
-  localStorage.removeItem('authToken');
 };
 
 export const hasRequiredRole = (user, allowedRoles) => {
@@ -29,4 +36,9 @@ export const hasRequiredRole = (user, allowedRoles) => {
   if (user.yetki === 'admin') return true;
   if (!allowedRoles || allowedRoles.length === 0) return true;
   return allowedRoles.includes(user.yetki);
+};
+
+export const authHeaders = () => {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 };

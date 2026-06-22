@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { defaultRouteByRole, getSession, saveSession } from '../utils/auth';
 import { useTheme } from '../theme/ThemeProvider';
 
-const PIN_LENGTH = 4;
 const EASE = [0.2, 0.8, 0.2, 1];
 
 const AnimatedCheck = () => (
@@ -30,7 +29,7 @@ const AnimatedX = () => (
   </svg>
 );
 
-const PinBox = ({ value, index, inputRef, onChange, onKeyDown, onPaste, phase }) => {
+const PinBox = ({ value, index, pinLength, inputRef, onChange, onKeyDown, onPaste, phase }) => {
   const filled = Boolean(value);
 
   const borderColor = () => {
@@ -53,10 +52,14 @@ const PinBox = ({ value, index, inputRef, onChange, onKeyDown, onPaste, phase })
     return 'none';
   };
 
-  // Her kutu merkezden ne kadar uzakta? Merkeze doğru git.
-  const center = (PIN_LENGTH - 1) / 2; // 1.5
-  const offsetFromCenter = index - center; // -1.5, -0.5, 0.5, 1.5
-  const mergeX = -offsetFromCenter * 58;  // merkeze doğru: sol kutular sağa, sağ kutular sola
+  // Kart genişliği ~288px (max-w-sm - padding), gap 0.5rem*16=8px
+  // Kullanılabilir alan: 288 - (pinLength-1)*8 px → kutu px
+  const BOX_PX = Math.min(54, Math.floor((288 - (pinLength - 1) * 8) / pinLength));
+  const BOX_REM = BOX_PX / 16;
+
+  const center = (pinLength - 1) / 2;
+  const offsetFromCenter = index - center;
+  const mergeX = -offsetFromCenter * (BOX_PX + 8);
 
   const getAnimate = () => {
     if (phase === 'merge') return { x: mergeX, scale: 0, opacity: 0 };
@@ -74,7 +77,7 @@ const PinBox = ({ value, index, inputRef, onChange, onKeyDown, onPaste, phase })
 
   return (
     <motion.div
-      style={{ width: '3.4rem', height: '3.8rem', flexShrink: 0 }}
+      style={{ width: `${BOX_REM}rem`, height: `${BOX_REM * 1.15}rem`, flexShrink: 0 }}
       animate={getAnimate()}
       transition={getTransition()}
     >
@@ -91,12 +94,12 @@ const PinBox = ({ value, index, inputRef, onChange, onKeyDown, onPaste, phase })
         disabled={phase !== 'idle'}
         style={{
           width: '100%', height: '100%',
-          borderRadius: '0.85rem',
-          border: `2.5px solid ${borderColor()}`,
+          borderRadius: '0.65rem',
+          border: `2px solid ${borderColor()}`,
           background: bgColor(),
           boxShadow: glowShadow(),
           color: 'var(--app-text)',
-          fontSize: '1.5rem', fontWeight: 700,
+          fontSize: `${Math.max(0.9, BOX_REM * 0.45)}rem`, fontWeight: 700,
           textAlign: 'center',
           outline: 'none',
           caretColor: 'transparent',
@@ -113,7 +116,8 @@ const LoginScreen = () => {
   const [username, setUsername]           = useState('');
   const [usernameError, setUsernameError] = useState('');
   const [checking, setChecking]           = useState(false);
-  const [pins, setPins]                   = useState(Array(PIN_LENGTH).fill(''));
+  const [pinLength, setPinLength]         = useState(4);
+  const [pins, setPins]                   = useState(Array(4).fill(''));
   const [pinError, setPinError]           = useState('');
   const [pinPhase, setPinPhase]           = useState('idle');
 
@@ -162,6 +166,9 @@ const LoginScreen = () => {
         usernameRef.current?.select();
         return;
       }
+      const len = Number(result.passwordLength) || 4;
+      setPinLength(len);
+      setPins(Array(len).fill(''));
       setStep('pin');
       setTimeout(() => pinRefs.current[0]?.focus(), 320);
     } catch {
@@ -179,7 +186,7 @@ const LoginScreen = () => {
     next[index] = char;
     setPins(next);
     setPinError('');
-    if (index < PIN_LENGTH - 1) {
+    if (index < pinLength - 1) {
       pinRefs.current[index + 1]?.focus();
     } else {
       doLogin(next);
@@ -200,24 +207,24 @@ const LoginScreen = () => {
         pinRefs.current[index - 1]?.focus();
       }
     }
-    if (e.key === 'ArrowLeft'  && index > 0)              pinRefs.current[index - 1]?.focus();
-    if (e.key === 'ArrowRight' && index < PIN_LENGTH - 1) pinRefs.current[index + 1]?.focus();
+    if (e.key === 'ArrowLeft'  && index > 0)             pinRefs.current[index - 1]?.focus();
+    if (e.key === 'ArrowRight' && index < pinLength - 1) pinRefs.current[index + 1]?.focus();
   };
 
   const handlePinPaste = (e) => {
     e.preventDefault();
     if (pinPhase !== 'idle') return;
-    const pasted = e.clipboardData.getData('text').slice(0, PIN_LENGTH).split('');
-    const next = Array(PIN_LENGTH).fill('');
+    const pasted = e.clipboardData.getData('text').slice(0, pinLength).split('');
+    const next = Array(pinLength).fill('');
     pasted.forEach((c, i) => { next[i] = c; });
     setPins(next);
-    if (pasted.length === PIN_LENGTH) doLogin(next);
+    if (pasted.length === pinLength) doLogin(next);
     else pinRefs.current[pasted.length]?.focus();
   };
 
   const doLogin = async (pinArray) => {
     const password = pinArray.join('');
-    if (password.length < PIN_LENGTH) return;
+    if (password.length < pinLength) return;
     setPinPhase('glow-green');
     try {
       const res = await fetch('/api/login', {
@@ -235,7 +242,7 @@ const LoginScreen = () => {
             setTimeout(() => {
               setPinPhase('show-x');
               setTimeout(() => {
-                setPins(Array(PIN_LENGTH).fill(''));
+                setPins(Array(pinLength).fill(''));
                 setPinError(result.message || 'Şifre hatalı.');
                 setPinPhase('idle');
                 pinRefs.current[0]?.focus();
@@ -250,7 +257,7 @@ const LoginScreen = () => {
         setPinPhase('merge');
         setTimeout(() => {
           setPinPhase('show-check');
-          saveSession(result.data.user);
+          saveSession(result.data.token);
           setTimeout(() => {
             navigate(result.data.redirectTo || defaultRouteByRole(result.data.user?.yetki), { replace: true });
           }, 900);
@@ -261,7 +268,7 @@ const LoginScreen = () => {
       setTimeout(() => {
         setPinPhase('glow-red');
         setTimeout(() => {
-          setPins(Array(PIN_LENGTH).fill(''));
+          setPins(Array(pinLength).fill(''));
           setPinError('Sunucuya bağlanılamadı.');
           setPinPhase('idle');
           pinRefs.current[0]?.focus();
@@ -366,13 +373,14 @@ const LoginScreen = () => {
                   <AnimatePresence>
                     {showBoxes && (
                       <motion.div
-                        style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}
+                    style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', width: '100%' }}
                         exit={{ opacity: 0 }}
                       >
                         {pins.map((val, i) => (
                           <PinBox
                             key={i}
                             index={i}
+                            pinLength={pinLength}
                             value={val}
                             phase={pinPhase}
                             inputRef={el => pinRefs.current[i] = el}
@@ -438,7 +446,7 @@ const LoginScreen = () => {
 
                 <button
                   type="button"
-                  onClick={() => { setStep('username'); setPins(Array(PIN_LENGTH).fill('')); setPinError(''); setPinPhase('idle'); }}
+                  onClick={() => { setStep('username'); setPins(Array(pinLength).fill('')); setPinError(''); setPinPhase('idle'); }}
                   className="mt-5 w-full text-center text-sm"
                   style={{ color: 'var(--app-text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
                 >

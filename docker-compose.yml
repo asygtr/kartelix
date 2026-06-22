@@ -6,5 +6,7 @@ services:
       - "5000:5000"
     volumes:
       - ./database:/app/database
+    env_file:
+      - .env
     environment:
       PORT: 5000
