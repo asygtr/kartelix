@@ -241,6 +241,156 @@ const PublicMamulPage = ({ mode = 'public' }) => {
 
   if (!mamul) return null;
 
+  if (isInternal) {
+    const maliyet = Number(mamul.bir_kg_maliyet || 0);
+    const satis = Number(mamul.bir_kg_satis_fiyati || 0);
+    const pb = mamul.para_birimi || 'TRY';
+    const kar = maliyet > 0 && satis > 0 && satis !== maliyet
+      ? (((satis - maliyet) / maliyet) * 100).toFixed(1) : null;
+    return (
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
+        style={{ fontFamily: 'Manrope, Inter, sans-serif', color: 'var(--app-text)', minHeight: '100%' }}>
+        {/* Üst bar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+          <button type="button" onClick={() => navigate(-1)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.8rem', borderRadius: '999px', background: 'var(--app-surface)', border: '1px solid var(--app-border)', color: 'var(--app-text)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 700 }}>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+            Geri
+          </button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <a href={`/u/${mamul.qr_slug}`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.8rem', borderRadius: '999px', background: 'var(--app-surface)', border: '1px solid var(--app-border)', color: 'var(--app-text)', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Müşteri görünümü
+            </a>
+            <a href={`/mamul/labels?mamulId=${mamul.id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.8rem', borderRadius: '999px', background: 'var(--app-primary)', border: 'none', color: '#fff', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/></svg>
+              Etiket bas
+            </a>
+          </div>
+        </div>
+
+        {/* Ana grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.65fr)', gap: '1.25rem', alignItems: 'start' }}>
+
+          {/* Sol */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Görsel */}
+            <div style={{ borderRadius: '1.1rem', overflow: 'hidden', background: `linear-gradient(135deg,${P.accent}22,${P.accentDeep}44)`, aspectRatio: '4/5', position: 'relative', border: '1px solid var(--app-border)' }}>
+              {gorselUrl
+                ? <img src={gorselUrl} alt={mamul.mamul_adi} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                : <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    <div style={{ width: '4rem', height: '4rem', borderRadius: '50%', background: `linear-gradient(135deg,${P.accent},${P.accentDeep})`, opacity: 0.6 }} />
+                    <div style={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: P.accent, opacity: 0.55 }}>Görsel yok</div>
+                  </div>
+              }
+              <div style={{ position: 'absolute', bottom: '0.75rem', left: '0.75rem', right: '0.75rem', background: 'rgba(0,0,0,0.52)', backdropFilter: 'blur(6px)', borderRadius: '0.6rem', padding: '0.45rem 0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: P.accent, flexShrink: 0, border: '1.5px solid rgba(255,255,255,0.35)' }} />
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.9)', letterSpacing: '0.06em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mamul.renk || '-'}</span>
+              </div>
+            </div>
+
+            {/* Kimlik */}
+            <div style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: '1rem', padding: '1rem' }}>
+              <div style={{ fontSize: '0.57rem', fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--app-text-muted)', marginBottom: '0.3rem' }}>{mamul.mamul_turu_adi}</div>
+              <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--app-text)', lineHeight: 1.2 }}>{mamul.mamul_adi}</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--app-text-muted)', marginTop: '0.3rem', fontWeight: 600 }}>{mamul.article_code}</div>
+              {mamul.koleksiyon_adi && <div style={{ marginTop: '0.5rem', display: 'inline-block', fontSize: '0.64rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: '999px', background: `${P.accent}18`, color: P.accent, border: `1px solid ${P.accent}30` }}>{mamul.koleksiyon_adi}</div>}
+            </div>
+
+            {/* Teknik */}
+            <div style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: '1rem', padding: '1rem' }}>
+              <div style={{ fontSize: '0.57rem', fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--app-text-muted)', marginBottom: '0.75rem' }}>Teknik Özellikler</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                {[
+                  { label: 'En', val: mamul.en ? `${mamul.en} cm` : null },
+                  { label: 'Gramaj', val: mamul.gramaj ? `${mamul.gramaj} gr/m²` : null },
+                  { label: 'Kompozisyon', val: mamul.kompozisyon_ozeti },
+                  { label: 'Durum', val: mamul.yayin_durumu },
+                ].filter(r => r.val).map(({ label, val }) => (
+                  <div key={label} style={{ padding: '0.5rem 0.6rem', borderRadius: '0.6rem', background: 'var(--app-soft)', border: '1px solid var(--app-border)' }}>
+                    <div style={{ fontSize: '0.54rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--app-text-muted)', marginBottom: '0.18rem' }}>{label}</div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--app-text)' }}>{val}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Sağ */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Fiyat */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: '1rem', padding: '1rem' }}>
+                <div style={{ fontSize: '0.54rem', fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--app-text-muted)', marginBottom: '0.4rem' }}>1 kg Maliyet</div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--app-text)' }}>{maliyet.toFixed(2)}</div>
+                <div style={{ fontSize: '0.64rem', color: 'var(--app-text-muted)', marginTop: '0.12rem' }}>{pb}</div>
+              </div>
+              <div style={{ background: `linear-gradient(135deg,${P.accent}18,${P.accentDeep}28)`, border: `1px solid ${P.accent}30`, borderRadius: '1rem', padding: '1rem', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ fontSize: '0.54rem', fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: P.accent, opacity: 0.75, marginBottom: '0.4rem' }}>1 kg Satış</div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 900, color: P.accent }}>{satis.toFixed(2)}</div>
+                <div style={{ fontSize: '0.64rem', color: P.accent, opacity: 0.7, marginTop: '0.12rem' }}>{pb}</div>
+                {kar !== null && (
+                  <div style={{ position: 'absolute', top: '0.6rem', right: '0.6rem', fontSize: '0.64rem', fontWeight: 800, padding: '0.15rem 0.45rem', borderRadius: '999px', background: Number(kar) >= 0 ? '#16a34a20' : '#dc262620', color: Number(kar) >= 0 ? '#16a34a' : '#dc2626', border: `1px solid ${Number(kar) >= 0 ? '#16a34a30' : '#dc262630'}` }}>%{kar}</div>
+                )}
+              </div>
+            </div>
+
+            {/* İplik */}
+            {mamul.iplikler?.length > 0 && (
+              <div style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: '1rem', padding: '1rem' }}>
+                <div style={{ fontSize: '0.57rem', fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--app-text-muted)', marginBottom: '0.85rem' }}>İplik Reçetesi</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
+                  {mamul.iplikler.map((item, i) => {
+                    const pct = Math.min(Math.max(Number(item.oran_yuzde) || 0, 0), 100);
+                    return (
+                      <div key={item.id || i}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--app-text)' }}>{item.iplik_adi}</span>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 900, color: P.accent }}>%{Math.round(pct)}</span>
+                        </div>
+                        <div style={{ height: '5px', borderRadius: '999px', background: 'var(--app-soft)', overflow: 'hidden' }}>
+                          <motion.div style={{ height: '100%', borderRadius: '999px', background: `linear-gradient(90deg,${P.accent},${P.accentDeep})` }}
+                            initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.7, delay: i * 0.08, ease: EASE }} />
+                        </div>
+                        {Number(item.birim_fiyat) > 0 && <div style={{ fontSize: '0.64rem', color: 'var(--app-text-muted)', marginTop: '0.12rem' }}>{Number(item.birim_fiyat).toFixed(2)} {pb} / kg</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Prosesler */}
+            {mamul.prosesler?.length > 0 && (
+              <div style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: '1rem', padding: '1rem' }}>
+                <div style={{ fontSize: '0.57rem', fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--app-text-muted)', marginBottom: '0.85rem' }}>Prosesler</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {mamul.prosesler.map((item, i) => (
+                    <div key={item.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: '0.55rem 0.7rem', borderRadius: '0.65rem', background: 'var(--app-soft)', border: '1px solid var(--app-border)' }}>
+                      <div style={{ width: '1.4rem', height: '1.4rem', borderRadius: '50%', background: `linear-gradient(135deg,${P.accent},${P.accentDeep})`, color: '#fff', fontSize: '0.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--app-text)' }}>{item.proses_adi}</div>
+                        {item.proses_tipi && item.proses_tipi !== 'Excel' && <div style={{ fontSize: '0.64rem', color: 'var(--app-text-muted)' }}>{item.proses_tipi}</div>}
+                      </div>
+                      {Number(item.birim_maliyet) > 0 && <div style={{ fontSize: '0.75rem', fontWeight: 800, color: P.accent, flexShrink: 0 }}>{Number(item.birim_maliyet).toFixed(2)}</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Notlar */}
+            {story && (
+              <div style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: '1rem', padding: '1rem' }}>
+                <div style={{ fontSize: '0.57rem', fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--app-text-muted)', marginBottom: '0.6rem' }}>Notlar</div>
+                <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: 1.7, color: 'var(--app-text-muted)' }}>{story}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <div ref={pageRef} style={{
       fontFamily: 'Manrope, Inter, sans-serif',
