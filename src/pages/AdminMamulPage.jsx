@@ -551,9 +551,17 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                     setSelectedMamulId(selectedMamulDetail.id);
                     setForm({
                       ...createEmptyForm(),
-                      ...selectedMamulDetail,
+                      mamulAdi: selectedMamulDetail.mamul_adi || '',
                       mamulTuruId: selectedMamulDetail.mamul_turu_id,
+                      koleksiyonAdi: selectedMamulDetail.koleksiyon_adi || '',
+                      yayinDurumu: selectedMamulDetail.yayin_durumu || 'taslak',
                       renkId: selectedMamulDetail.renk_id || '',
+                      renk: selectedMamulDetail.renk || '',
+                      renkKodu: selectedMamulDetail.renk_kodu || '',
+                      kompozisyonOzeti: selectedMamulDetail.kompozisyon_ozeti || '',
+                      en: selectedMamulDetail.en || '',
+                      gramaj: selectedMamulDetail.gramaj || '',
+                      aciklama: selectedMamulDetail.aciklama || '',
                       birKgSatisFiyati: selectedMamulDetail.bir_kg_satis_fiyati || '',
                       paraBirimi: selectedMamulDetail.para_birimi || 'TRY',
                       gorselUrl: selectedMamulDetail.gorsel_url || '',
@@ -561,6 +569,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                       tanitimHikayesi: selectedMamulDetail.tanitim_hikayesi || '',
                       materyalNotlari: selectedMamulDetail.materyal_notlari || '',
                       vurguEtiketi: selectedMamulDetail.vurgu_etiketi || '',
+                      aktif: Boolean(selectedMamulDetail.aktif),
                       iplikler: selectedMamulDetail.iplikler?.length ? selectedMamulDetail.iplikler.map(i => ({
                         iplik_tanim_id: i.iplik_tanim_id || '',
                         iplik_adi: i.iplik_adi || '',
