@@ -250,6 +250,9 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
         : `Mamül kaydedildi. Makale No: ${result.data.articleCode}`);
       setTimeout(() => setMessage(''), 4000);
       haptic.success();
+      if (isEditing) {
+        showMamulDetail(selectedMamulId);
+      }
       setSelectedMamulId(null);
       setForm(createEmptyForm());
       setShowEditor(false);

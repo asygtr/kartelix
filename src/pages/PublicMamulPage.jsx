@@ -530,7 +530,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
                 transition={{ duration: 0.55, delay: 0.12, ease: EASE }}
                 style={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', color: P.textMuted, marginBottom: '0.45rem' }}
               >
-                {v(mamul.article_code)}
+                <span style={{ opacity: 0.6, marginRight: '0.3rem' }}>ARTICLE NO</span>{v(mamul.article_code)}
               </motion.div>
 
               <motion.h1
