@@ -7,7 +7,6 @@ import AdminLandingPage from './pages/AdminLandingPage';
 import StaffOrderPage from './pages/StaffOrderPage';
 import PublicMamulPage from './pages/PublicMamulPage';
 import AdminMamulPage from './pages/AdminMamulPage';
-import MamulLandingPage from './pages/MamulLandingPage';
 import MamulLabelPage from './pages/MamulLabelPage';
 import { ThemeProvider } from './theme/ThemeProvider';
 import { GenelAyarlarProvider } from './theme/ThemeProvider';
@@ -46,7 +45,7 @@ function App() {
 
           <Route element={<ProtectedRoute allowedRoles={['mamul', 'admin']} />}>
             <Route element={<AppLayout />}>
-              <Route path="/mamul" element={<MamulLandingPage />} />
+              <Route path="/mamul" element={<Navigate to="/mamul/labels" replace />} />
               <Route path="/mamul/labels" element={<MamulLabelPage />} />
               <Route path="/mamul/preview/:slug" element={<PublicMamulPage mode="internal" />} />
             </Route>

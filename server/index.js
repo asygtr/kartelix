@@ -2513,6 +2513,8 @@ app.get('/api/public/mamuller/:slug', (req, res, next) => {
                       gorsel_url: mamul.gorsel_url,
                       vurgu_etiketi: mamul.vurgu_etiketi,
                       bakim_talimatlari: mamul.bakim_talimatlari,
+                      bir_kg_maliyet: Number(mamul.bir_kg_maliyet || 0),
+                      bir_kg_satis_fiyati: Number(mamul.bir_kg_satis_fiyati || 0),
                       iplikler: yarnRows.map((item) => ({
                         ...item,
                         oran_yuzde: Number(item.oran_yuzde || 0)

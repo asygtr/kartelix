@@ -1,8 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { clearSession } from '../utils/auth';
-import AppNavbar from './AppNavbar';
+import { clearSession, getSession } from '../utils/auth';
+import AppNavbar, { useNavItems } from './AppNavbar';
+import MobileBottomNav from './MobileBottomNav';
 
 const pageTitles = {
   '/admin': 'Yönetim',
@@ -11,7 +12,6 @@ const pageTitles = {
   '/admin/reports': 'Raporlar',
   '/admin/settings': 'Ayarlar',
   '/staff/orders/new': 'Siparişler',
-  '/mamul': 'Mamül',
   '/mamul/labels': 'Etiket',
 };
 
@@ -25,6 +25,11 @@ const AppLayout = ({ navAction }) => {
   const navigate  = useNavigate();
   const prevPath  = useRef(location.pathname);
   const title     = pageTitles[location.pathname] || '';
+  const session = getSession();
+  const role = session?.yetki || 'guest';
+  const [searchOpen, setSearchOpen] = useState(false);
+  const openSearch = useCallback(() => setSearchOpen(true), []);
+  const mobileNavItems = useNavItems(role, openSearch);
 
   const prevIndex = pageOrder.indexOf(prevPath.current);
   const currIndex = pageOrder.indexOf(location.pathname);
@@ -67,7 +72,13 @@ const AppLayout = ({ navAction }) => {
       onTouchEnd={handleTouchEnd}
       style={{ minHeight: '100dvh' }}
     >
-      <AppNavbar title={title} action={navAction} onLogout={handleLogout} />
+      <AppNavbar title={title} action={navAction} onLogout={handleLogout} searchOpen={searchOpen} setSearchOpen={setSearchOpen} />
+      <MobileBottomNav
+        items={mobileNavItems}
+        location={location}
+        searchOpen={searchOpen}
+        onSearchClick={() => setSearchOpen(true)}
+      />
       <div className="app-page">
         <div className="app-container space-y-6">
           <AnimatePresence mode="wait" custom={direction} initial={false}>
@@ -78,7 +89,6 @@ const AppLayout = ({ navAction }) => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: direction * -24 }}
               transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
-              style={{ willChange: 'transform, opacity' }}
             >
               <Outlet />
             </motion.div>

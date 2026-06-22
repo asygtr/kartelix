@@ -4,7 +4,6 @@ import { useTheme } from '../theme/ThemeProvider';
 import { useGenelAyarlar } from '../theme/ThemeProvider';
 import { getSession } from '../utils/auth';
 import QrCameraModal from './QrCameraModal';
-import MobileBottomNav from './MobileBottomNav';
 import { isMobileCameraDevice } from '../utils/qr';
 import { Home, Search, ClipboardList, Tag, Layers, BarChart2, Settings, LogOut, X, QrCode, Menu } from './icons.jsx';
 
@@ -17,7 +16,6 @@ const navSets = {
     { to: '/admin/reports', label: 'Raporlar' }
   ],
   mamul: [
-    { to: '/mamul', label: 'Mamül Merkezi' },
     { to: '/mamul/labels', label: 'Etiket Bas' }
   ],
   staff: [
@@ -35,7 +33,18 @@ const isActiveLink = (pathname, target) => {
 };
 
 
-const AppNavbar = ({ title, action, onLogout }) => {
+export const useNavItems = (role, onSearchOpen) => useMemo(() => {
+  const items = [];
+  items.push({ key: 'home', label: 'Ana Sayfa', icon: <Home className="app-nav-icon-svg" />, to: role === 'admin' ? '/admin' : role === 'mamul' ? '/mamul' : '/staff/orders/new' });
+  items.push({ key: 'search', label: 'Ara', icon: <Search className="app-nav-icon-svg" />, action: () => onSearchOpen() });
+  items.push({ key: 'orders', label: 'Siparişler', icon: <ClipboardList className="app-nav-icon-svg" />, to: role === 'admin' ? '/admin/orders' : role === 'staff' ? '/staff/orders/new' : null });
+  items.push({ key: 'labels', label: 'Etiket Bas', icon: <Tag className="app-nav-icon-svg" />, to: role === 'admin' || role === 'mamul' ? '/mamul/labels' : null });
+  items.push({ key: 'mamul', label: 'Mamül', icon: <Layers className="app-nav-icon-svg" />, to: role === 'admin' ? '/admin/mamuller' : null });
+  if (role === 'admin') items.push({ key: 'reports', label: 'Raporlar', icon: <BarChart2 className="app-nav-icon-svg" />, to: '/admin/reports' });
+  return items.filter((item) => item.to || item.action);
+}, [role, onSearchOpen]);
+
+const AppNavbar = ({ title, action, onLogout, searchOpen, setSearchOpen }) => {
   const { appLogo } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
@@ -44,7 +53,6 @@ const AppNavbar = ({ title, action, onLogout }) => {
   const primaryLinks = navSets[role] || navSets.guest;
   const showSettings = role === 'admin' && location.pathname !== '/admin/settings';
   const showSettingsMenu = role === 'admin' && location.pathname === '/admin/settings';
-  const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchMessage, setSearchMessage] = useState('');
@@ -60,56 +68,6 @@ const AppNavbar = ({ title, action, onLogout }) => {
       setSearchValue(''); // Clear search input when popup is closed
     }
   }, [searchOpen]);
-
-  const mobileNavItems = useMemo(() => {
-    const items = [];
-
-    items.push({
-      key: 'home',
-      label: 'Ana Sayfa',
-        icon: <Home className="app-nav-icon-svg" />,
-      to: role === 'admin' ? '/admin' : role === 'mamul' ? '/mamul' : '/staff/orders/new'
-    });
-
-    items.push({
-      key: 'search',
-      label: 'Ara',
-      icon: <Search className="app-nav-icon-svg" />,
-      action: () => setSearchOpen(true)
-    });
-
-    items.push({
-      key: 'orders',
-      label: 'Siparişler',
-      icon: <ClipboardList className="app-nav-icon-svg" />,
-      to: role === 'admin' ? '/admin/orders' : role === 'staff' ? '/staff/orders/new' : null
-    });
-
-    items.push({
-      key: 'labels',
-      label: 'Etiket Bas',
-      icon: <Tag className="app-nav-icon-svg" />,
-      to: role === 'admin' || role === 'mamul' ? '/mamul/labels' : null
-    });
-
-    items.push({
-      key: 'mamul',
-      label: 'Mamül',
-      icon: <Layers className="app-nav-icon-svg" />,
-      to: role === 'admin' ? '/admin/mamuller' : role === 'mamul' ? '/mamul' : null
-    });
-
-    if (role === 'admin') {
-      items.push({
-        key: 'reports',
-        label: 'Raporlar',
-        icon: <BarChart2 className="app-nav-icon-svg" />,
-        to: '/admin/reports'
-      });
-    }
-
-    return items.filter((item) => item.to || item.action);
-  }, [role]);
 
   const runGlobalSearch = async (incomingValue) => {
     const lookupCode = String(incomingValue ?? searchValue).trim();
@@ -208,12 +166,6 @@ const AppNavbar = ({ title, action, onLogout }) => {
       </div>
     </header>
     ) : null}
-    <MobileBottomNav
-      items={mobileNavItems}
-      location={location}
-      searchOpen={searchOpen}
-      onSearchClick={() => setSearchOpen(true)}
-    />
 
     {searchOpen ? (
       <div className="app-mobile-search-sheet" onClick={(event) => {
@@ -300,7 +252,15 @@ const AppNavbar = ({ title, action, onLogout }) => {
                 <div className="app-mobile-search-pricing">
                   <div className="app-mobile-search-price-card">
                     <div className="app-mobile-search-summary-label">1 kg satış</div>
-                    <div className="app-mobile-search-price-value">{Number(searchResult.bir_kg_satis_fiyati || 0).toFixed(2)} TRY</div>
+                    <div className="app-mobile-search-price-value">
+                      {(() => {
+                        const maliyet = Number(searchResult.bir_kg_maliyet || 0);
+                        const satis   = Number(searchResult.bir_kg_satis_fiyati || 0);
+                        const kar     = Number(genelAyarlar.karYuzdesi || 0);
+                        const fiyat   = kar > 0 && maliyet > 0 ? maliyet * (1 + kar / 100) : satis;
+                        return fiyat.toFixed(2);
+                      })()} TRY
+                    </div>
                   </div>
                   <div className="app-mobile-search-price-card">
                     <div className="app-mobile-search-summary-label">1 kg maliyet</div>

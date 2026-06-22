@@ -2,7 +2,7 @@ const SESSION_KEY = 'showroomSession';
 
 export const defaultRouteByRole = (role) => {
   if (role === 'staff') return '/staff/orders/new';
-  if (role === 'mamul') return '/mamul';
+  if (role === 'mamul') return '/mamul/labels';
   return '/admin';
 };
 

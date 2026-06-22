@@ -165,9 +165,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
       ? fetch(`/api/admin/mamul-lookup?code=${encodeURIComponent(slug)}`).then(r => r.json())
       : fetch(`/api/public/mamuller/${slug}`).then(r => r.json());
 
-    const ayarRequest = !isInternal
-      ? fetch('/api/genel-ayarlar').then(r => r.json()).catch(() => ({ success: false }))
-      : Promise.resolve({ success: false });
+    const ayarRequest = fetch('/api/genel-ayarlar').then(r => r.json()).catch(() => ({ success: false }));
 
     Promise.all([
       mamulRequest,
@@ -175,7 +173,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
     ]).then(([mamulRes, ayarRes]) => {
       if (!mamulRes.success) throw new Error(mamulRes.error || 'Bulunamadı');
       setMamul(mamulRes.data);
-      setGenelAyarlar(!isInternal ? (ayarRes.success ? ayarRes.data : { publicProsesGoster: false, publicFiyatGoster: false }) : null);
+      setGenelAyarlar(ayarRes.success ? ayarRes.data : { publicProsesGoster: false, publicFiyatGoster: false, publicHikayeGoster: true, karYuzdesi: 0 });
     }).catch(err => setError(err.message))
       .finally(() => setLoading(false));
   }, [slug, isInternal]);
@@ -205,9 +203,18 @@ const PublicMamulPage = ({ mode = 'public' }) => {
   const hasProsesler = prosesAcik && mamul?.prosesler?.length > 0;
   const careItems    = useMemo(() => parseCare(mamul?.bakim_talimatlari), [mamul?.bakim_talimatlari]);
   const gorselUrl    = v(mamul?.gorsel_url);
-  const hasPrice     = isInternal && (Number(mamul?.bir_kg_satis_fiyati || 0) > 0 || Number(mamul?.bir_kg_maliyet || 0) > 0);
+  const karYuzdesi   = Number(genelAyarlar?.karYuzdesi || 0);
+  const satisFiyati  = useMemo(() => {
+    const maliyet = Number(mamul?.bir_kg_maliyet || 0);
+    const satis   = Number(mamul?.bir_kg_satis_fiyati || 0);
+    if (karYuzdesi > 0 && maliyet > 0) return maliyet * (1 + karYuzdesi / 100);
+    return satis > 0 ? satis : maliyet;
+  }, [mamul?.bir_kg_maliyet, mamul?.bir_kg_satis_fiyati, karYuzdesi]);
+  const hasPrice = isInternal
+    ? (Number(mamul?.bir_kg_satis_fiyati || 0) > 0 || Number(mamul?.bir_kg_maliyet || 0) > 0)
+    : (genelAyarlar?.publicFiyatGoster === true && satisFiyati > 0);
 
-  if (loading || (!isInternal && genelAyarlar === null)) return (
+  if (loading || genelAyarlar === null) return (
     <div style={{ minHeight: isInternal ? '60vh' : '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isInternal ? 'transparent' : '#f3efe7' }}>
       <div style={{ display: 'flex', gap: '0.5rem' }}>
         {[0,1,2].map(i => (
@@ -257,7 +264,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
       <div style={{ position: 'relative', zIndex: 1, maxWidth: '36rem', margin: '0 auto', padding: '0 1rem 5rem' }}>
 
         {/* ╔╔ HERO ╔╔ */}
-        <motion.section style={{ y: heroY, opacity: heroOpacity, scale: heroScale, paddingTop: '3.5rem', paddingBottom: '1.5rem', willChange: 'transform' }}>
+        <motion.section style={{ y: heroY, opacity: heroOpacity, scale: heroScale, paddingTop: '1.5rem', paddingBottom: '1.5rem', willChange: 'transform' }}>
 
           {/* Ust bar: geri / marka + dil toggle + paylas */}
           <motion.div
@@ -518,15 +525,17 @@ const PublicMamulPage = ({ mode = 'public' }) => {
           <Reveal delay={0.045}>
             <div style={{ ...cardStyle(P, dark), marginBottom: '0.85rem' }}>
               <SectionLabel P={P}>{t.price}</SectionLabel>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', marginTop: '0.9rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isInternal ? '1fr 1fr' : '1fr', gap: '0.65rem', marginTop: '0.9rem' }}>
                 <div style={{ padding: '0.7rem 0.8rem', borderRadius: '0.7rem', background: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', border: `1px solid ${P.border}` }}>
                   <div style={{ fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: P.textMuted, marginBottom: '0.28rem' }}>{t.salesPrice}</div>
-                  <div style={{ fontSize: '1rem', fontWeight: 900, color: P.accent }}>{Number(mamul.bir_kg_satis_fiyati || 0).toFixed(2)} TRY</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 900, color: P.accent }}>{satisFiyati.toFixed(2)} TRY</div>
                 </div>
-                <div style={{ padding: '0.7rem 0.8rem', borderRadius: '0.7rem', background: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', border: `1px solid ${P.border}` }}>
-                  <div style={{ fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: P.textMuted, marginBottom: '0.28rem' }}>{t.costPrice}</div>
-                  <div style={{ fontSize: '1rem', fontWeight: 900, color: P.accent }}>{Number(mamul.bir_kg_maliyet || 0).toFixed(2)} TRY</div>
-                </div>
+                {isInternal && (
+                  <div style={{ padding: '0.7rem 0.8rem', borderRadius: '0.7rem', background: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', border: `1px solid ${P.border}` }}>
+                    <div style={{ fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: P.textMuted, marginBottom: '0.28rem' }}>{t.costPrice}</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 900, color: P.accent }}>{Number(mamul.bir_kg_maliyet || 0).toFixed(2)} TRY</div>
+                  </div>
+                )}
               </div>
             </div>
           </Reveal>
@@ -617,13 +626,9 @@ const ProcessRow = ({ item, index, P, dark, total }) => {
       </div>
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: '0.84rem', fontWeight: 700, color: P.text }}>{item.proses_adi}</div>
-        {item.aciklama && <div style={{ fontSize: '0.74rem', color: P.textMuted, marginTop: '0.18rem', lineHeight: 1.5 }}>{item.aciklama}</div>}
+        {item.aciklama && !/^[A-Z]+\d+:/.test(item.aciklama) && <div style={{ fontSize: '0.74rem', color: P.textMuted, marginTop: '0.18rem', lineHeight: 1.5 }}>{item.aciklama}</div>}
       </div>
-      {item.proses_tipi && (
-        <span style={{ flexShrink: 0, fontSize: '0.56rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: P.textMuted, background: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', padding: '0.2rem 0.5rem', borderRadius: '999px' }}>
-          {item.proses_tipi}
-        </span>
-      )}
+
     </motion.div>
   );
 };

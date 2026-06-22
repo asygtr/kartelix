@@ -61,7 +61,8 @@ code {
   height: 100dvh;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 5.2rem 0 6rem;
+  padding-top: 4.8rem;
+  padding-bottom: 2rem;
   box-sizing: border-box;
   -webkit-overflow-scrolling: touch;
   word-break: break-word;
@@ -590,10 +591,12 @@ code {
 
 .app-drawer-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100dvh;
   z-index: 10000;
   background: rgba(15, 23, 42, 0.34);
-  backdrop-filter: blur(8px);
   overflow: hidden;
   animation: appDrawerOverlayIn 260ms ease forwards;
 }
@@ -1804,9 +1807,8 @@ code {
   }
 
   .app-page {
-    min-height: 100dvh;
-    padding-top: calc(5.4rem + env(safe-area-inset-top, 0px));
-    padding-bottom: calc(5.4rem + env(safe-area-inset-bottom, 0px));
+    padding-top: calc(3.6rem + env(safe-area-inset-top, 0px) + 0.75rem);
+    padding-bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px));
   }
 
   .app-nav-shell {
@@ -1904,8 +1906,8 @@ code {
 
 @media (max-width: 768px) {
   .app-page {
-    padding-top: calc(4.4rem + env(safe-area-inset-top, 0px));
-    padding-bottom: calc(4.8rem + env(safe-area-inset-bottom, 0px));
+    padding-top: calc(3.4rem + env(safe-area-inset-top, 0px) + 0.5rem);
+    padding-bottom: calc(4.2rem + env(safe-area-inset-bottom, 0px));
   }
 
   .app-container {

@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useTheme } from '../theme/ThemeProvider';
+import { useTheme, useGenelAyarlar } from '../theme/ThemeProvider';
 import { palettes } from '../theme/palettes';
-import AppNavbar from '../components/AppNavbar';
 import LabelDesignerPanel from '../components/LabelDesignerPanel';
-import { clearSession } from '../utils/auth';
-import { X, Menu } from '../components/icons.jsx';
+import { X } from '../components/icons.jsx';
 
 const tabs = [
   { id: 'genel', label: 'Genel Ayarlar' },
@@ -38,7 +36,6 @@ const initialEmailForm = {
 };
 
 const CloseIcon = () => <X className="app-nav-icon-svg" />;
-const MenuIcon  = () => <Menu className="app-nav-icon-svg" />;
 
 const SettingsPage = () => {
   const location = useLocation();
@@ -76,7 +73,8 @@ const SettingsPage = () => {
   const [themeStatus, setThemeStatus] = useState('');
   const [brandingForm, setBrandingForm] = useState({ appLogo: '/nevres.png', appBackground: '/showroom-bg.png' });
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [genelAyarlar, setGenelAyarlar] = useState({ publicProsesGoster: false, publicFiyatGoster: false });
+  const { genelAyarlar: ctxGenelAyarlar, saveGenelAyarlar: ctxSaveGenelAyarlar, loadGenelAyarlar: ctxLoadGenelAyarlar } = useGenelAyarlar();
+  const [genelAyarlar, setGenelAyarlar] = useState({ publicProsesGoster: false, publicFiyatGoster: false, publicHikayeGoster: true, karYuzdesi: 0 });
   const [genelAyarlarStatus, setGenelAyarlarStatus] = useState('');
   const [drawerVisible, setDrawerVisible] = useState(false);
 
@@ -89,16 +87,12 @@ const SettingsPage = () => {
   };
 
   const saveGenelAyarlar = async (next) => {
-    try {
-      const r = await fetch('/api/genel-ayarlar', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(next)
-      });
-      const d = await r.json();
-      if (d.success) { setGenelAyarlar(d.data); setGenelAyarlarStatus('Kaydedildi.'); }
-      else setGenelAyarlarStatus('Kayıt başarısız.');
-    } catch { setGenelAyarlarStatus('Hata oluştu.'); }
+    setGenelAyarlar(next);
+    ctxSaveGenelAyarlar(
+      next,
+      () => setGenelAyarlarStatus('Kaydedildi.'),
+      () => setGenelAyarlarStatus('Kayıt başarısız.')
+    );
     setTimeout(() => setGenelAyarlarStatus(''), 2500);
   };
 
@@ -173,6 +167,11 @@ const SettingsPage = () => {
     loadGenelAyarlar();
   }, []);
 
+  // Context'teki genel ayarlar değişince local state'i de güncelle
+  useEffect(() => {
+    setGenelAyarlar(ctxGenelAyarlar);
+  }, [ctxGenelAyarlar]);
+
   useEffect(() => {
     setBrandingForm({
       appLogo: appLogo || '/nevres.png',
@@ -189,6 +188,12 @@ const SettingsPage = () => {
     const timeout = setTimeout(() => setDrawerVisible(false), 260);
     return () => clearTimeout(timeout);
   }, [drawerOpen]);
+
+  useEffect(() => {
+    const openDrawer = () => setDrawerOpen(true);
+    window.addEventListener('settings-menu:open', openDrawer);
+    return () => window.removeEventListener('settings-menu:open', openDrawer);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search || '');
@@ -256,11 +261,6 @@ const SettingsPage = () => {
     }
   };
 
-  const handleLogout = () => {
-    clearSession();
-    window.location.href = '/';
-  };
-
   const createDefinition = async (url, payload, onSuccess) => {
     const response = await fetch(url, {
       method: 'POST',
@@ -295,9 +295,9 @@ const SettingsPage = () => {
     });
     const result = await response.json();
     if (!response.ok || !result.success) {
-      throw new Error(result.error || 'Excel okuma sıklığı kaydedilemedi');
+      throw new Error(result.error || 'Okuma sıklığı kaydedilemedi');
     }
-    setExcelStatus('Excel okuma sıklığı kaydedildi.');
+    setExcelStatus('Okuma sıklığı kaydedildi.');
     await loadExcelSettings();
   };
 
@@ -305,9 +305,9 @@ const SettingsPage = () => {
     const response = await fetch('/api/admin/excel-sync/run', { method: 'POST' });
     const result = await response.json();
     if (!response.ok || !result.success) {
-      throw new Error(result.error || 'Excel senkronizasyonu çalıştırılamadı');
+      throw new Error(result.error || 'Senkronizasyon çalıştırılamadı');
     }
-    setExcelStatus('Excel senkronizasyonu tamamlandı.');
+    setExcelStatus('Senkronizasyon tamamlandı.');
     setExcelSyncStatus(result.data);
     await loadDefinitions();
   };
@@ -591,18 +591,10 @@ const SettingsPage = () => {
       )
     },
     excel: {
-      title: 'Excel senkronizasyonu',
-      description: 'Mamül, ürün grubu, renk, iplik, proses ve fiyat verileri yalnızca xls klasöründeki ÜRGE Excel dosyalarından okunur.',
+      title: 'Senkronizasyon',
+      description: 'Mamül, ürün grubu, renk, iplik, proses ve fiyat verileri otomatik olarak okunur.',
       form: (
         <div className="space-y-4">
-          <div className="app-soft-panel p-4 space-y-3">
-            <div className="text-sm font-semibold text-[color:var(--app-text)]">Excel tek kaynak</div>
-            <div className="text-sm text-slate-600">
-              Uygulama manuel tanım kabul etmez. Dosyalar otomatik olarak xls klasöründen okunur; article, ürün adı,
-              iplik yüzdeleri, iplik fiyatları, prosesler ve 1 kg fiyat hesapları Excel'den gelir.
-            </div>
-          </div>
-
           <div className="app-soft-panel p-4 space-y-3">
             <div className="text-sm font-semibold text-[color:var(--app-text)]">Okuma sıklığı</div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr,auto]">
@@ -635,7 +627,7 @@ const SettingsPage = () => {
                 className="app-btn-primary"
                 onClick={async () => {
                   try {
-                    setExcelStatus('Excel senkronizasyonu çalıştırılıyor...');
+                    setExcelStatus('Senkronizasyon çalıştırılıyor...');
                     await runExcelSync();
                   } catch (err) {
                     setExcelStatus(err.message);
@@ -653,7 +645,7 @@ const SettingsPage = () => {
                 Son hata: {excelSyncStatus?.lastError || 'Yok'}
               </div>
             </div>
-            {excelStatus ? <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700">{excelStatus}</div> : null}
+            {excelStatus ? <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700">{excelStatus.replace(/Excel /gi, '')}</div> : null}
           </div>
         </div>
       ),
@@ -667,7 +659,7 @@ const SettingsPage = () => {
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-500">Henüz ÜRGE Excel okuma sonucu yok.</div>
+            <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-500">Henüz okuma sonucu yok.</div>
           )}
 
           {excelSyncStatus?.urgeLastResult?.files?.map((item) => (
@@ -1010,6 +1002,25 @@ const SettingsPage = () => {
             <div className="text-sm font-semibold text-[color:var(--app-text)]">Müşteri (public) görünümü</div>
             <label className="flex items-center justify-between gap-4">
               <div>
+                <div className="text-sm font-medium text-[color:var(--app-text)]">Satış fiyatı kâr yüzdesi</div>
+                <div className="mt-0.5 text-xs text-slate-500">Maliyet üzerine uygulanacak kâr oranı. Örn: 20 girersen maliyet ×1.20 olarak gösterilir.</div>
+              </div>
+              <input
+                type="number" min="0" max="999" step="1"
+                className="app-input w-24 text-right"
+                value={genelAyarlar.karYuzdesi ?? 0}
+                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, karYuzdesi: Number(e.target.value) || 0 })} />
+            </label>
+            <label className="flex items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-medium text-[color:var(--app-text)]">Kumaş Hikayesini göster</div>
+                <div className="mt-0.5 text-xs text-slate-500">Müşteri QR/link sayfasında Kumaş Hikayesi bölümü görünsün.</div>
+              </div>
+              <input type="checkbox" checked={genelAyarlar.publicHikayeGoster !== false}
+                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicHikayeGoster: e.target.checked })} />
+            </label>
+            <label className="flex items-center justify-between gap-4">
+              <div>
                 <div className="text-sm font-medium text-[color:var(--app-text)]">Proses bilgisini göster</div>
                 <div className="mt-0.5 text-xs text-slate-500">Müşteri QR/link sayfasında üretim prosesleri görünsün.</div>
               </div>
@@ -1031,13 +1042,15 @@ const SettingsPage = () => {
       list: (
         <div className="mt-4 space-y-3">
           {[
+            `Hikaye görünürlüğü: ${genelAyarlar.publicHikayeGoster !== false ? 'Açık' : 'Kapalı'}`,
             `Proses görünürlüğü: ${genelAyarlar.publicProsesGoster ? 'Açık' : 'Kapalı'}`,
-            `Fiyat görünürlüğü: ${genelAyarlar.publicFiyatGoster ? 'Açık' : 'Kapalı'}`
+            `Fiyat görünürlüğü: ${genelAyarlar.publicFiyatGoster ? 'Açık' : 'Kapalı'}`,
+            `Kâr yüzdesi: %${genelAyarlar.karYuzdesi ?? 0}`
           ].map((item, i) => (
             <div key={i} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">{item}</div>
           ))}
         </div>
-      )
+      ),
     },
     system: {
       title: 'Operasyon merkezi',
@@ -1071,35 +1084,7 @@ const SettingsPage = () => {
   })[activeTab];
 
   return (
-    <div className="app-page">
-      <div className="app-container space-y-6">
-        <AppNavbar
-          title="Ayarlar"
-          action={(
-            <button
-              type="button"
-              onClick={() => setDrawerOpen(true)}
-              className="app-nav-icon-button"
-aria-label="Ayar bölümlerini aç"
-               title="Ayar bölümlerini aç"
-            >
-              <MenuIcon />
-            </button>
-          )}
-          onLogout={handleLogout}
-        />
-
-        {activeTab !== 'labels' ? (
-          <section className="app-hero app-page-hero app-reveal-up">
-            <div className="app-page-hero-grid">
-              <div>
-                <div className="app-chip">{tabs.find((tab) => tab.id === activeTab)?.label}</div>
-                <h1 className="mt-4 text-3xl font-semibold text-[color:var(--app-text)]">{current.title}</h1>
-              </div>
-              <div className="app-page-hero-actions" />
-            </div>
-          </section>
-        ) : null}
+    <div>
 
         {current.fullWidth ? (
           <section className="app-reveal-up app-reveal-delay-1">
@@ -1116,14 +1101,13 @@ aria-label="Ayar bölümlerini aç"
 
               <div>
                 <h3 className="text-lg font-semibold text-slate-900">
-                  {activeTab === 'excel' ? 'Kayıtlar ve son senkronlar' : activeTab === 'email' ? 'Bağlantı özeti' : 'Mevcut tanımlar'}
+                  {activeTab === 'excel' ? 'Son senkronlar' : activeTab === 'email' ? 'Bağlantı özeti' : 'Mevcut tanımlar'}
                 </h3>
                 {current.list}
               </div>
             </div>
           </section>
         )}
-      </div>
 
       {drawerVisible ? (
         <div
