@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../theme/ThemeProvider';
 import { useGenelAyarlar } from '../theme/ThemeProvider';
-import { getSession } from '../utils/auth';
+import { getSession, authHeaders } from '../utils/auth';
 import QrCameraModal from './QrCameraModal';
 import { isMobileCameraDevice } from '../utils/qr';
 import { Home, Search, ClipboardList, Tag, Layers, BarChart2, Settings, LogOut, X, QrCode, Menu } from './icons.jsx';
@@ -81,7 +81,7 @@ const AppNavbar = ({ title, action, onLogout, searchOpen, setSearchOpen }) => {
     try {
       setSearchLoading(true);
       setSearchMessage('');
-      const response = await fetch(`/api/admin/mamul-lookup?code=${encodeURIComponent(lookupCode)}`);
+      const response = await fetch(`/api/admin/mamul-lookup?code=${encodeURIComponent(lookupCode)}`, { headers: authHeaders() });
       const result = await response.json();
 
       if (!response.ok || !result.success) {
@@ -259,12 +259,12 @@ const AppNavbar = ({ title, action, onLogout, searchOpen, setSearchOpen }) => {
                         const kar     = Number(genelAyarlar.karYuzdesi || 0);
                         const fiyat   = kar > 0 && maliyet > 0 ? maliyet * (1 + kar / 100) : satis;
                         return fiyat.toFixed(2);
-                      })()} TRY
+                      })()} {searchResult.para_birimi || 'TRY'}
                     </div>
                   </div>
                   <div className="app-mobile-search-price-card">
                     <div className="app-mobile-search-summary-label">1 kg maliyet</div>
-                    <div className="app-mobile-search-price-value">{Number(searchResult.bir_kg_maliyet || 0).toFixed(2)} TRY</div>
+                    <div className="app-mobile-search-price-value">{Number(searchResult.bir_kg_maliyet || 0).toFixed(2)} {searchResult.para_birimi || 'TRY'}</div>
                   </div>
                 </div>
               ) : null}
