@@ -712,7 +712,10 @@ function createOrderEmailTransport(settings) {
       user,
       pass
     },
-    requireTLS: !secure && port === 587
+    requireTLS: !secure && port === 587,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000
   });
 }
 
@@ -2686,18 +2689,18 @@ app.post('/api/orders/:id/complete', requireAuth(['admin']), async (req, res, ne
     const approvalRecipients = parseEmailList(settings.approvalEmails);
     let emailStatus = { skipped: true, message: 'Sipariş onay e-posta adresi tanımlı değil' };
 
-    if (approvalRecipients.length && settings.smtpHost && (settings.smtpUser || settings.senderEmail) && settings.smtpPassword) {
-      try {
-        const { order: freshOrder, items } = await loadOrderForEmail(siparisId);
-        const content = buildApprovalEmailContent(freshOrder, items, settings.approvalShowPrices !== false);
-        const result = await sendSmtpMail({ settings, recipients: approvalRecipients, subject: content.subject, html: content.html, text: content.text });
-        emailStatus = { skipped: false, message: 'Onay e-postası gönderildi', ...result };
-      } catch (emailErr) {
-        emailStatus = { skipped: false, error: emailErr.message || 'E-posta gonderilemedi' };
-      }
-    }
-
     res.json({ success: true, data: { siparisId: Number(siparisId), emailStatus } });
+
+    if (approvalRecipients.length && settings.smtpHost && (settings.smtpUser || settings.senderEmail) && settings.smtpPassword) {
+      loadOrderForEmail(siparisId)
+        .then(({ order: freshOrder, items }) => {
+          const content = buildApprovalEmailContent(freshOrder, items, settings.approvalShowPrices !== false);
+          return sendSmtpMail({ settings, recipients: approvalRecipients, subject: content.subject, html: content.html, text: content.text });
+        })
+        .catch((emailErr) => {
+          console.error('Onay email gonderme hatasi:', emailErr?.message || emailErr);
+        });
+    }
   } catch (err) {
     next(err);
   }
