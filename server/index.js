@@ -2645,32 +2645,19 @@ app.post('/api/orders', requireAuth(['admin', 'staff']), (req, res, next) => {
                         return next(commitErr);
                       }
 
-                      sendOrderEmailNotification(siparisId)
-                        .then((emailStatus) => {
-                          res.status(201).json({
-                            success: true,
-                            data: {
-                              siparisId,
-                              toplamTutar,
-                              kalemSayisi: enrichedItems.length,
-                              emailStatus
-                            }
-                          });
-                        })
-                        .catch((emailErr) => {
-                          res.status(201).json({
-                            success: true,
-                            data: {
-                              siparisId,
-                              toplamTutar,
-                              kalemSayisi: enrichedItems.length,
-                              emailStatus: {
-                                skipped: false,
-                                error: emailErr.message || 'E-posta gönderilemedi'
-                              }
-                            }
-                          });
-                        });
+                      res.status(201).json({
+                        success: true,
+                        data: {
+                          siparisId,
+                          toplamTutar,
+                          kalemSayisi: enrichedItems.length,
+                          emailStatus: { skipped: true, message: 'E-posta arka planda gönderiliyor' }
+                        }
+                      });
+
+                      sendOrderEmailNotification(siparisId).catch((emailErr) => {
+                        console.error('Siparis email gonderme hatasi:', emailErr?.message || emailErr);
+                      });
                     });
                   }
                 }
