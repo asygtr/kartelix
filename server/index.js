@@ -1832,7 +1832,7 @@ app.get('/api/admin/mamuller', requireAuth(['admin']), (req, res, next) => {
   });
 });
 
-app.get('/api/admin/mamuller/:id', requireAuth(['admin']), (req, res, next) => {
+app.get('/api/admin/mamuller/:id', requireAuth(['admin', 'mamul']), (req, res, next) => {
   const mamulId = req.params.id;
 
   loadMamulDetailByClause(`mk.id = ?`, [mamulId], (err, detail) => {
