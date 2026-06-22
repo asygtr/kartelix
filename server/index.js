@@ -1118,7 +1118,9 @@ const excelOwnedMutationGuard = (req, res, next) => {
   ];
 
   const isExcelOwned = excelOwnedPaths.some((routePath) => req.path === routePath || req.path.startsWith(`${routePath}/`));
-  const isAllowedOperation = req.path === '/api/admin/excel-sync/run' || req.path === '/api/admin/excel-settings/poll';
+  const isAllowedOperation = req.path === '/api/admin/excel-sync/run' || req.path === '/api/admin/excel-settings/poll'
+    || /^\/api\/admin\/mamuller\/\d+(\/gorsel|\/showcase|\/duplicate)?$/.test(req.path)
+    || req.path === '/api/admin/mamuller-lookup';
 
   if (isExcelOwned && !isAllowedOperation) {
     return res.status(403).json({
