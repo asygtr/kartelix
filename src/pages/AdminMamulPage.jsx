@@ -12,6 +12,8 @@ const emptyYarn = { iplik_tanim_id: '', iplik_adi: '', oran_yuzde: '', birim_fiy
 const emptyProcess = { proses_tanim_id: '', proses_adi: '', proses_tipi: '', birim_maliyet: '', renk_bazli: false, aciklama: '' };
 const normalizeSearchValue = (value) => String(value || '').trim().toLowerCase();
 
+const CURRENCIES = ['TRY', 'USD', 'EUR', 'GBP'];
+
 const createEmptyForm = () => ({
   mamulAdi: '',
   mamulTuruId: '',
@@ -32,6 +34,7 @@ const createEmptyForm = () => ({
   gorselUrl: '',
   vurguEtiketi: '',
   birKgSatisFiyati: '',
+  paraBirimi: 'TRY',
   aktif: true,
   iplikler: [{ ...emptyYarn }],
   prosesler: [{ ...emptyProcess }]
@@ -170,6 +173,20 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
   const totalCost = (yarnCost + processCost).toFixed(2);
   const hasCostInput = form.iplikler.some((item) => Number(item.oran_yuzde || 0) > 0 || Number(item.birim_fiyat || 0) > 0)
     || form.prosesler.some((item) => Number(item.birim_maliyet || 0) > 0);
+
+  const karYuzdesi = useMemo(() => {
+    const maliyet = Number(totalCost);
+    const satis = Number(form.birKgSatisFiyati || 0);
+    if (!maliyet || !satis) return null;
+    return (((satis - maliyet) / maliyet) * 100).toFixed(1);
+  }, [totalCost, form.birKgSatisFiyati]);
+
+  const applyKarYuzdesi = (yuzde) => {
+    const maliyet = Number(totalCost);
+    if (!maliyet) return;
+    const satis = (maliyet * (1 + Number(yuzde) / 100)).toFixed(2);
+    setForm((prev) => ({ ...prev, birKgSatisFiyati: satis }));
+  };
 
   const updateArrayItem = (field, index, key, value) => {
     setForm((prev) => ({
@@ -465,18 +482,40 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
               <div className="mt-5 grid gap-4 md:grid-cols-3">
                 <div className="app-stat">
                   <div className="app-stat-label">İplik maliyeti</div>
-                  <div className="app-stat-value">{yarnCost.toFixed(2)}</div>
+                  <div className="app-stat-value">{yarnCost.toFixed(2)} {form.paraBirimi}</div>
                 </div>
                 <div className="app-stat">
                   <div className="app-stat-label">Proses maliyeti</div>
-                  <div className="app-stat-value">{processCost.toFixed(2)}</div>
+                  <div className="app-stat-value">{processCost.toFixed(2)} {form.paraBirimi}</div>
                 </div>
                 <div className="app-stat" style={{ background: 'linear-gradient(135deg, var(--app-surface-strong), var(--app-primary-strong))', color: '#fff' }}>
                   <div className="app-stat-label" style={{ color: 'rgba(255,255,255,0.65)' }}>1 kg maliyet</div>
-                  <div className="app-stat-value" style={{ color: '#fff' }}>{hasCostInput ? totalCost : '-'}</div>
+                  <div className="app-stat-value" style={{ color: '#fff' }}>{hasCostInput ? `${totalCost} ${form.paraBirimi}` : '-'}</div>
                 </div>
-                <input className="app-input md:col-span-2" placeholder="1 kg satış fiyatı" value={form.birKgSatisFiyati} onChange={(e) => setForm((prev) => ({ ...prev, birKgSatisFiyati: e.target.value }))} />
-                <label className="app-soft-panel flex items-center gap-3 px-4 py-3 text-sm">
+
+                <select className="app-select" value={form.paraBirimi} onChange={(e) => setForm((prev) => ({ ...prev, paraBirimi: e.target.value }))}>
+                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+
+                <div className="md:col-span-2 flex gap-2 items-center">
+                  <input className="app-input flex-1" placeholder="1 kg satış fiyatı" value={form.birKgSatisFiyati} onChange={(e) => setForm((prev) => ({ ...prev, birKgSatisFiyati: e.target.value }))} />
+                  {karYuzdesi !== null && (
+                    <span className={`text-sm font-semibold px-2 py-1 rounded whitespace-nowrap ${Number(karYuzdesi) >= 0 ? 'text-[color:var(--app-success)]' : 'text-red-500'}`}>
+                      %{karYuzdesi} kâr
+                    </span>
+                  )}
+                </div>
+
+                <div className="md:col-span-3 flex flex-wrap gap-2">
+                  <span className="text-xs text-[color:var(--app-text-muted)] self-center mr-1">Hızlı kâr:</span>
+                  {[10, 15, 20, 25, 30, 40, 50].map((p) => (
+                    <button key={p} type="button" onClick={() => applyKarYuzdesi(p)} className="app-btn-secondary" style={{ fontSize: '0.72rem', padding: '0.2rem 0.6rem' }}>
+                      %{p}
+                    </button>
+                  ))}
+                </div>
+
+                <label className="app-soft-panel flex items-center gap-3 px-4 py-3 text-sm md:col-span-3">
                   <input type="checkbox" checked={form.aktif} onChange={(e) => setForm((prev) => ({ ...prev, aktif: e.target.checked }))} />
                   Public tarafta aktif göster
                 </label>
@@ -512,6 +551,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                       mamulTuruId: selectedMamulDetail.mamul_turu_id,
                       renkId: selectedMamulDetail.renk_id || '',
                       birKgSatisFiyati: selectedMamulDetail.bir_kg_satis_fiyati || '',
+                      paraBirimi: selectedMamulDetail.para_birimi || 'TRY',
                       gorselUrl: selectedMamulDetail.gorsel_url || '',
                       tanitimBasligi: selectedMamulDetail.tanitim_basligi || '',
                       tanitimHikayesi: selectedMamulDetail.tanitim_hikayesi || '',
@@ -603,8 +643,8 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                      <div className="app-data-row"><div className="app-data-key">Koleksiyon</div><div className="app-data-value">{selectedMamulDetail.koleksiyon_adi || '-'}</div></div>
                     <div className="app-data-row"><div className="app-data-key">Kompozisyon</div><div className="app-data-value">{selectedMamulDetail.kompozisyon_ozeti || '-'}</div></div>
                     <div className="app-data-row"><div className="app-data-key">Ölçü</div><div className="app-data-value">{selectedMamulDetail.en || '-'} EN / {selectedMamulDetail.gramaj || '-'} GR</div></div>
-                    <div className="app-data-row"><div className="app-data-key">1 kg maliyet</div><div className="app-data-value">{Number(selectedMamulDetail.bir_kg_maliyet || 0).toFixed(2)}</div></div>
-                    <div className="app-data-row"><div className="app-data-key">1 kg satış</div><div className="app-data-value">{Number(selectedMamulDetail.bir_kg_satis_fiyati || 0).toFixed(2)}</div></div>
+                    <div className="app-data-row"><div className="app-data-key">1 kg maliyet</div><div className="app-data-value">{Number(selectedMamulDetail.bir_kg_maliyet || 0).toFixed(2)} {selectedMamulDetail.para_birimi || 'TRY'}</div></div>
+                    <div className="app-data-row"><div className="app-data-key">1 kg satış</div><div className="app-data-value">{Number(selectedMamulDetail.bir_kg_satis_fiyati || 0).toFixed(2)} {selectedMamulDetail.para_birimi || 'TRY'}{Number(selectedMamulDetail.bir_kg_maliyet || 0) > 0 && Number(selectedMamulDetail.bir_kg_satis_fiyati || 0) > 0 ? <span className={`ml-2 text-xs font-semibold ${Number(selectedMamulDetail.bir_kg_satis_fiyati) >= Number(selectedMamulDetail.bir_kg_maliyet) ? 'text-[color:var(--app-success)]' : 'text-red-500'}`}>%{(((Number(selectedMamulDetail.bir_kg_satis_fiyati) - Number(selectedMamulDetail.bir_kg_maliyet)) / Number(selectedMamulDetail.bir_kg_maliyet)) * 100).toFixed(1)} kâr</span> : null}</div></div>
                     <div className="app-data-row"><div className="app-data-key">Durum</div><div className="app-data-value">{selectedMamulDetail.yayin_durumu || '-'}</div></div>
                     <div className="app-data-row"><div className="app-data-key">Excel dosyası</div><div className="app-data-value">{selectedMamulDetail.excel_kaynak_dosyasi || '-'}</div></div>
                     <div className="app-data-row"><div className="app-data-key">Excel satırı</div><div className="app-data-value">{selectedMamulDetail.excel_satir_no || '-'}</div></div>

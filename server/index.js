@@ -472,6 +472,7 @@ db.run(`CREATE TABLE IF NOT EXISTS ui_ayarlari (
     ensureColumnExists('mamul_kartlari', 'koleksiyon_adi', `TEXT`);
     ensureColumnExists('mamul_kartlari', 'yayin_durumu', `TEXT DEFAULT 'taslak'`);
     ensureColumnExists('mamul_kartlari', 'bakim_talimatlari', `TEXT`);
+    ensureColumnExists('mamul_kartlari', 'para_birimi', `TEXT DEFAULT 'TRY'`);
 
     ensureColumnExists('kullanicilar', 'password_length', 'INTEGER DEFAULT 4');
   });
@@ -1878,6 +1879,7 @@ app.post('/api/admin/mamuller', requireAuth(['admin']), (req, res, next) => {
     vurguEtiketi,
     bakimTalimatlari,
     birKgSatisFiyati,
+    paraBirimi = 'TRY',
     aktif = true,
     iplikler = [],
     prosesler = []
@@ -1906,8 +1908,8 @@ app.post('/api/admin/mamuller', requireAuth(['admin']), (req, res, next) => {
         `INSERT INTO mamul_kartlari (
           mamul_adi, mamul_turu_id, article_no, article_code, koleksiyon_adi, yayin_durumu, renk, renk_kodu,
           kompozisyon_ozeti, en, gramaj, aciklama, tanitim_basligi, tanitim_hikayesi,
-          materyal_notlari, gorsel_url, vurgu_etiketi, bakim_talimatlari, bir_kg_maliyet, bir_kg_satis_fiyati, qr_slug, aktif
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
+          materyal_notlari, gorsel_url, vurgu_etiketi, bakim_talimatlari, bir_kg_maliyet, bir_kg_satis_fiyati, para_birimi, qr_slug, aktif
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
         [
           String(mamulAdi).trim(),
           mamulTuruId,
@@ -1929,6 +1931,7 @@ app.post('/api/admin/mamuller', requireAuth(['admin']), (req, res, next) => {
           String(bakimTalimatlari || '').trim(),
           totalCost,
           Number(birKgSatisFiyati || 0),
+          String(paraBirimi || 'TRY').trim().toUpperCase(),
           qrSlug,
           aktif ? 1 : 0
         ],
@@ -2035,6 +2038,7 @@ app.put('/api/admin/mamuller/:id', requireAuth(['admin']), (req, res, next) => {
     vurguEtiketi,
     bakimTalimatlari,
     birKgSatisFiyati,
+    paraBirimi = 'TRY',
     aktif = true,
     iplikler = [],
     prosesler = []
@@ -2097,6 +2101,7 @@ const qrSlug = slugify(`${existing.article_code}-${mamulAdi}-${renk || ''}`);
               bakim_talimatlari = ?,
               bir_kg_maliyet = ?,
               bir_kg_satis_fiyati = ?,
+              para_birimi = ?,
               qr_slug = ?,
               aktif = ?,
               excel_formul_json = ?,
@@ -2122,6 +2127,7 @@ const qrSlug = slugify(`${existing.article_code}-${mamulAdi}-${renk || ''}`);
             String(bakimTalimatlari || '').trim(),
             totalCost,
             Number(birKgSatisFiyati || 0),
+            String(paraBirimi || 'TRY').trim().toUpperCase(),
             qrSlug,
             aktif ? 1 : 0,
             formulJson,
