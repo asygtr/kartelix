@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { authHeaders } from '../utils/auth';
 import { motion, useInView } from 'framer-motion';
 import {
   Chart as ChartJS,
@@ -71,7 +72,7 @@ const ReportsPage = () => {
   const [error, setError]     = useState('');
 
   useEffect(() => {
-    fetch('/api/admin/reports/overview')
+    fetch('/api/admin/reports/overview', { headers: authHeaders() })
       .then(r => r.json())
       .then(res => {
         if (!res.success) throw new Error(res.error || 'Hata');

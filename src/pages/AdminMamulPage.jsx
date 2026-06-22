@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { authHeaders } from '../utils/auth';
 import { AnimatePresence, motion } from 'framer-motion';
 import PageSearchBar from '../components/PageSearchBar';
 import { extractColorName, resolveColorHex } from '../utils/labelTemplate';
@@ -60,7 +61,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
     try {
       const fd = new FormData();
       fd.append('gorsel', file);
-      const res = await fetch(`/api/admin/mamuller/${selectedMamulDetail.id}/gorsel`, { method: 'POST', body: fd });
+      const res = await fetch(`/api/admin/mamuller/${selectedMamulDetail.id}/gorsel`, { method: 'POST', headers: authHeaders(), body: fd });
       const result = await res.json();
       if (!result.success) throw new Error(result.error || 'Yüklenemedi');
       setSelectedMamulDetail((prev) => ({ ...prev, gorsel_url: result.data.gorsel_url }));
@@ -76,7 +77,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
     if (!selectedMamulDetail?.id) return;
     setGorselUploading(true);
     try {
-      const res = await fetch(`/api/admin/mamuller/${selectedMamulDetail.id}/gorsel`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/mamuller/${selectedMamulDetail.id}/gorsel`, { method: 'DELETE', headers: authHeaders() });
       const result = await res.json();
       if (!result.success) throw new Error(result.error || 'Silinemedi');
       setSelectedMamulDetail((prev) => ({ ...prev, gorsel_url: null }));
@@ -92,11 +93,11 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
     setListLoading(true);
     try {
     const [typesResponse, colorsResponse, yarnsResponse, processesResponse, mamulResponse] = await Promise.all([
-      fetch('/api/admin/mamul-turleri'),
-      fetch('/api/admin/renkler'),
-      fetch('/api/admin/iplikler'),
-      fetch('/api/admin/prosesler'),
-      fetch('/api/admin/mamuller')
+      fetch('/api/admin/mamul-turleri', { headers: authHeaders() }),
+      fetch('/api/admin/renkler', { headers: authHeaders() }),
+      fetch('/api/admin/iplikler', { headers: authHeaders() }),
+      fetch('/api/admin/prosesler', { headers: authHeaders() }),
+      fetch('/api/admin/mamuller', { headers: authHeaders() })
     ]);
 
     const [typesResult, colorsResult, yarnsResult, processesResult, mamulResult] = await Promise.all([
@@ -138,7 +139,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
       }
 
       try {
-        const response = await fetch(`/api/admin/mamuller/next-article-no/${form.mamulTuruId}`);
+        const response = await fetch(`/api/admin/mamuller/next-article-no/${form.mamulTuruId}`, { headers: authHeaders() });
         const result = await response.json();
 
         if (result.success) {
@@ -214,7 +215,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
       const isEditing = Boolean(selectedMamulId);
       const response = await fetch(isEditing ? `/api/admin/mamuller/${selectedMamulId}` : '/api/admin/mamuller', {
         method: isEditing ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           ...form,
           renk: selectedColor?.ad || form.renk,
@@ -254,7 +255,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
   const showMamulDetail = async (mamulId) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/admin/mamuller/${mamulId}`);
+      const response = await fetch(`/api/admin/mamuller/${mamulId}`, { headers: authHeaders() });
       const result = await response.json();
 
       if (!response.ok || !result.success) {

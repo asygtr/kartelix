@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { getSession } from '../utils/auth';
+import { getSession, authHeaders } from '../utils/auth';
 import PageSearchBar from '../components/PageSearchBar';
 import { useToast } from '../components/Toast';
 import { Plus, Pencil, Trash2, X, CreditCard, Minus } from '../components/icons.jsx';
@@ -103,16 +103,16 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
   }, []);
 
   const [ordersLoading, setOrdersLoading] = useState(true);
-  const loadOrders    = async () => { setOrdersLoading(true); try { const r = await fetch('/api/orders'); const d = await r.json(); setOrders(d.success ? d.data : []); } finally { setOrdersLoading(false); } };
+  const loadOrders    = async () => { setOrdersLoading(true); try { const r = await fetch('/api/orders', { headers: authHeaders() }); const d = await r.json(); setOrders(d.success ? d.data : []); } finally { setOrdersLoading(false); } };
   const loadCompanies = async () => { const r = await fetch('/api/firmalar'); const d = await r.json(); setCompanies(d.success ? d.data : []); };
-  const loadColors    = async () => { const r = await fetch('/api/admin/renkler'); const d = await r.json(); setColorOptions(d.success ? d.data : []); };
+  const loadColors    = async () => { const r = await fetch('/api/admin/renkler', { headers: authHeaders() }); const d = await r.json(); setColorOptions(d.success ? d.data : []); };
 
   useEffect(() => { loadOrders(); loadCompanies(); loadColors(); }, []);
 
   const searchMamuller = async (term) => {
     const t = String(term || '').trim();
     if (t.length < 2) { setResults([]); return; }
-    try { setLoading(true); const r = await fetch(`/api/admin/mamuller?term=${encodeURIComponent(t)}`); const d = await r.json(); setResults(d.success ? d.data : []); }
+    try { setLoading(true); const r = await fetch(`/api/admin/mamuller?term=${encodeURIComponent(t)}`, { headers: authHeaders() }); const d = await r.json(); setResults(d.success ? d.data : []); }
     finally { setLoading(false); }
   };
 
@@ -161,7 +161,7 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
   const closePanel      = () => { setPanelMode(null); resetEditorState(); };
 
   const loadOrderDetail = async (orderId) => {
-    try { const r = await fetch(`/api/orders/${orderId}`); const d = await r.json(); if (!r.ok || !d.success) throw new Error(d.error || 'Detay alınamadı'); setSelectedOrderDetail(d.data); }
+    try { const r = await fetch(`/api/orders/${orderId}`, { headers: authHeaders() }); const d = await r.json(); if (!r.ok || !d.success) throw new Error(d.error || 'Detay alınamadı'); setSelectedOrderDetail(d.data); }
     catch (e) { showToast(e.message, 'error'); }
   };
 
@@ -189,7 +189,7 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
 
   const deleteOrder = async (orderId) => {
     if (!window.confirm(`Sipariş #${orderId} silinsin mi?`)) return;
-    try { setDeleting(true); const r = await fetch(`/api/orders/${orderId}`, { method: 'DELETE' }); const d = await r.json(); if (!r.ok || !d.success) throw new Error(d.error || 'Silinemedi'); if (selectedOrderDetail?.id === orderId) setSelectedOrderDetail(null); haptic.success(); showToast(`Sipariş silindi: #${orderId}`, 'success'); await loadOrders(); }
+    try { setDeleting(true); const r = await fetch(`/api/orders/${orderId}`, { method: 'DELETE', headers: authHeaders() }); const d = await r.json(); if (!r.ok || !d.success) throw new Error(d.error || 'Silinemedi'); if (selectedOrderDetail?.id === orderId) setSelectedOrderDetail(null); haptic.success(); showToast(`Sipariş silindi: #${orderId}`, 'success'); await loadOrders(); }
     catch (e) { showToast(e.message, 'error'); }
     finally { setDeleting(false); }
   };
@@ -200,7 +200,7 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
       setCompleting(true);
       const r = await fetch(`/api/orders/${orderId}/complete`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ onayEmail: form.onayEmail })
       });
       const d = await r.json();
@@ -224,7 +224,7 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
       }
       const r = await fetch(editingOrderId ? `/api/orders/${editingOrderId}` : '/api/orders', {
         method: editingOrderId ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ ...form, personelUsername: user?.username || mode, items: selectedItems.map(i => ({ mamulId: i.mamulId, miktarKg: Number(i.miktarKg || 0), birimFiyat: Number(i.birimFiyat || 0), renk: i.renk })), kartvizit: { imageDataUrl: form.kartvizitImageDataUrl, note: form.kartvizitNotu, ocrFirma: form.kartvizitOcrFirma, ocrKisi: form.kartvizitOcrKisi, ocrTelefon: form.kartvizitOcrTelefon, ocrEmail: form.kartvizitOcrEmail, ocrDurumu: form.kartvizitOcrDurumu } })
       });
       const d = await r.json();

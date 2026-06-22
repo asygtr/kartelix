@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useInView } from 'framer-motion';
 import { getSession } from '../utils/auth';
+import { authHeaders } from '../utils/auth';
 
 const EASE = [0.2, 0.8, 0.2, 1];
 
@@ -104,7 +105,7 @@ const AdminLandingPage = () => {
   const greeting = hour < 12 ? 'Günaydın' : hour < 18 ? 'İyi günler' : 'İyi akşamlar';
 
   useEffect(() => {
-    fetch('/api/admin/reports/overview')
+    fetch('/api/admin/reports/overview', { headers: authHeaders() })
       .then(r => r.json())
       .then(res => { if (res.success) setReport(res.data); })
       .catch(() => {});
