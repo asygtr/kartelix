@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { motion, useScroll, useTransform, useSpring, useInView } from 'framer-motion';
 import { resolveColorPalette, isDarkPalette } from '../utils/colorPalette';
+import { authHeaders } from '../utils/auth';
 
 const v = (val) => String(val || '').trim() || null;
 const EASE = [0.16, 1, 0.3, 1];
@@ -162,7 +163,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
 
   useEffect(() => {
     const mamulRequest = isInternal
-      ? fetch(`/api/admin/mamul-lookup?code=${encodeURIComponent(slug)}`).then(r => r.json())
+      ? fetch(`/api/admin/mamul-lookup?code=${encodeURIComponent(slug)}`, { headers: authHeaders() }).then(r => r.json())
       : fetch(`/api/public/mamuller/${slug}`).then(r => r.json());
 
     const ayarRequest = fetch('/api/genel-ayarlar').then(r => r.json()).catch(() => ({ success: false }));
