@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { authHeaders } from '../utils/auth';
+import { authHeaders, getSession } from '../utils/auth';
 import { AnimatePresence, motion } from 'framer-motion';
 import PageSearchBar from '../components/PageSearchBar';
 import { extractColorName, resolveColorHex } from '../utils/labelTemplate';
@@ -287,8 +287,11 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
     }
   };
 
+  const session = getSession();
+  const isAdmin = session?.yetki === 'admin';
+
   // eslint-disable-next-line no-unused-vars
-  const pageTitle = mode === 'mamul' ? 'Excel mamül kartları' : 'Mamül kartı';
+  const pageTitle = mode === 'mamul' ? 'Mamül kartları' : 'Mamül kartı';
   const resolveMamulMatch = (rawValue) => {
     const term = normalizeSearchValue(rawValue);
     if (!term) return null;
@@ -543,7 +546,8 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Mamül detayı</h2>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => {
+                  {isAdmin ? (
+                    <button type="button" onClick={() => {
                     setSelectedMamulId(selectedMamulDetail.id);
                     setForm({
                       ...createEmptyForm(),
@@ -574,6 +578,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                     });
                     setShowEditor(true);
                   }} className="app-btn-secondary">Düzenle</button>
+                  ) : null}
                   <button type="button" onClick={() => setSelectedMamulDetail(null)} className="app-btn-secondary">Listeye geri dön</button>
                 </div>
               </div>

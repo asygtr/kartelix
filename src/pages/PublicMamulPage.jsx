@@ -249,7 +249,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
       ? (((satis - maliyet) / maliyet) * 100).toFixed(1) : null;
     return (
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
-        style={{ fontFamily: 'Manrope, Inter, sans-serif', color: 'var(--app-text)', minHeight: '100%' }}>
+        style={{ fontFamily: 'Manrope, Inter, sans-serif', color: 'var(--app-text)', minHeight: '100%', overflowY: 'auto', paddingBottom: '3rem' }}>
         {/* Üst bar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
           <button type="button" onClick={() => navigate(-1)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.8rem', borderRadius: '999px', background: 'var(--app-surface)', border: '1px solid var(--app-border)', color: 'var(--app-text)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 700 }}>
@@ -288,8 +288,11 @@ const PublicMamulPage = ({ mode = 'public' }) => {
             <div style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: '1rem', padding: '1rem' }}>
               <div style={{ fontSize: '0.57rem', fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--app-text-muted)', marginBottom: '0.3rem' }}>{mamul.mamul_turu_adi}</div>
               <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--app-text)', lineHeight: 1.2 }}>{mamul.mamul_adi}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--app-text-muted)', marginTop: '0.3rem', fontWeight: 600 }}>{mamul.article_code}</div>
-              {mamul.koleksiyon_adi && <div style={{ marginTop: '0.5rem', display: 'inline-block', fontSize: '0.64rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: '999px', background: `${P.accent}18`, color: P.accent, border: `1px solid ${P.accent}30` }}>{mamul.koleksiyon_adi}</div>}
+              <div style={{ fontSize: '0.7rem', color: 'var(--app-text-muted)', marginTop: '0.3rem', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.54rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', marginRight: '0.3rem', opacity: 0.6 }}>ARTICLE NO</span>
+                {mamul.article_code}
+              </div>
+              {mamul.koleksiyon_adi && !String(mamul.koleksiyon_adi).startsWith('Excel') && <div style={{ marginTop: '0.5rem', display: 'inline-block', fontSize: '0.64rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: '999px', background: `${P.accent}18`, color: P.accent, border: `1px solid ${P.accent}30` }}>{mamul.koleksiyon_adi}</div>}
             </div>
 
             {/* Teknik */}
