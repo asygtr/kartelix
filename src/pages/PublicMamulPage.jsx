@@ -259,11 +259,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <a href={`/u/${mamul.qr_slug}`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.8rem', borderRadius: '999px', background: 'var(--app-surface)', border: '1px solid var(--app-border)', color: 'var(--app-text)', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              Müşteri görünümü
-            </a>
-            <a href={`/mamul/labels?mamulId=${mamul.id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.8rem', borderRadius: '999px', background: 'var(--app-primary)', border: 'none', color: '#fff', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/></svg>
-              Etiket bas
+              Müşteri nasıl görüyor?
             </a>
           </div>
         </div>
@@ -304,12 +300,11 @@ const PublicMamulPage = ({ mode = 'public' }) => {
                   { label: 'En', val: mamul.en ? `${mamul.en} cm` : null },
                   { label: 'Gramaj', val: mamul.gramaj ? `${mamul.gramaj} gr/m²` : null },
                   { label: 'Kompozisyon', val: mamul.kompozisyon_ozeti },
-                  { label: 'Durum', val: mamul.yayin_durumu },
                 ].filter(r => r.val).map(({ label, val }) => (
-                  <div key={label} style={{ padding: '0.5rem 0.6rem', borderRadius: '0.6rem', background: 'var(--app-soft)', border: '1px solid var(--app-border)' }}>
-                    <div style={{ fontSize: '0.54rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--app-text-muted)', marginBottom: '0.18rem' }}>{label}</div>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--app-text)' }}>{val}</div>
-                  </div>
+                  <div key={label} style={{ padding: '0.5rem 0.6rem', borderRadius: '0.6rem', background: 'var(--app-soft)', border: '1px solid var(--app-border)', gridColumn: 'span 2' }}>
+                <div style={{ fontSize: '0.54rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--app-text-muted)', marginBottom: '0.18rem' }}>{label}</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--app-text)' }}>{val}</div>
+                </div>
                 ))}
               </div>
             </div>
@@ -324,13 +319,15 @@ const PublicMamulPage = ({ mode = 'public' }) => {
                 <div style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--app-text)' }}>{maliyet.toFixed(2)}</div>
                 <div style={{ fontSize: '0.64rem', color: 'var(--app-text-muted)', marginTop: '0.12rem' }}>{pb}</div>
               </div>
-              <div style={{ background: `linear-gradient(135deg,${P.accent}18,${P.accentDeep}28)`, border: `1px solid ${P.accent}30`, borderRadius: '1rem', padding: '1rem', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ background: `linear-gradient(135deg,${P.accent}18,${P.accentDeep}28)`, border: `1px solid ${P.accent}30`, borderRadius: '1rem', padding: '1rem' }}>
                 <div style={{ fontSize: '0.54rem', fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: P.accent, opacity: 0.75, marginBottom: '0.4rem' }}>1 kg Satış</div>
                 <div style={{ fontSize: '1.35rem', fontWeight: 900, color: P.accent }}>{satis.toFixed(2)}</div>
-                <div style={{ fontSize: '0.64rem', color: P.accent, opacity: 0.7, marginTop: '0.12rem' }}>{pb}</div>
-                {kar !== null && (
-                  <div style={{ position: 'absolute', top: '0.6rem', right: '0.6rem', fontSize: '0.64rem', fontWeight: 800, padding: '0.15rem 0.45rem', borderRadius: '999px', background: Number(kar) >= 0 ? '#16a34a20' : '#dc262620', color: Number(kar) >= 0 ? '#16a34a' : '#dc2626', border: `1px solid ${Number(kar) >= 0 ? '#16a34a30' : '#dc262630'}` }}>%{kar}</div>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.12rem' }}>
+                  <div style={{ fontSize: '0.64rem', color: P.accent, opacity: 0.7 }}>{pb}</div>
+                  {kar !== null && (
+                    <div style={{ fontSize: '0.64rem', fontWeight: 800, padding: '0.15rem 0.45rem', borderRadius: '999px', background: Number(kar) >= 0 ? '#16a34a20' : '#dc262620', color: Number(kar) >= 0 ? '#16a34a' : '#dc2626', border: `1px solid ${Number(kar) >= 0 ? '#16a34a30' : '#dc262630'}` }}>%{kar}</div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -381,7 +378,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
             {/* Notlar */}
             {story && (
               <div style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: '1rem', padding: '1rem' }}>
-                <div style={{ fontSize: '0.57rem', fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--app-text-muted)', marginBottom: '0.6rem' }}>Notlar</div>
+                <div style={{ fontSize: '0.57rem', fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--app-text-muted)', marginBottom: '0.6rem' }}>Kumaş Hikayesi</div>
                 <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: 1.7, color: 'var(--app-text-muted)' }}>{story}</p>
               </div>
             )}
