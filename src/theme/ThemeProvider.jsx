@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { defaultPaletteId, palettes } from './palettes';
+import { authHeaders } from '../utils/auth';
 
 const ThemeContext = createContext({
   activePalette: defaultPaletteId,
@@ -95,7 +96,7 @@ export const GenelAyarlarProvider = ({ children }) => {
     try {
       const r = await fetch('/api/genel-ayarlar', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(next)
       });
       const d = await r.json();
