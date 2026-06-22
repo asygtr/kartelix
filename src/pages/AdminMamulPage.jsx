@@ -177,7 +177,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
   const karYuzdesi = useMemo(() => {
     const maliyet = Number(totalCost);
     const satis = Number(form.birKgSatisFiyati || 0);
-    if (!maliyet || !satis) return null;
+    if (!maliyet || !satis || maliyet === satis) return null;
     return (((satis - maliyet) / maliyet) * 100).toFixed(1);
   }, [totalCost, form.birKgSatisFiyati]);
 
@@ -644,7 +644,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                     <div className="app-data-row"><div className="app-data-key">Kompozisyon</div><div className="app-data-value">{selectedMamulDetail.kompozisyon_ozeti || '-'}</div></div>
                     <div className="app-data-row"><div className="app-data-key">Ölçü</div><div className="app-data-value">{selectedMamulDetail.en || '-'} EN / {selectedMamulDetail.gramaj || '-'} GR</div></div>
                     <div className="app-data-row"><div className="app-data-key">1 kg maliyet</div><div className="app-data-value">{Number(selectedMamulDetail.bir_kg_maliyet || 0).toFixed(2)} {selectedMamulDetail.para_birimi || 'TRY'}</div></div>
-                    <div className="app-data-row"><div className="app-data-key">1 kg satış</div><div className="app-data-value">{Number(selectedMamulDetail.bir_kg_satis_fiyati || 0).toFixed(2)} {selectedMamulDetail.para_birimi || 'TRY'}{Number(selectedMamulDetail.bir_kg_maliyet || 0) > 0 && Number(selectedMamulDetail.bir_kg_satis_fiyati || 0) > 0 ? <span className={`ml-2 text-xs font-semibold ${Number(selectedMamulDetail.bir_kg_satis_fiyati) >= Number(selectedMamulDetail.bir_kg_maliyet) ? 'text-[color:var(--app-success)]' : 'text-red-500'}`}>%{(((Number(selectedMamulDetail.bir_kg_satis_fiyati) - Number(selectedMamulDetail.bir_kg_maliyet)) / Number(selectedMamulDetail.bir_kg_maliyet)) * 100).toFixed(1)} kâr</span> : null}</div></div>
+                    <div className="app-data-row"><div className="app-data-key">1 kg satış</div><div className="app-data-value">{Number(selectedMamulDetail.bir_kg_satis_fiyati || 0).toFixed(2)} {selectedMamulDetail.para_birimi || 'TRY'}{Number(selectedMamulDetail.bir_kg_maliyet || 0) > 0 && Number(selectedMamulDetail.bir_kg_satis_fiyati || 0) > 0 && Number(selectedMamulDetail.bir_kg_satis_fiyati) !== Number(selectedMamulDetail.bir_kg_maliyet) ? <span className={`ml-2 text-xs font-semibold ${Number(selectedMamulDetail.bir_kg_satis_fiyati) >= Number(selectedMamulDetail.bir_kg_maliyet) ? 'text-[color:var(--app-success)]' : 'text-red-500'}`}>%{(((Number(selectedMamulDetail.bir_kg_satis_fiyati) - Number(selectedMamulDetail.bir_kg_maliyet)) / Number(selectedMamulDetail.bir_kg_maliyet)) * 100).toFixed(1)} kâr</span> : null}</div></div>
                     <div className="app-data-row"><div className="app-data-key">Durum</div><div className="app-data-value">{selectedMamulDetail.yayin_durumu || '-'}</div></div>
                     <div className="app-data-row"><div className="app-data-key">Excel dosyası</div><div className="app-data-value">{selectedMamulDetail.excel_kaynak_dosyasi || '-'}</div></div>
                     <div className="app-data-row"><div className="app-data-key">Excel satırı</div><div className="app-data-value">{selectedMamulDetail.excel_satir_no || '-'}</div></div>
