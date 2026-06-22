@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import LabelPreviewCard from './LabelPreviewCard';
+import { authHeaders } from '../utils/auth';
 import {
   defaultLabelTemplate,
   labelFieldCatalog,
@@ -9,24 +10,24 @@ import {
 
 const api = {
   getTemplates: () =>
-    fetch('/api/admin/label-templates').then(r => r.json()).catch(() => ({ success: false, data: [] })),
+    fetch('/api/admin/label-templates', { headers: authHeaders() }).then(r => r.json()).catch(() => ({ success: false, data: [] })),
   getActive: () =>
-    fetch('/api/admin/label-templates/active').then(r => r.json()).catch(() => ({ success: false })),
+    fetch('/api/admin/label-templates/active', { headers: authHeaders() }).then(r => r.json()).catch(() => ({ success: false })),
   getById: (id) =>
-    fetch(`/api/admin/label-templates/${id}`).then(r => r.json()).catch(() => ({ success: false })),
+    fetch(`/api/admin/label-templates/${id}`, { headers: authHeaders() }).then(r => r.json()).catch(() => ({ success: false })),
   save: (templateId, name, template, setActive) =>
     fetch('/api/admin/label-templates', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ templateId, name, template, setActive })
     }).then(r => r.json()).catch(() => null),
   delete: (templateId) =>
-    fetch(`/api/admin/label-templates/${templateId}`, { method: 'DELETE' }).then(r => r.json()).catch(() => null),
-  exportCsv: () => fetch('/api/admin/label-templates/export'),
+    fetch(`/api/admin/label-templates/${templateId}`, { method: 'DELETE', headers: authHeaders() }).then(r => r.json()).catch(() => null),
+  exportCsv: () => fetch('/api/admin/label-templates/export', { headers: authHeaders() }),
   importCsv: (text) =>
     fetch('/api/admin/label-templates/import', {
       method: 'POST',
-      headers: { 'Content-Type': 'text/csv' },
+      headers: { 'Content-Type': 'text/csv', ...authHeaders() },
       body: text
     }).then(r => r.json()).catch(() => null)
 };
