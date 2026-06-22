@@ -199,7 +199,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
   const prosesAcik   = isInternal || genelAyarlar?.publicProsesGoster === true;
   const hikayeAcik   = isInternal || genelAyarlar?.publicHikayeGoster !== false;
   const story        = hikayeAcik ? (v(mamul?.tanitim_hikayesi) || v(mamul?.aciklama) || v(mamul?.materyal_notlari)) : null;
-  const hasYarn      = mamul?.iplikler?.length > 0;
+  const hasYarn = mamul?.iplikler?.length > 0 && (isInternal || genelAyarlar?.publicHammaddeGoster !== false);
   const hasRelated   = mamul?.benzer_urunler?.length > 0;
   const hasProsesler = prosesAcik && mamul?.prosesler?.length > 0;
   const careItems    = useMemo(() => parseCare(mamul?.bakim_talimatlari), [mamul?.bakim_talimatlari]);

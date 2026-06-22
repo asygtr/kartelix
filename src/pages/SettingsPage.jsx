@@ -76,7 +76,7 @@ const SettingsPage = () => {
   const [brandingForm, setBrandingForm] = useState({ appLogo: '/nevres.png', appBackground: '/showroom-bg.png' });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { genelAyarlar: ctxGenelAyarlar, saveGenelAyarlar: ctxSaveGenelAyarlar, loadGenelAyarlar: ctxLoadGenelAyarlar } = useGenelAyarlar();
-  const [genelAyarlar, setGenelAyarlar] = useState({ publicProsesGoster: false, publicFiyatGoster: false, publicHikayeGoster: true, karYuzdesi: 0 });
+  const [genelAyarlar, setGenelAyarlar] = useState({ publicProsesGoster: false, publicFiyatGoster: false, publicHikayeGoster: true, publicHammaddeGoster: true, karYuzdesi: 0 });
   const [genelAyarlarStatus, setGenelAyarlarStatus] = useState('');
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
@@ -1043,6 +1043,14 @@ const SettingsPage = () => {
               </div>
               <input type="checkbox" checked={genelAyarlar.publicHikayeGoster !== false}
                 onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicHikayeGoster: e.target.checked })} />
+            </label>
+            <label className="flex items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-medium text-[color:var(--app-text)]">Hammadde bilgisini göster</div>
+                <div className="mt-0.5 text-xs text-slate-500">Müşteri QR/link sayfasında iplik reçetesi görünsün.</div>
+              </div>
+              <input type="checkbox" checked={genelAyarlar.publicHammaddeGoster !== false}
+                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicHammaddeGoster: e.target.checked })} />
             </label>
             <label className="flex items-center justify-between gap-4">
               <div>
