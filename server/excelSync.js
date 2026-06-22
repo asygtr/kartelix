@@ -315,17 +315,31 @@ const calculateProcessCost = async (db, mamulId) => {
   return Number(row?.total || 0);
 };
 
+const loadKarYuzdesi = async (db) => {
+  const row = await dbGet(db, `SELECT deger FROM ui_ayarlari WHERE anahtar = 'genel_ayarlar'`);
+  try {
+    const parsed = row?.deger ? JSON.parse(row.deger) : {};
+    return Number(parsed.karYuzdesi || 0);
+  } catch {
+    return 0;
+  }
+};
+
 const recalculateCosts = async (db, mamulIds) => {
+  const karYuzdesi = await loadKarYuzdesi(db);
   for (const mamulId of mamulIds) {
     const yarnCost = await calculateYarnCost(db, mamulId);
     const processCost = await calculateProcessCost(db, mamulId);
     const totalCost = Number((yarnCost + processCost).toFixed(2));
+    const satisFiyati = totalCost > 0
+      ? Number((totalCost * (1 + karYuzdesi / 100)).toFixed(2))
+      : 0;
     await dbRun(
       db,
       `UPDATE mamul_kartlari
-       SET bir_kg_maliyet = ?, updated_at = CURRENT_TIMESTAMP
+       SET bir_kg_maliyet = ?, bir_kg_satis_fiyati = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
-      [totalCost, mamulId]
+      [totalCost, satisFiyati, mamulId]
     );
   }
 };
@@ -750,6 +764,7 @@ const importUrgeWorkbook = async (db, configuredFile, workbook, sheetName) => {
   const typePrefix = getFileTypePrefix(fileName);
   const typeInfo = await upsertUrgeType(db, typePrefix, fileName);
   const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1');
+  const karYuzdesi = await loadKarYuzdesi(db);
   let imported = 0;
   let skipped = 0;
 
@@ -784,6 +799,7 @@ const importUrgeWorkbook = async (db, configuredFile, workbook, sheetName) => {
     const hamMaliyet = cellNumber(sheet, `AJ${rowNumber}`, 0);
     const prosesMaliyeti = cellNumber(sheet, `AN${rowNumber}`, 0);
     const mamulMaliyeti = cellNumber(sheet, `AM${rowNumber}`, 0) || (hamMaliyet + prosesMaliyeti);
+    const satisFiyati = mamulMaliyeti > 0 ? Number((mamulMaliyeti * (1 + karYuzdesi / 100)).toFixed(2)) : 0;
     const fasonOrgu = cellNumber(sheet, `AI${rowNumber}`, 0);
     const qrSlug = slugify(`${articleNo}-${product}-${color}`);
     const yarns = parseUrgeYarns(sheet, rowNumber);
@@ -870,7 +886,7 @@ const importUrgeWorkbook = async (db, configuredFile, workbook, sheetName) => {
           '',
           'Excel',
           mamulMaliyeti,
-          mamulMaliyeti,
+          satisFiyati,
           qrSlug,
           fileName,
           rowNumber,
@@ -911,7 +927,7 @@ const importUrgeWorkbook = async (db, configuredFile, workbook, sheetName) => {
           '',
           'Excel',
           mamulMaliyeti,
-          mamulMaliyeti,
+          satisFiyati,
           qrSlug,
           fileName,
           rowNumber,

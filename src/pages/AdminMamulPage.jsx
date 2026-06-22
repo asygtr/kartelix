@@ -646,8 +646,6 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                     <div className="app-data-row"><div className="app-data-key">1 kg maliyet</div><div className="app-data-value">{Number(selectedMamulDetail.bir_kg_maliyet || 0).toFixed(2)} {selectedMamulDetail.para_birimi || 'TRY'}</div></div>
                     <div className="app-data-row"><div className="app-data-key">1 kg satış</div><div className="app-data-value">{Number(selectedMamulDetail.bir_kg_satis_fiyati || 0).toFixed(2)} {selectedMamulDetail.para_birimi || 'TRY'}{Number(selectedMamulDetail.bir_kg_maliyet || 0) > 0 && Number(selectedMamulDetail.bir_kg_satis_fiyati || 0) > 0 && Number(selectedMamulDetail.bir_kg_satis_fiyati) !== Number(selectedMamulDetail.bir_kg_maliyet) ? <span className={`ml-2 text-xs font-semibold ${Number(selectedMamulDetail.bir_kg_satis_fiyati) >= Number(selectedMamulDetail.bir_kg_maliyet) ? 'text-[color:var(--app-success)]' : 'text-red-500'}`}>%{(((Number(selectedMamulDetail.bir_kg_satis_fiyati) - Number(selectedMamulDetail.bir_kg_maliyet)) / Number(selectedMamulDetail.bir_kg_maliyet)) * 100).toFixed(1)} kâr</span> : null}</div></div>
                     <div className="app-data-row"><div className="app-data-key">Durum</div><div className="app-data-value">{selectedMamulDetail.yayin_durumu || '-'}</div></div>
-                    <div className="app-data-row"><div className="app-data-key">Excel dosyası</div><div className="app-data-value">{selectedMamulDetail.excel_kaynak_dosyasi || '-'}</div></div>
-                    <div className="app-data-row"><div className="app-data-key">Excel satırı</div><div className="app-data-value">{selectedMamulDetail.excel_satir_no || '-'}</div></div>
                   </div>
 
                   <div className="app-soft-panel p-4">
@@ -666,7 +664,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                     <div className="mt-3 space-y-2">
                       {selectedMamulDetail.prosesler?.length ? selectedMamulDetail.prosesler.map((item) => (
                         <div key={item.id} className="text-sm text-[color:var(--app-text-muted)]">
-                          {item.proses_adi} / {item.proses_tipi || 'Tip tanımsız'} / {Number(item.birim_maliyet || 0).toFixed(2)}
+                          {item.proses_adi}{item.proses_tipi && item.proses_tipi !== 'Excel' ? ` / ${item.proses_tipi}` : ''} / {Number(item.birim_maliyet || 0).toFixed(2)}
                         </div>
                       )) : <div className="text-sm text-[color:var(--app-text-muted)]">-</div>}
                     </div>
