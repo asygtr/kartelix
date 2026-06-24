@@ -1,35 +1,11 @@
-require('dotenv').config();
-
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const crypto = require('crypto');
-const nodemailer = require('nodemailer');
-const multer = require('multer');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const helmet = require('helmet');
-const { startExcelSync, SOURCE_ORDER } = require('./excelSync');
-const createAuthRouter = require('./routes/auth');
-const { createSettingsRouter } = require('./routes/settings');
-const { createReferenceDataRouter } = require('./routes/referenceData');
-const { createMamullerRouter } = require('./routes/mamuller');
-const { createOrdersRouter } = require('./routes/orders');
-const { createLabelingRouter } = require('./routes/labeling');
-const { createCatalogRouter } = require('./routes/catalog');
-const { createAdminRouter } = require('./routes/admin');
-
-const DEFAULT_ALLOWED_ORIGIN = 'http://localhost:3000';
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-only-change-me';
-const BCRYPT_ROUNDS = 12;
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || DEFAULT_ALLOWED_ORIGIN;
 
 const app = express();
-app.disable('x-powered-by');
-app.use(helmet());
-app.use(cors({ origin: ALLOWED_ORIGIN, credentials: true }));
+app.use(cors());
 app.use(express.json());
 
 // Veritabanı bağlantısı
@@ -43,25 +19,6 @@ if (!fs.existsSync(databaseDir)) {
 }
 
 const db = new sqlite3.Database(databasePath);
-
-const excelInboxDir = process.env.EXCEL_INBOX_DIR || path.join(__dirname, '..', 'xls');
-const excelPollMs = Number(process.env.EXCEL_POLL_MS || 60_000);
-const excelPreviewLimit = Number(process.env.EXCEL_PREVIEW_LIMIT || 50);
-const excelSync = startExcelSync({
-  db,
-  directory: excelInboxDir,
-  defaultIntervalMs: excelPollMs,
-  previewLimit: excelPreviewLimit
-});
-
-app.use('/api', createAuthRouter({ db, bcrypt, jwt, jwtSecret: JWT_SECRET }));
-app.use('/api', createSettingsRouter({ db, jwt, jwtSecret: JWT_SECRET, nodemailer }));
-app.use('/api', createReferenceDataRouter({ db, jwt, jwtSecret: JWT_SECRET }));
-app.use('/api', createMamullerRouter({ db, jwt, jwtSecret: JWT_SECRET }));
-app.use('/api', createOrdersRouter({ db, jwt, jwtSecret: JWT_SECRET, nodemailer }));
-app.use('/api', createLabelingRouter({ db, jwt, jwtSecret: JWT_SECRET, excelSync }));
-app.use('/api', createCatalogRouter({ db, jwt, jwtSecret: JWT_SECRET }));
-app.use('/api', createAdminRouter({ db, jwt, jwtSecret: JWT_SECRET }));
 
 // Veritabanı tablolarını başlat
 const initDatabase = () => {
@@ -173,6 +130,16 @@ const initDatabase = () => {
       username TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       yetki TEXT DEFAULT 'admin',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS mamuller (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      kod TEXT UNIQUE NOT NULL,
+      ad TEXT NOT NULL,
+      tip TEXT,
+      stok INTEGER DEFAULT 0,
+      kartela_hazir BOOLEAN DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
@@ -297,42 +264,11 @@ const initDatabase = () => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
-db.run(`CREATE TABLE IF NOT EXISTS ui_ayarlari (
-       id INTEGER PRIMARY KEY AUTOINCREMENT,
-       anahtar TEXT UNIQUE NOT NULL,
-       deger TEXT,
-       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-     )`);
-
-    db.run(`CREATE TABLE IF NOT EXISTS label_templates (
-       id INTEGER PRIMARY KEY AUTOINCREMENT,
-       template_id TEXT UNIQUE NOT NULL,
-       name TEXT NOT NULL,
-       template_json TEXT NOT NULL,
-       is_active INTEGER DEFAULT 0,
-       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-     )`);
-
-    db.run(`CREATE TABLE IF NOT EXISTS excel_kaynaklari (
+    db.run(`CREATE TABLE IF NOT EXISTS ui_ayarlari (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      kaynak_tipi TEXT NOT NULL UNIQUE,
-      dosya_adi TEXT NOT NULL,
-      uzanti TEXT NOT NULL DEFAULT '.xlsx',
-      sheet_adi TEXT,
-      aktif BOOLEAN DEFAULT 1,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      anahtar TEXT UNIQUE NOT NULL,
+      deger TEXT,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
-
-    db.run(`CREATE TABLE IF NOT EXISTS excel_snapshots (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      file_path TEXT NOT NULL,
-      file_mtime_ms INTEGER NOT NULL,
-      file_size INTEGER DEFAULT 0,
-      summary_json TEXT,
-      preview_json TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
   // Varsayılan etiket ayarlarını ekle
@@ -369,33 +305,26 @@ db.run(`CREATE TABLE IF NOT EXISTS ui_ayarlari (
     db.run(`DELETE FROM kullanicilar WHERE username NOT IN ('yonetici', 'satici', 'mamul')`);
     db.run(`DELETE FROM kullanicilar WHERE yetki NOT IN ('admin', 'staff', 'mamul')`);
 
-    // Varsayılan kullanıcıları sadece yoksa oluştur (şifrelerini ASLA sıfırlama)
-    const defaultUsers = [
-      { username: 'yonetici', password: '1234', yetki: 'admin' },
-      { username: 'satici',   password: '1234', yetki: 'staff' },
-      { username: 'mamul',    password: '1234', yetki: 'mamul' }
-    ];
+    db.run(
+      `INSERT INTO kullanicilar (username, password, yetki)
+       VALUES (?, ?, ?)
+       ON CONFLICT(username) DO UPDATE SET password = excluded.password, yetki = excluded.yetki`,
+      ['yonetici', '1234', 'admin']
+    );
 
-    defaultUsers.forEach(({ username, password, yetki }) => {
-      db.get(`SELECT id, password FROM kullanicilar WHERE username = ?`, [username], async (err, row) => {
-        if (err) return;
-        if (!row) {
-          // Kullanici yok — olustur
-          const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-          db.run(
-            `INSERT OR IGNORE INTO kullanicilar (username, password, yetki, password_length) VALUES (?, ?, ?, ?)`,
-            [username, hash, yetki, password.length]
-          );
-        } else if (!row.password.startsWith('$2')) {
-          // Sifre duz metin — hash'le
-          const hash = await bcrypt.hash(row.password, BCRYPT_ROUNDS);
-          db.run(
-            `UPDATE kullanicilar SET password = ?, password_length = ? WHERE username = ?`,
-            [hash, row.password.length, username]
-          );
-        }
-      });
-    });
+    db.run(
+      `INSERT INTO kullanicilar (username, password, yetki)
+       VALUES (?, ?, ?)
+       ON CONFLICT(username) DO UPDATE SET password = excluded.password, yetki = excluded.yetki`,
+      ['satici', '1234', 'staff']
+    );
+
+    db.run(
+      `INSERT INTO kullanicilar (username, password, yetki)
+       VALUES (?, ?, ?)
+       ON CONFLICT(username) DO UPDATE SET password = excluded.password, yetki = excluded.yetki`,
+      ['mamul', '1234', 'mamul']
+    );
 
   const defaultMamulTurleri = [
     { ad: 'Suprem', kod_prefix: '10', aciklama: 'Örnek varsayılan mamul türü' },
@@ -469,9 +398,432 @@ db.run(`CREATE TABLE IF NOT EXISTS ui_ayarlari (
     db.run(
       `INSERT OR IGNORE INTO ui_ayarlari (anahtar, deger) VALUES (?, ?)`,
       ['app_background', '/showroom-bg.png']
-);
+    );
 
-    // Mock/demo veriler kaldırıldı - sadece Excel'den gelen veriler kullanılacak
+    const demoMamuller = [
+        {
+          turAdi: '2 İplik',
+          mamul_adi: 'Deneme 2 Iplik',
+          article_no: '54321',
+          article_code: '20-54321',
+          koleksiyon_adi: 'Urban Core',
+          yayin_durumu: 'yayinda',
+          renk: 'Antrasit',
+          renk_kodu: 'ANT-01',
+          kompozisyon_ozeti: '%33 Pamuk / %7 Polyester / %60 Viskon',
+          en: '180',
+          gramaj: '240',
+          aciklama: 'Fuar ve showroom sunumu icin yumusak tuseli 2 iplik demo mamul.',
+          bir_kg_maliyet: 8.92,
+          bir_kg_satis_fiyati: 12.75,
+          qr_slug: '20-54321-deneme-2-iplik-antrasit',
+          aktif: 1,
+          tanitim_basligi: 'Yumusak tutumlu iki iplik demo serisi',
+          tanitim_hikayesi: 'Urban Core koleksiyonu icin gelistirilen bu yuzey, yumusak tusesi ve dengeli gramaji ile gunluk premium giyim gruplarina hitap eder.',
+          materyal_notlari: 'Ic yuzeyde konfor, dis yuzeyde tok bir durus hedeflenmistir.',
+          gorsel_url: '',
+          vurgu_etiketi: 'Yeni Sezon',
+          iplikler: [
+            { iplik_adi: 'Pamuk 30/1', oran_yuzde: 33, birim_fiyat: 5.5 },
+            { iplik_adi: 'Polyester', oran_yuzde: 7, birim_fiyat: 4.25 },
+            { iplik_adi: 'Viskon', oran_yuzde: 60, birim_fiyat: 6.1 }
+          ],
+          prosesler: [
+            { proses_adi: 'Boyama', proses_tipi: 'Renk', renk_bazli: 1, birim_maliyet: 1.4, aciklama: 'Antrasit boya prosesi' },
+            { proses_adi: 'Sanfor', proses_tipi: 'Finisaj', renk_bazli: 0, birim_maliyet: 0.8, aciklama: 'Cekme kontrolu' }
+          ]
+        },
+        {
+          turAdi: 'Suprem',
+          mamul_adi: 'Soft Suprem Indigo',
+          article_no: '10124',
+          article_code: '10-10124',
+          koleksiyon_adi: 'Daily Ease',
+          yayin_durumu: 'yayinda',
+          renk: 'Indigo',
+          renk_kodu: 'IND-07',
+          kompozisyon_ozeti: '%95 Organik Pamuk / %5 Elastan',
+          en: '175',
+          gramaj: '190',
+          aciklama: 'Gunluk giyim icin esnek ve nefes alan suprem demo mamul.',
+          bir_kg_maliyet: 9.35,
+          bir_kg_satis_fiyati: 14.4,
+          qr_slug: '10-10124-soft-suprem-indigo',
+          aktif: 1,
+          tanitim_basligi: 'Esnek ve rafine suprem yapisi',
+          tanitim_hikayesi: 'Daily Ease kapsulu icin hazirlanan bu mamul, elastan katkisi ile hareket ozgurlugu saglarken organik pamuk yapisiyla dogal bir yuzey verir.',
+          materyal_notlari: 'Hafif gramajli, yakin ten temasinda konfor odakli.',
+          gorsel_url: '',
+          vurgu_etiketi: 'Core',
+          iplikler: [
+            { iplik_adi: 'Organik Pamuk 24/1', oran_yuzde: 95, birim_fiyat: 6.85 },
+            { iplik_adi: 'Elastan', oran_yuzde: 5, birim_fiyat: 8.2 }
+          ],
+          prosesler: [
+            { proses_adi: 'Boyama', proses_tipi: 'Renk', renk_bazli: 1, birim_maliyet: 1.4, aciklama: 'Indigo renk uygulamasi' },
+            { proses_adi: 'Soft Touch', proses_tipi: 'Apre', renk_bazli: 0, birim_maliyet: 0.55, aciklama: 'Yumusak tutum bitisi' }
+          ]
+        },
+        {
+          turAdi: '3 İplik',
+          mamul_adi: 'Compact 3 Iplik Tas',
+          article_no: '30018',
+          article_code: '30-30018',
+          koleksiyon_adi: 'Studio Layer',
+          yayin_durumu: 'taslak',
+          renk: 'Tas',
+          renk_kodu: 'TAS-12',
+          kompozisyon_ozeti: '%70 Pamuk / %30 Polyester',
+          en: '185',
+          gramaj: '310',
+          aciklama: 'Tok duruslu, ust giyim ve dis katman urunleri icin 3 iplik demo mamul.',
+          bir_kg_maliyet: 10.65,
+          bir_kg_satis_fiyati: 16.9,
+          qr_slug: '30-30018-compact-3-iplik-tas',
+          aktif: 1,
+          tanitim_basligi: 'Tok duruslu compact 3 iplik',
+          tanitim_hikayesi: 'Studio Layer grubu icin gelistirilen bu yapida compact ve enzim yikama kombinasyonu ile daha rafine bir yuzey elde edilir.',
+          materyal_notlari: 'Daha tok, daha net siluet isteyen ust grup icin konumlanir.',
+          gorsel_url: '',
+          vurgu_etiketi: 'Preview',
+          iplikler: [
+            { iplik_adi: 'Pamuk 30/1', oran_yuzde: 70, birim_fiyat: 5.5 },
+            { iplik_adi: 'Polyester', oran_yuzde: 30, birim_fiyat: 4.25 }
+          ],
+          prosesler: [
+            { proses_adi: 'Compact', proses_tipi: 'Finisaj', renk_bazli: 0, birim_maliyet: 0.65, aciklama: 'Yuzey toparlama' },
+            { proses_adi: 'Enzim Yikama', proses_tipi: 'Yikama', renk_bazli: 0, birim_maliyet: 1.1, aciklama: 'Tuse yumusatma' }
+          ]
+        }
+      ];
+
+    const demoFirmalar = [
+      { ad: 'Nova Knit Studio', telefon: '+90 212 555 10 10', adres: 'Merter / Istanbul' },
+      { ad: 'Luma Retail Group', telefon: '+90 216 555 22 22', adres: 'Kadikoy / Istanbul' },
+      { ad: 'Northline Apparel', telefon: '+90 232 555 33 33', adres: 'Bornova / Izmir' }
+    ];
+
+    const demoSiparisler = [
+      {
+        musteriAdi: 'Selin Akar',
+        firmaAdi: 'Nova Knit Studio',
+        ilgiliKisi: 'Selin Akar',
+        telefon: '+90 532 111 22 33',
+        email: 'selin@novaknit.example',
+        fuarAdi: 'Premiere Vision',
+        aciklama: 'Demo siparis: ikili sunum toplantisi sonrasi numune teyidi beklenecek.',
+        durum: 'kaydedildi',
+        personelUsername: 'satici',
+        paraBirimi: 'TRY',
+        items: [
+          { articleCode: '20-54321', miktarKg: 85 },
+          { articleCode: '10-10124', miktarKg: 42 }
+        ]
+      },
+      {
+        musteriAdi: 'Murat Yalin',
+        firmaAdi: 'Luma Retail Group',
+        ilgiliKisi: 'Murat Yalin',
+        telefon: '+90 533 444 55 66',
+        email: 'murat@lumaretail.example',
+        fuarAdi: 'Showroom ziyareti',
+        aciklama: 'Demo siparis: tas ve compact grup icin ikinci gorusme planlandi.',
+        durum: 'isleme_alindi',
+        personelUsername: 'yonetici',
+        paraBirimi: 'TRY',
+        items: [
+          { articleCode: '30-30018', miktarKg: 120 },
+          { articleCode: '20-54321', miktarKg: 30 }
+        ]
+      },
+      {
+        musteriAdi: 'Deniz Koc',
+        firmaAdi: 'Northline Apparel',
+        ilgiliKisi: 'Deniz Koc',
+        telefon: '+90 542 777 88 99',
+        email: 'deniz@northline.example',
+        fuarAdi: 'WhatsApp talebi',
+        aciklama: 'Demo siparis: renk kartela teyidi sonrasi kapatilacak deneme siparisi.',
+        durum: 'kapatildi',
+        personelUsername: 'satici',
+        paraBirimi: 'TRY',
+        items: [
+          { articleCode: '10-10124', miktarKg: 18 }
+        ]
+      }
+    ];
+
+    let demoSiparisSeedRunning = false;
+
+    const trySeedDemoSiparisler = () => {
+      if (demoSiparisSeedRunning) {
+        return;
+      }
+
+      demoSiparisSeedRunning = true;
+
+      const firmaAdlari = demoFirmalar.map((firma) => firma.ad);
+      const articleCodes = [...new Set(demoSiparisler.flatMap((siparis) => siparis.items.map((item) => item.articleCode)))];
+      const firmaPlaceholders = firmaAdlari.map(() => '?').join(', ');
+      const articlePlaceholders = articleCodes.map(() => '?').join(', ');
+
+      db.all(
+        `SELECT id, ad FROM firmalar WHERE ad IN (${firmaPlaceholders})`,
+        firmaAdlari,
+        (firmaErr, firmaRows) => {
+          if (firmaErr) {
+            console.error('Demo firma kontrol hatasi:', firmaErr);
+            demoSiparisSeedRunning = false;
+            return;
+          }
+
+          if (firmaRows.length < demoFirmalar.length) {
+            demoSiparisSeedRunning = false;
+            return;
+          }
+
+          db.all(
+            `SELECT id, mamul_adi, article_no, article_code, renk, bir_kg_satis_fiyati
+             FROM mamul_kartlari
+             WHERE article_code IN (${articlePlaceholders})`,
+            articleCodes,
+            (mamulErr, mamulRows) => {
+              if (mamulErr) {
+                console.error('Demo siparis mamul kontrol hatasi:', mamulErr);
+                demoSiparisSeedRunning = false;
+                return;
+              }
+
+              if (mamulRows.length < articleCodes.length) {
+                demoSiparisSeedRunning = false;
+                return;
+              }
+
+              const mamulMap = new Map(mamulRows.map((row) => [row.article_code, row]));
+              let kalanSiparis = demoSiparisler.length;
+
+              const finishSeed = () => {
+                kalanSiparis -= 1;
+                if (kalanSiparis <= 0) {
+                  demoSiparisSeedRunning = false;
+                }
+              };
+
+              demoSiparisler.forEach((siparis) => {
+                db.get(
+                  `SELECT id FROM kartelix_orders
+                   WHERE musteri_adi = ? AND firma_adi = ? AND fuar_adi = ? AND personel_username = ?`,
+                  [siparis.musteriAdi, siparis.firmaAdi, siparis.fuarAdi, siparis.personelUsername],
+                  (existingErr, existingRow) => {
+                    if (existingErr) {
+                      console.error('Demo siparis kontrol hatasi:', existingErr);
+                      finishSeed();
+                      return;
+                    }
+
+                    if (existingRow) {
+                      finishSeed();
+                      return;
+                    }
+
+                    const enrichedItems = siparis.items
+                      .map((item) => {
+                        const mamul = mamulMap.get(item.articleCode);
+                        if (!mamul) return null;
+                        const miktarKg = Number(item.miktarKg || 0);
+                        const birimFiyat = Number(mamul.bir_kg_satis_fiyati || 0);
+                        return {
+                          mamulId: mamul.id,
+                          mamul_adi: mamul.mamul_adi,
+                          article_no: mamul.article_no,
+                          article_code: mamul.article_code,
+                          renk: mamul.renk || '',
+                          miktar_kg: miktarKg,
+                          birim_fiyat: birimFiyat,
+                          tutar: Number((miktarKg * birimFiyat).toFixed(2))
+                        };
+                      })
+                      .filter(Boolean);
+
+                    if (enrichedItems.length === 0) {
+                      finishSeed();
+                      return;
+                    }
+
+                    const toplamTutar = Number(enrichedItems.reduce((sum, item) => sum + item.tutar, 0).toFixed(2));
+
+                    db.serialize(() => {
+                      db.run('BEGIN TRANSACTION');
+                      db.run(
+                        `INSERT INTO kartelix_orders (
+                          musteri_adi, firma_adi, ilgili_kisi, telefon, email, fuar_adi, aciklama,
+                          durum, personel_username, toplam_tutar, para_birimi
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        [
+                          siparis.musteriAdi,
+                          siparis.firmaAdi,
+                          siparis.ilgiliKisi,
+                          siparis.telefon,
+                          siparis.email,
+                          siparis.fuarAdi,
+                          siparis.aciklama,
+                          siparis.durum,
+                          siparis.personelUsername,
+                          toplamTutar,
+                          siparis.paraBirimi
+                        ],
+                        function(insertErr) {
+                          if (insertErr) {
+                            console.error('Demo siparis ekleme hatasi:', insertErr);
+                            db.run('ROLLBACK');
+                            finishSeed();
+                            return;
+                          }
+
+                          const siparisId = this.lastID;
+                          let kalanKalem = enrichedItems.length;
+
+                          enrichedItems.forEach((item) => {
+                            db.run(
+                              `INSERT INTO kartelix_order_items (
+                                siparis_id, mamul_id, mamul_adi, article_no, article_code, renk,
+                                miktar_kg, birim_fiyat, tutar
+                              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                              [
+                                siparisId,
+                                item.mamulId,
+                                item.mamul_adi,
+                                item.article_no,
+                                item.article_code,
+                                item.renk,
+                                item.miktar_kg,
+                                item.birim_fiyat,
+                                item.tutar
+                              ],
+                              (itemErr) => {
+                                if (itemErr) {
+                                  console.error('Demo siparis kalemi ekleme hatasi:', itemErr);
+                                  db.run('ROLLBACK');
+                                  finishSeed();
+                                  return;
+                                }
+
+                                kalanKalem -= 1;
+                                if (kalanKalem === 0) {
+                                  db.run('COMMIT', (commitErr) => {
+                                    if (commitErr) {
+                                      console.error('Demo siparis commit hatasi:', commitErr);
+                                      db.run('ROLLBACK');
+                                    }
+                                    finishSeed();
+                                  });
+                                }
+                              }
+                            );
+                          });
+                        }
+                      );
+                    });
+                  }
+                );
+              });
+            }
+          );
+        }
+      );
+    };
+
+    demoFirmalar.forEach((firma) => {
+      db.run(
+        `INSERT OR IGNORE INTO firmalar (ad, telefon, adres) VALUES (?, ?, ?)`,
+        [firma.ad, firma.telefon, firma.adres],
+        () => {
+          trySeedDemoSiparisler();
+        }
+      );
+    });
+
+    demoMamuller.forEach((demo) => {
+      db.get(`SELECT id FROM mamul_kartlari WHERE article_code = ?`, [demo.article_code], (existingErr, existingRow) => {
+        if (existingErr) {
+          console.error('Demo mamul kontrol hatasi:', existingErr);
+          return;
+        }
+
+        if (existingRow) {
+          trySeedDemoSiparisler();
+          return;
+        }
+
+        db.get(`SELECT id FROM mamul_turleri WHERE ad = ?`, [demo.turAdi], (turErr, turRow) => {
+          if (turErr || !turRow) {
+            if (turErr) console.error('Demo mamul tur hatasi:', turErr);
+            return;
+          }
+
+          db.run(
+            `INSERT OR IGNORE INTO mamul_kartlari (
+              mamul_adi, mamul_turu_id, article_no, article_code, koleksiyon_adi, yayin_durumu,
+              renk, renk_kodu, kompozisyon_ozeti, en, gramaj, aciklama,
+              bir_kg_maliyet, bir_kg_satis_fiyati, qr_slug, aktif,
+              tanitim_basligi, tanitim_hikayesi, materyal_notlari, gorsel_url, vurgu_etiketi
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              demo.mamul_adi,
+              turRow.id,
+              demo.article_no,
+              demo.article_code,
+              demo.koleksiyon_adi,
+              demo.yayin_durumu,
+              demo.renk,
+              demo.renk_kodu,
+              demo.kompozisyon_ozeti,
+              demo.en,
+              demo.gramaj,
+              demo.aciklama,
+              demo.bir_kg_maliyet,
+              demo.bir_kg_satis_fiyati,
+              demo.qr_slug,
+              demo.aktif,
+              demo.tanitim_basligi,
+              demo.tanitim_hikayesi,
+              demo.materyal_notlari,
+              demo.gorsel_url,
+              demo.vurgu_etiketi
+            ],
+            function (insertErr) {
+              if (insertErr) {
+                console.error('Demo mamul ekleme hatasi:', insertErr);
+                return;
+              }
+
+              const mamulId = this.lastID;
+
+              if (!mamulId) return;
+
+              demo.iplikler.forEach((iplik, index) => {
+                const maliyetTutari = Number((((Number(iplik.oran_yuzde || 0) / 100) * Number(iplik.birim_fiyat || 0))).toFixed(2));
+                db.run(
+                  `INSERT INTO mamul_iplik_detaylari (mamul_id, iplik_adi, oran_yuzde, birim_fiyat, maliyet_tutari, sira_no)
+                   VALUES (?, ?, ?, ?, ?, ?)`,
+                  [mamulId, iplik.iplik_adi, Number(iplik.oran_yuzde || 0), Number(iplik.birim_fiyat || 0), maliyetTutari, index + 1]
+                );
+              });
+
+              demo.prosesler.forEach((proses, index) => {
+                db.run(
+                  `INSERT INTO mamul_proses_detaylari (mamul_id, proses_adi, proses_tipi, renk_bazli, birim_maliyet, aciklama, sira_no)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                  [mamulId, proses.proses_adi, proses.proses_tipi, proses.renk_bazli ? 1 : 0, Number(proses.birim_maliyet || 0), proses.aciklama, index + 1]
+                );
+              });
+
+              trySeedDemoSiparisler();
+            }
+          );
+        });
+      });
+    });
 
     ensureColumnExists('siparisler', 'created_at', `DATETIME DEFAULT CURRENT_TIMESTAMP`);
     ensureColumnExists('siparisler', 'firma_adi', `TEXT`);
@@ -482,8 +834,6 @@ db.run(`CREATE TABLE IF NOT EXISTS ui_ayarlari (
     ensureColumnExists('siparis_kartelalari', 'created_at', `DATETIME DEFAULT CURRENT_TIMESTAMP`);
     ensureColumnExists('siparis_kalemleri', 'created_at', `DATETIME DEFAULT CURRENT_TIMESTAMP`);
     ensureColumnExists('kartelix_orders', 'created_at', `DATETIME DEFAULT CURRENT_TIMESTAMP`);
-    ensureColumnExists('kartelix_orders', 'onay_email', `TEXT`);
-    ensureColumnExists('kartelix_orders', 'tamamlandi_at', `DATETIME`);
     ensureColumnExists('kartelix_orders', 'email', `TEXT`);
     ensureColumnExists('kartelix_orders', 'kartvizit_gorsel', `TEXT`);
     ensureColumnExists('kartelix_orders', 'kartvizit_notu', `TEXT`);
@@ -501,33 +851,13 @@ db.run(`CREATE TABLE IF NOT EXISTS ui_ayarlari (
     ensureColumnExists('mamul_kartlari', 'vurgu_etiketi', `TEXT`);
     ensureColumnExists('mamul_kartlari', 'koleksiyon_adi', `TEXT`);
     ensureColumnExists('mamul_kartlari', 'yayin_durumu', `TEXT DEFAULT 'taslak'`);
-    ensureColumnExists('mamul_kartlari', 'bakim_talimatlari', `TEXT`);
-    ensureColumnExists('mamul_kartlari', 'para_birimi', `TEXT DEFAULT 'TRY'`);
 
-    ensureColumnExists('kullanicilar', 'password_length', 'INTEGER DEFAULT 4');
+    console.log('✅ Veritabanı tabloları hazır');
   });
 };
 
 // Veritabanı başlatma
 initDatabase();
-
-// --- AUTH MIDDLEWARE ---
-
-const requireAuth = (roles = []) => (req, res, next) => {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token) return res.status(401).json({ success: false, error: 'Kimlik doğrulaması gereklidir' });
-  try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    req.user = payload;
-    if (roles.length && !roles.includes(payload.yetki) && payload.yetki !== 'admin') {
-      return res.status(403).json({ success: false, error: 'Yetkisiz erişim' });
-    }
-    next();
-  } catch {
-    return res.status(401).json({ success: false, error: 'Geçersiz veya süresi dolmuş oturum' });
-  }
-};
 
 // --- YARDIMCI FONKSİYONLAR ---
 
@@ -573,376 +903,6 @@ const mapSiparisKalemi = (row) => ({
   birim_fiyat: Number(row.birim_fiyat || 0),
   tutar: Number(row.tutar || 0)
 });
-
-const defaultOrderEmailSettings = {
-  enabled: false,
-  smtpHost: 'smtp.gmail.com',
-  smtpPort: 587,
-  smtpSecure: false,
-  senderName: 'Kartelix Siparis',
-  senderEmail: '',
-  smtpUser: '',
-  smtpPassword: '',
-  recipientEmails: '',
-  approvalEmails: '',
-  approvalShowPrices: true,
-  testRecipient: '',
-  replyTo: '',
-  lastAuthError: ''
-};
-
-const dbGetAsync = (sql, params = []) => new Promise((resolve, reject) => {
-  db.get(sql, params, (err, row) => (err ? reject(err) : resolve(row || null)));
-});
-
-const dbAllAsync = (sql, params = []) => new Promise((resolve, reject) => {
-  db.all(sql, params, (err, rows) => (err ? reject(err) : resolve(rows || [])));
-});
-
-const dbRunAsync = (sql, params = []) => new Promise((resolve, reject) => {
-  db.run(sql, params, function(err) {
-    if (err) reject(err);
-    else resolve(this);
-  });
-});
-
-const parseJsonValue = (value, fallback) => {
-  try {
-    return value ? JSON.parse(value) : fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-const parseEmailList = (value) =>
-  String(value || '')
-    .split(/[;,]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-const isFiniteTimestamp = (value) => Number.isFinite(Number(value)) && Number(value) > 0;
-
-const sanitizeOrderEmailSettings = (settings) => ({
-  ...settings,
-  enabled: Boolean(settings.enabled),
-  smtpHost: String(settings.smtpHost || defaultOrderEmailSettings.smtpHost).trim(),
-  smtpPort: Number(settings.smtpPort || defaultOrderEmailSettings.smtpPort),
-  smtpSecure: Boolean(settings.smtpSecure),
-  senderName: String(settings.senderName || defaultOrderEmailSettings.senderName).trim(),
-  senderEmail: String(settings.senderEmail || '').trim(),
-  smtpUser: String(settings.smtpUser || '').trim(),
-  smtpPassword: '',
-  recipientEmails: String(settings.recipientEmails || '').trim(),
-  approvalEmails: String(settings.approvalEmails || '').trim(),
-  approvalShowPrices: settings.approvalShowPrices !== undefined ? Boolean(settings.approvalShowPrices) : true,
-  testRecipient: String(settings.testRecipient || '').trim(),
-  replyTo: String(settings.replyTo || '').trim(),
-  lastAuthError: String(settings.lastAuthError || '').trim()
-});
-
-const classifyEmailError = (err) => {
-  const code = String(err?.code || '').toUpperCase();
-  const responseCode = Number(err?.responseCode || 0);
-  const responseText = String(err?.response || err?.body || err?.message || '').trim();
-
-  if (code === 'EAUTH' || responseCode === 401 || responseCode === 403 || responseCode === 535 || responseCode === 534 || responseText.toLowerCase().includes('app password') || responseText.toLowerCase().includes('username and password not accepted')) {
-    return { status: 401, message: 'Gmail kimlik doğrulaması başarısız. Uygulama parolası veya kullanıcı bilgileri kontrol edilmeli.', code: code || 'AUTH' };
-  }
-
-  if (code === 'ENOTFOUND' || code === 'ETIMEDOUT' || code === 'ECONNECTION' || code === 'ECONNREFUSED') {
-    return { status: 502, message: 'Gmail SMTP sunucusuna bağlanılamadı. Host veya port kontrol edilmeli.', code: code || 'NETWORK' };
-  }
-
-  return {
-    status: responseCode >= 400 ? 502 : 500,
-    message: responseText || err?.message || 'Gmail SMTP işlemi başarısız oldu',
-    code: code || `HTTP_${responseCode || 500}`
-  };
-};
-
-async function loadOrderEmailSettings(includeSecrets = false) {
-  const row = await dbGetAsync(`SELECT deger FROM ui_ayarlari WHERE anahtar = 'order_email_settings'`, []);
-  const parsed = parseJsonValue(row?.deger, {});
-  const merged = {
-    enabled: Boolean(parsed.enabled),
-    smtpHost: String(parsed.smtpHost || defaultOrderEmailSettings.smtpHost).trim() || defaultOrderEmailSettings.smtpHost,
-    smtpPort: Number(parsed.smtpPort || defaultOrderEmailSettings.smtpPort),
-    smtpSecure: Boolean(parsed.smtpSecure),
-    senderName: String(parsed.senderName || defaultOrderEmailSettings.senderName).trim(),
-    senderEmail: String(parsed.senderEmail || '').trim(),
-    smtpUser: String(parsed.smtpUser || '').trim(),
-    smtpPassword: String(parsed.smtpPassword || '').trim(),
-    recipientEmails: String(parsed.recipientEmails || '').trim(),
-    approvalEmails: String(parsed.approvalEmails || '').trim(),
-    approvalShowPrices: parsed.approvalShowPrices !== undefined ? Boolean(parsed.approvalShowPrices) : true,
-    testRecipient: String(parsed.testRecipient || '').trim(),
-    replyTo: String(parsed.replyTo || '').trim(),
-    lastAuthError: String(parsed.lastAuthError || '').trim()
-  };
-
-  return includeSecrets ? merged : sanitizeOrderEmailSettings(merged);
-}
-
-async function saveOrderEmailSettings(incomingSettings) {
-  const existing = await loadOrderEmailSettings(true);
-  const next = {
-    enabled: Boolean(incomingSettings.enabled),
-    smtpHost: String(incomingSettings.smtpHost || existing.smtpHost || defaultOrderEmailSettings.smtpHost).trim() || defaultOrderEmailSettings.smtpHost,
-    smtpPort: Number(incomingSettings.smtpPort || existing.smtpPort || defaultOrderEmailSettings.smtpPort),
-    smtpSecure: Boolean(incomingSettings.smtpSecure),
-    senderName: String(incomingSettings.senderName || existing.senderName || defaultOrderEmailSettings.senderName).trim(),
-    senderEmail: String(incomingSettings.senderEmail || existing.senderEmail || '').trim(),
-    smtpUser: String(incomingSettings.smtpUser || existing.smtpUser || '').trim(),
-    smtpPassword: String(incomingSettings.smtpPassword || existing.smtpPassword || '').trim(),
-    recipientEmails: String(incomingSettings.recipientEmails || existing.recipientEmails || '').trim(),
-    approvalEmails: String(incomingSettings.approvalEmails !== undefined ? incomingSettings.approvalEmails : (existing.approvalEmails || '')).trim(),
-    approvalShowPrices: incomingSettings.approvalShowPrices !== undefined ? Boolean(incomingSettings.approvalShowPrices) : (existing.approvalShowPrices !== undefined ? Boolean(existing.approvalShowPrices) : true),
-    testRecipient: String(incomingSettings.testRecipient || existing.testRecipient || '').trim(),
-    replyTo: String(incomingSettings.replyTo || existing.replyTo || '').trim(),
-    lastAuthError: ''
-  };
-
-  await dbRunAsync(
-    `INSERT INTO ui_ayarlari (anahtar, deger)
-     VALUES ('order_email_settings', ?)
-     ON CONFLICT(anahtar) DO UPDATE SET deger = excluded.deger, updated_at = CURRENT_TIMESTAMP`,
-    [JSON.stringify(next)]
-  );
-
-  return sanitizeOrderEmailSettings(next);
-}
-
-const resolveOrderEmailSender = (settings) =>
-  String(settings.senderEmail || settings.smtpUser || '').trim();
-
-function createOrderEmailTransport(settings) {
-  const host = String(settings.smtpHost || 'smtp.gmail.com').trim() || 'smtp.gmail.com';
-  const port = Number(settings.smtpPort || 587);
-  const secure = Boolean(settings.smtpSecure);
-  const user = String(settings.smtpUser || settings.senderEmail || '').trim();
-  const pass = String(settings.smtpPassword || '').trim();
-
-  if (!user) {
-    const error = new Error('SMTP kullanıcı veya gönderici e-posta boş');
-    error.code = 'ESETTINGS';
-    error.responseCode = 400;
-    throw error;
-  }
-  if (!pass) {
-    const error = new Error('SMTP parola / uygulama parolası boş');
-    error.code = 'ESETTINGS';
-    error.responseCode = 400;
-    throw error;
-  }
-
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: {
-      user,
-      pass
-    },
-    requireTLS: !secure && port === 587,
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000
-  });
-}
-
-function buildApprovalEmailContent(order, items = [], showPrices = true) {
-  const siparisNo = `#${order.id}`;
-  const firma = order.firma_adi || order.musteri_adi || '-';
-  const colSpan = showPrices ? 5 : 4;
-  const itemRows = items.length
-    ? items.map((item) => [
-        '<tr>',
-        `<td style="padding:8px;border-bottom:1px solid #e8e0d4">${item.article_code || item.article_no || '-'}</td>`,
-        `<td style="padding:8px;border-bottom:1px solid #e8e0d4">${item.mamul_adi || '-'}</td>`,
-        `<td style="padding:8px;border-bottom:1px solid #e8e0d4">${item.renk || '-'}</td>`,
-        `<td style="padding:8px;border-bottom:1px solid #e8e0d4;text-align:right">${Number(item.miktar_kg || 0).toFixed(2)} kg</td>`,
-        showPrices ? `<td style="padding:8px;border-bottom:1px solid #e8e0d4;text-align:right">${Number(item.tutar || 0).toFixed(2)} ${order.para_birimi || 'TRY'}</td>` : '',
-        '</tr>'
-      ].join('')).join('')
-    : `<tr><td colspan="${colSpan}" style="padding:8px;color:#888">-</td></tr>`;
-
-  const priceTh = showPrices ? '<th align="right" style="padding:8px">Tutar</th>' : '';
-  const totalRow = showPrices
-    ? `<tr><td style="padding:4px 0;color:#666">Toplam Tutar</td><td style="padding:4px 0;font-weight:700;font-size:15px">${Number(order.toplam_tutar || 0).toFixed(2)} ${order.para_birimi || 'TRY'}</td></tr>`
-    : '';
-
-  const html = [
-    '<div style="font-family:Arial,sans-serif;color:#1a2024;line-height:1.6;max-width:640px">',
-    '<div style="background:#1a2024;padding:24px 32px;border-radius:8px 8px 0 0">',
-    '<div style="color:#fff;font-size:18px;font-weight:700;letter-spacing:0.04em">SİPARİŞ ONAYLANDI</div>',
-    `<div style="color:rgba(255,255,255,0.6);font-size:13px;margin-top:4px">Sipariş ${siparisNo} – ${firma}</div>`,
-    '</div>',
-    '<div style="background:#faf8f5;padding:24px 32px;border:1px solid #e8e0d4;border-top:none">',
-    '<p style="margin:0 0 16px">Sayın İlgili,</p>',
-    `<p style="margin:0 0 16px"><strong>${firma}</strong> firmasına ait <strong>${siparisNo}</strong> numaralı sipariş tarafımızca incelenmiş ve <strong>onaylanmıştır</strong>. Siparişin üretim sürecine alınması için bilgilerinizi paylaşıyoruz.</p>`,
-    '<table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px">',
-    `<thead><tr style="background:#ede8df"><th align="left" style="padding:8px">Article</th><th align="left" style="padding:8px">Mamül</th><th align="left" style="padding:8px">Renk</th><th align="right" style="padding:8px">Miktar</th>${priceTh}</tr></thead>`,
-    `<tbody>${itemRows}</tbody>`,
-    '</table>',
-    '<table cellpadding="0" cellspacing="0" style="width:100%;font-size:13px;margin-bottom:16px">',
-    `<tr><td style="padding:4px 0;color:#666">Firma</td><td style="padding:4px 0;font-weight:600">${order.firma_adi || '-'}</td></tr>`,
-    `<tr><td style="padding:4px 0;color:#666">İlgili Kişi</td><td style="padding:4px 0">${order.ilgili_kisi || '-'}</td></tr>`,
-    `<tr><td style="padding:4px 0;color:#666">Telefon</td><td style="padding:4px 0">${order.telefon || '-'}</td></tr>`,
-    `<tr><td style="padding:4px 0;color:#666">Fuar / Kaynak</td><td style="padding:4px 0">${order.fuar_adi || '-'}</td></tr>`,
-    totalRow,
-    '</table>',
-    order.aciklama ? `<p style="margin:0 0 16px;font-size:13px;color:#555"><strong>Not:</strong> ${order.aciklama}</p>` : '',
-    '<p style="margin:16px 0 0;font-size:13px;color:#888">Bu e-posta otomatik olarak gönderilmiştir.</p>',
-    '</div></div>'
-  ].join('');
-
-  const text = [
-    `SİPARİŞ ONAYLANDI – ${siparisNo}`,
-    `Firma: ${firma}`,
-    `İlgili Kişi: ${order.ilgili_kisi || '-'}`,
-    `Telefon: ${order.telefon || '-'}`,
-    ...(showPrices ? [`Toplam: ${Number(order.toplam_tutar || 0).toFixed(2)} ${order.para_birimi || 'TRY'}`] : []),
-    '',
-    'Kalemler:',
-    ...(items.length ? items.map((i) => showPrices
-      ? `${i.article_code} - ${i.mamul_adi} - ${Number(i.miktar_kg || 0).toFixed(2)} kg - ${Number(i.tutar || 0).toFixed(2)} ${order.para_birimi || 'TRY'}`
-      : `${i.article_code} - ${i.mamul_adi} - ${Number(i.miktar_kg || 0).toFixed(2)} kg`) : ['-'])
-  ].join('\n');
-
-  return { subject: `Sipariş Onaylandı ${siparisNo} – ${firma}`, html, text };
-}
-
-function buildOrderEmailContent(order, items = []) {
-  const title = `Kartelix Siparis #${order.id}`;
-  const lines = items.map((item) =>
-    `${item.article_code || item.article_no} - ${item.mamul_adi} - ${Number(item.miktar_kg || 0).toFixed(2)} kg`
-  );
-  const text = [
-    title,
-    '',
-    `Firma: ${order.firma_adi || order.musteri_adi || '-'}`,
-    `İlgili kişi: ${order.ilgili_kisi || '-'}`,
-    `Telefon: ${order.telefon || '-'}`,
-    `E-posta: ${order.email || '-'}`,
-    `Fuar: ${order.fuar_adi || '-'}`,
-    `Personel: ${order.personel_username || '-'}`,
-    `Durum: ${order.durum || '-'}`,
-    `Toplam: ${Number(order.toplam_tutar || 0).toFixed(2)} ${order.para_birimi || 'TRY'}`,
-    '',
-    'Kalemler:',
-    ...(lines.length ? lines : ['-']),
-    '',
-    order.aciklama ? `Not: ${order.aciklama}` : ''
-  ].filter((line, index, array) => line || array[index - 1] !== '').join('\n');
-
-  const itemRows = items.length
-    ? items.map((item) => `
-        <tr>
-          <td>${item.article_code || item.article_no || '-'}</td>
-          <td>${item.mamul_adi || '-'}</td>
-          <td>${item.renk || '-'}</td>
-          <td style="text-align:right">${Number(item.miktar_kg || 0).toFixed(2)} kg</td>
-          <td style="text-align:right">${Number(item.tutar || 0).toFixed(2)} ${order.para_birimi || 'TRY'}</td>
-        </tr>
-      `).join('')
-    : '<tr><td colspan="5">-</td></tr>';
-
-  const html = `
-    <div style="font-family:Arial,sans-serif;color:#172023;line-height:1.5">
-      <h2>${title}</h2>
-      <p><strong>Firma:</strong> ${order.firma_adi || order.musteri_adi || '-'}</p>
-      <p><strong>İlgili kişi:</strong> ${order.ilgili_kisi || '-'}<br>
-      <strong>Telefon:</strong> ${order.telefon || '-'}<br>
-      <strong>E-posta:</strong> ${order.email || '-'}<br>
-      <strong>Fuar:</strong> ${order.fuar_adi || '-'}<br>
-      <strong>Personel:</strong> ${order.personel_username || '-'}</p>
-      <table cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%;border:1px solid #d7c5ad">
-        <thead>
-          <tr style="background:#f3efe7">
-            <th align="left">Article</th>
-            <th align="left">Mamül</th>
-            <th align="left">Renk</th>
-            <th align="right">Miktar</th>
-            <th align="right">Tutar</th>
-          </tr>
-        </thead>
-        <tbody>${itemRows}</tbody>
-      </table>
-      <p><strong>Toplam:</strong> ${Number(order.toplam_tutar || 0).toFixed(2)} ${order.para_birimi || 'TRY'}</p>
-      ${order.aciklama ? `<p><strong>Not:</strong> ${order.aciklama}</p>` : ''}
-    </div>
-  `;
-
-  return { subject: `${title} - ${order.firma_adi || order.musteri_adi || '-'}`, text, html };
-}
-
-async function loadOrderForEmail(siparisId) {
-  const order = await dbGetAsync(`SELECT * FROM kartelix_orders WHERE id = ?`, [siparisId]);
-  if (!order) throw new Error('Siparis bulunamadi');
-  const items = await dbAllAsync(
-    `SELECT * FROM kartelix_order_items WHERE siparis_id = ? ORDER BY id ASC`,
-    [siparisId]
-  );
-  return { order, items: items.map(mapSiparisKalemi) };
-}
-
-async function sendSmtpMail({ settings, recipients, subject, html, text }) {
-  const transporter = createOrderEmailTransport(settings);
-  const fromEmail = resolveOrderEmailSender(settings);
-  if (!fromEmail) {
-    const error = new Error('Gönderici e-posta veya SMTP kullanıcı alanı boş');
-    error.code = 'ESETTINGS';
-    error.responseCode = 400;
-    throw error;
-  }
-
-  const info = await transporter.sendMail({
-    from: `"${settings.senderName || 'Kartelix'}" <${fromEmail}>`,
-    to: recipients.join(', '),
-    replyTo: settings.replyTo || fromEmail,
-    subject,
-    text,
-    html
-  });
-
-  return {
-    accepted: info.accepted || recipients,
-    rejected: info.rejected || [],
-    messageId: info.messageId || ''
-  };
-}
-
-async function sendOrderEmailNotification(siparisId, overrideRecipients = '') {
-  const settings = await loadOrderEmailSettings(true);
-  if (!settings.enabled && !overrideRecipients) {
-    return { skipped: true, message: 'E-posta bildirimi pasif' };
-  }
-
-  const recipients = parseEmailList(overrideRecipients || settings.recipientEmails);
-  if (!recipients.length) {
-    return { skipped: true, message: 'Sipariş alıcı e-postası tanımlı değil' };
-  }
-
-  if (!settings.smtpHost || !(settings.smtpUser || settings.senderEmail) || !settings.smtpPassword) {
-    return { skipped: true, message: 'Gmail SMTP ayarları eksik' };
-  }
-
-  const { order, items } = await loadOrderForEmail(siparisId);
-  const content = buildOrderEmailContent(order, items);
-  const result = await sendSmtpMail({
-    settings,
-    recipients,
-    subject: content.subject,
-    html: content.html,
-    text: content.text
-  });
-
-  return {
-    skipped: false,
-    message: 'E-posta gönderildi',
-    ...result
-  };
-}
 
 const mapMamulDetail = (mamul, iplikler, prosesler) => ({
   ...mapMamulCard(mamul),
@@ -1092,6 +1052,30 @@ function generateArticleNo(prefix = 'PRD', callback) {
   );
 }
 
+// Input validation middleware
+const validateSiparis = (req, res, next) => {
+  const { musteriAdi, kartelalar } = req.body;
+  
+  const errors = [];
+  
+  if (!musteriAdi || musteriAdi.trim().length < 2) {
+    errors.push('Müşteri adı en az 2 karakter olmalıdır');
+  }
+  
+  if (!kartelalar || !Array.isArray(kartelalar) || kartelalar.length === 0) {
+    errors.push('En az bir kartela eklenmelidir');
+  }
+  
+  if (errors.length > 0) {
+    return res.status(400).json({ 
+      error: 'Geçersiz veri', 
+      details: errors 
+    });
+  }
+  
+  next();
+};
+
 // Error handling middleware
 const errorHandler = (err, req, res, next) => {
   console.error('Server Error:', err);
@@ -1109,132 +1093,205 @@ const errorHandler = (err, req, res, next) => {
   });
 };
 
-const excelOwnedMutationGuard = (req, res, next) => {
-  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
-    return next();
-  }
-
-  const excelOwnedPaths = [
-    '/api/admin/mamul-turleri',
-    '/api/admin/renkler',
-    '/api/admin/iplikler',
-    '/api/admin/prosesler',
-    '/api/admin/mamuller',
-    '/api/admin/excel-sources'
-  ];
-
-  const isExcelOwned = excelOwnedPaths.some((routePath) => req.path === routePath || req.path.startsWith(`${routePath}/`));
-  const isAllowedOperation = req.path === '/api/admin/excel-sync/run' || req.path === '/api/admin/excel-settings/poll'
-    || /^\/api\/admin\/mamuller\/\d+(\/gorsel|\/showcase|\/duplicate)?$/.test(req.path)
-    || req.path === '/api/admin/mamuller-lookup';
-
-  if (isExcelOwned && !isAllowedOperation) {
-    return res.status(403).json({
-      success: false,
-      error: 'Bu veri Excel kaynaklidir. Uygulama arayuzunden manuel kayit veya guncelleme yapilamaz.'
-    });
-  }
-
-  return next();
-};
-
-app.use(excelOwnedMutationGuard);
-
 // --- MEVCUT API ROTLARI ---
 
-app.get('/api/admin/excel-settings', requireAuth(['admin']), async (req, res, next) => {
-  try {
-    const sources = await new Promise((resolve, reject) => {
-      db.all(
-        `SELECT id, kaynak_tipi, dosya_adi, uzanti, sheet_adi, aktif, updated_at
-         FROM excel_kaynaklari
-         ORDER BY CASE kaynak_tipi
-           ${SOURCE_ORDER.map((type, index) => `WHEN '${type}' THEN ${index + 1}`).join(' ')}
-           ELSE 999 END, id ASC`,
-        [],
-        (err, rows) => (err ? reject(err) : resolve(rows || []))
-      );
-    });
+// Mamül Detayını Çekme
+app.get('/api/mamul/:kod', (req, res, next) => {
+  const mamulKod = req.params.kod;
 
-    const pollRow = await new Promise((resolve, reject) => {
-      db.get(
-        `SELECT deger FROM ui_ayarlari WHERE anahtar = 'excel_poll_ms'`,
-        [],
-        (err, row) => (err ? reject(err) : resolve(row || null))
-      );
-    });
+  if (!mamulKod || mamulKod.length < 2) {
+    return res.status(400).json({ error: 'Geçersiz mamul kodu' });
+  }
 
-    res.json({
+  const sql = `
+    SELECT kod, ad, tip, stok AS stok_adet, kartela_hazir
+    FROM mamuller
+    WHERE kod = ?
+    LIMIT 1
+  `;
+
+  db.get(sql, [mamulKod], (err, row) => {
+    if (err) return next(err);
+    
+    if (!row) {
+      return res.status(404).json({ error: 'Mamül bulunamadı' });
+    }
+
+    res.json({ 
       success: true,
       data: {
-        pollMs: Number(pollRow?.deger || 60000),
-        sources: sources.map((row) => ({
-          id: row.id,
-          kaynak_tipi: row.kaynak_tipi,
-          dosya_adi: row.dosya_adi,
-          uzanti: row.uzanti || '.xlsx',
-          sheet_adi: row.sheet_adi || '',
-          aktif: Boolean(row.aktif),
-          updated_at: row.updated_at
-        }))
+        ...row,
+        renkSayisi: row.renkSayisi || 6, 
+        sonGiris: row.sonGiris || '2025-10-15'
       }
     });
-  } catch (err) {
-    next(err);
-  }
+  });
 });
 
-app.put('/api/admin/excel-settings/poll', requireAuth(['admin']), (req, res, next) => {
-  const pollMs = Number(req.body?.pollMs || 0);
-  if (!Number.isFinite(pollMs) || pollMs < 5000) {
-    return res.status(400).json({ error: 'Excel okuma sıklığı en az 5000 ms olmalıdır' });
+// Mamül Arama
+app.get('/api/search', (req, res, next) => {
+  const term = req.query.term ? String(req.query.term).trim() : '';
+  
+  if (term.length < 2) {
+    return res.json({ 
+      success: true, 
+      data: { mamuller: [] },
+      message: 'Arama için en az 2 karakter girin'
+    });
   }
 
-  db.run(
-    `INSERT INTO ui_ayarlari (anahtar, deger)
-     VALUES ('excel_poll_ms', ?)
-     ON CONFLICT(anahtar) DO UPDATE SET deger = excluded.deger, updated_at = CURRENT_TIMESTAMP`,
-    [String(Math.round(pollMs))],
-    (err) => {
-      if (err) return next(err);
-      res.json({ success: true, data: { pollMs: Math.round(pollMs) } });
+  const searchTerm = `%${term}%`;
+  const sql = `
+    SELECT id, kod, ad, tip, stok, kartela_hazir
+    FROM mamuller
+    WHERE kod LIKE ? OR ad LIKE ? OR tip LIKE ?
+    ORDER BY 
+      CASE 
+        WHEN kod LIKE ? THEN 1
+        WHEN ad LIKE ? THEN 2
+        ELSE 3
+      END
+    LIMIT 20
+  `;
+  
+  db.all(sql, [searchTerm, searchTerm, searchTerm, `%${term}%`, `%${term}%`], (err, rows) => {
+    if (err) {
+      return next(err);
     }
-  );
+    res.json({ 
+      success: true, 
+      data: { mamuller: rows } 
+    });
+  });
 });
 
-app.post('/api/admin/excel-sources', requireAuth(['admin']), (req, res, next) => {
-  const { kaynakTipi, dosyaAdi, uzanti = '.xlsx', sheetAdi = '', aktif = true } = req.body;
+// Firma listesi
+app.get('/api/firmalar', (req, res, next) => {
+  db.all(`SELECT * FROM firmalar ORDER BY ad ASC`, [], (err, rows) => {
+    if (err) return next(err);
+    
+    res.json({ 
+      success: true,
+      data: rows 
+    });
+  });
+});
 
-  if (!kaynakTipi || !SOURCE_ORDER.includes(String(kaynakTipi).trim())) {
-    return res.status(400).json({ error: 'Geçerli bir kaynak tipi seçilmelidir' });
-  }
-  if (!dosyaAdi || !String(dosyaAdi).trim()) {
-    return res.status(400).json({ error: 'Dosya adı zorunludur' });
-  }
-  if (!['.xls', '.xlsx'].includes(String(uzanti).trim().toLowerCase())) {
-    return res.status(400).json({ error: 'Uzantı .xls veya .xlsx olmalıdır' });
+app.post('/api/firmalar', (req, res, next) => {
+  const { ad, telefon, adres } = req.body;
+
+  if (!ad || !String(ad).trim()) {
+    return res.status(400).json({ error: 'Firma adı zorunludur' });
   }
 
   db.run(
-    `INSERT INTO excel_kaynaklari (kaynak_tipi, dosya_adi, uzanti, sheet_adi, aktif)
-     VALUES (?, ?, ?, ?, ?)`,
-    [
-      String(kaynakTipi).trim(),
-      String(dosyaAdi).trim(),
-      String(uzanti).trim().toLowerCase(),
-      String(sheetAdi || '').trim(),
-      aktif ? 1 : 0
-    ],
+    `INSERT INTO firmalar (ad, telefon, adres) VALUES (?, ?, ?)`,
+    [String(ad).trim(), String(telefon || '').trim(), String(adres || '').trim()],
     function(err) {
       if (err) return next(err);
+
       res.status(201).json({
         success: true,
         data: {
           id: this.lastID,
-          kaynak_tipi: String(kaynakTipi).trim(),
-          dosya_adi: String(dosyaAdi).trim(),
-          uzanti: String(uzanti).trim().toLowerCase(),
-          sheet_adi: String(sheetAdi || '').trim(),
+          ad: String(ad).trim(),
+          telefon: String(telefon || '').trim(),
+          adres: String(adres || '').trim()
+        }
+      });
+    }
+  );
+});
+
+// Giriş kontrolü
+app.post('/api/login', (req, res, next) => {
+  const { username, password } = req.body;
+  
+  if (!username || !password) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Kullanıcı adı ve şifre gereklidir' 
+    });
+  }
+
+  const normalizedUsername = String(username || '').trim().toLowerCase();
+  const loginAliases = {
+    admin: 'yonetici',
+    staff: 'satici',
+    yonetici: 'yonetici',
+    satici: 'satici',
+    mamul: 'mamul'
+  };
+  const finalUsername = loginAliases[normalizedUsername] || normalizedUsername;
+
+  db.get(
+    `SELECT id, username, yetki FROM kullanicilar WHERE username = ? AND password = ?`,
+    [finalUsername, password],
+    (err, row) => {
+      if (err) return next(err);
+      
+      if (!row) {
+        return res.json({ 
+          success: false, 
+          message: 'Geçersiz kullanıcı adı veya şifre' 
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        data: { 
+          user: row,
+          redirectTo: row.yetki === 'staff'
+            ? '/staff/orders/new'
+            : row.yetki === 'mamul'
+              ? '/mamul'
+              : '/admin'
+        },
+        message: 'Giriş başarılı'
+      });
+    }
+  );
+});
+
+app.get('/api/admin/mamul-turleri', (req, res, next) => {
+  db.all(
+    `SELECT * FROM mamul_turleri ORDER BY ad ASC`,
+    [],
+    (err, rows) => {
+      if (err) return next(err);
+
+      res.json({
+        success: true,
+        data: rows.map((row) => ({ ...row, aktif: Boolean(row.aktif) }))
+      });
+    }
+  );
+});
+
+app.post('/api/admin/mamul-turleri', (req, res, next) => {
+  const { ad, kodPrefix, aciklama, aktif = true } = req.body;
+
+  if (!ad || !String(ad).trim()) {
+    return res.status(400).json({ error: 'Mamul türü adı zorunludur' });
+  }
+
+  if (!kodPrefix || !String(kodPrefix).trim()) {
+    return res.status(400).json({ error: 'Kod prefix zorunludur' });
+  }
+
+  db.run(
+    `INSERT INTO mamul_turleri (ad, kod_prefix, aciklama, aktif) VALUES (?, ?, ?, ?)`,
+    [String(ad).trim(), String(kodPrefix).trim(), String(aciklama || '').trim(), aktif ? 1 : 0],
+    function(err) {
+      if (err) return next(err);
+
+      res.status(201).json({
+        success: true,
+        data: {
+          id: this.lastID,
+          ad: String(ad).trim(),
+          kod_prefix: String(kodPrefix).trim(),
+          aciklama: String(aciklama || '').trim(),
           aktif: Boolean(aktif)
         }
       });
@@ -1242,42 +1299,32 @@ app.post('/api/admin/excel-sources', requireAuth(['admin']), (req, res, next) =>
   );
 });
 
-app.put('/api/admin/excel-sources/:id', requireAuth(['admin']), (req, res, next) => {
-  const { kaynakTipi, dosyaAdi, uzanti = '.xlsx', sheetAdi = '', aktif = true } = req.body;
+app.put('/api/admin/mamul-turleri/:id', (req, res, next) => {
+  const { ad, kodPrefix, aciklama, aktif = true } = req.body;
   const id = req.params.id;
 
-  if (!kaynakTipi || !SOURCE_ORDER.includes(String(kaynakTipi).trim())) {
-    return res.status(400).json({ error: 'Geçerli bir kaynak tipi seçilmelidir' });
+  if (!ad || !String(ad).trim()) {
+    return res.status(400).json({ error: 'Mamul türü adı zorunludur' });
   }
-  if (!dosyaAdi || !String(dosyaAdi).trim()) {
-    return res.status(400).json({ error: 'Dosya adı zorunludur' });
-  }
-  if (!['.xls', '.xlsx'].includes(String(uzanti).trim().toLowerCase())) {
-    return res.status(400).json({ error: 'Uzantı .xls veya .xlsx olmalıdır' });
+
+  if (!kodPrefix || !String(kodPrefix).trim()) {
+    return res.status(400).json({ error: 'Kod prefix zorunludur' });
   }
 
   db.run(
-    `UPDATE excel_kaynaklari
-     SET kaynak_tipi = ?, dosya_adi = ?, uzanti = ?, sheet_adi = ?, aktif = ?, updated_at = CURRENT_TIMESTAMP
+    `UPDATE mamul_turleri
+     SET ad = ?, kod_prefix = ?, aciklama = ?, aktif = ?
      WHERE id = ?`,
-    [
-      String(kaynakTipi).trim(),
-      String(dosyaAdi).trim(),
-      String(uzanti).trim().toLowerCase(),
-      String(sheetAdi || '').trim(),
-      aktif ? 1 : 0,
-      id
-    ],
+    [String(ad).trim(), String(kodPrefix).trim(), String(aciklama || '').trim(), aktif ? 1 : 0, id],
     function(err) {
       if (err) return next(err);
       res.json({
         success: true,
         data: {
           id: Number(id),
-          kaynak_tipi: String(kaynakTipi).trim(),
-          dosya_adi: String(dosyaAdi).trim(),
-          uzanti: String(uzanti).trim().toLowerCase(),
-          sheet_adi: String(sheetAdi || '').trim(),
+          ad: String(ad).trim(),
+          kod_prefix: String(kodPrefix).trim(),
+          aciklama: String(aciklama || '').trim(),
           aktif: Boolean(aktif)
         }
       });
@@ -1285,31 +1332,255 @@ app.put('/api/admin/excel-sources/:id', requireAuth(['admin']), (req, res, next)
   );
 });
 
-app.delete('/api/admin/excel-sources/:id', requireAuth(['admin']), (req, res, next) => {
-  db.run(`DELETE FROM excel_kaynaklari WHERE id = ?`, [req.params.id], function(err) {
+app.get('/api/admin/renkler', (req, res, next) => {
+  db.all(`SELECT * FROM renk_tanimlari ORDER BY ad ASC`, [], (err, rows) => {
     if (err) return next(err);
-    res.json({ success: true, data: { deleted: this.changes > 0 } });
+    res.json({ success: true, data: rows.map((row) => ({ ...row, aktif: Boolean(row.aktif) })) });
   });
 });
 
-app.post('/api/admin/excel-sync/run', requireAuth(['admin']), async (req, res) => {
-  try {
-    await excelSync.runNow();
-    const status = await excelSync.getStatus();
-    res.json({ success: true, data: status });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err?.message || 'Excel sync calistirilamadi' });
+app.post('/api/admin/renkler', (req, res, next) => {
+  const { ad, kod, aktif = true } = req.body;
+  if (!ad || !String(ad).trim()) {
+    return res.status(400).json({ error: 'Renk adı zorunludur' });
   }
+  if (!kod || !String(kod).trim()) {
+    return res.status(400).json({ error: 'Renk kodu zorunludur' });
+  }
+
+  db.run(
+    `INSERT INTO renk_tanimlari (ad, kod, aktif) VALUES (?, ?, ?)`,
+    [String(ad).trim(), String(kod).trim(), aktif ? 1 : 0],
+    function(err) {
+      if (err) return next(err);
+      res.status(201).json({ success: true, data: { id: this.lastID, ad: String(ad).trim(), kod: String(kod).trim(), aktif: Boolean(aktif) } });
+    }
+  );
 });
 
-app.get('/api/admin/mamuller/next-article-no/:mamulTuruId', requireAuth(['admin']), (req, res, next) => {
+app.put('/api/admin/renkler/:id', (req, res, next) => {
+  const { ad, kod, aktif = true } = req.body;
+  const id = req.params.id;
+
+  if (!ad || !String(ad).trim()) {
+    return res.status(400).json({ error: 'Renk adı zorunludur' });
+  }
+  if (!kod || !String(kod).trim()) {
+    return res.status(400).json({ error: 'Renk kodu zorunludur' });
+  }
+
+  db.run(
+    `UPDATE renk_tanimlari SET ad = ?, kod = ?, aktif = ? WHERE id = ?`,
+    [String(ad).trim(), String(kod).trim(), aktif ? 1 : 0, id],
+    function(err) {
+      if (err) return next(err);
+      res.json({
+        success: true,
+        data: { id: Number(id), ad: String(ad).trim(), kod: String(kod).trim(), aktif: Boolean(aktif) }
+      });
+    }
+  );
+});
+
+app.get('/api/admin/iplikler', (req, res, next) => {
+  db.all(`SELECT * FROM iplik_tanimlari ORDER BY ad ASC`, [], (err, rows) => {
+    if (err) return next(err);
+    res.json({ success: true, data: rows.map((row) => ({ ...row, aktif: Boolean(row.aktif), birim_fiyat: Number(row.birim_fiyat || 0) })) });
+  });
+});
+
+app.post('/api/admin/iplikler', (req, res, next) => {
+  const { ad, kod, birim = 'kg', birimFiyat = 0, aktif = true } = req.body;
+  if (!ad || !String(ad).trim()) {
+    return res.status(400).json({ error: 'İplik adı zorunludur' });
+  }
+
+  db.run(
+    `INSERT INTO iplik_tanimlari (ad, kod, birim, birim_fiyat, aktif) VALUES (?, ?, ?, ?, ?)`,
+    [String(ad).trim(), String(kod || '').trim(), String(birim || 'kg').trim(), Number(birimFiyat || 0), aktif ? 1 : 0],
+    function(err) {
+      if (err) return next(err);
+      res.status(201).json({ success: true, data: { id: this.lastID, ad: String(ad).trim(), kod: String(kod || '').trim(), birim: String(birim || 'kg').trim(), birim_fiyat: Number(birimFiyat || 0), aktif: Boolean(aktif) } });
+    }
+  );
+});
+
+app.put('/api/admin/iplikler/:id', (req, res, next) => {
+  const { ad, kod, birim = 'kg', birimFiyat = 0, aktif = true } = req.body;
+  const id = req.params.id;
+
+  if (!ad || !String(ad).trim()) {
+    return res.status(400).json({ error: 'İplik adı zorunludur' });
+  }
+
+  db.run(
+    `UPDATE iplik_tanimlari
+     SET ad = ?, kod = ?, birim = ?, birim_fiyat = ?, aktif = ?
+     WHERE id = ?`,
+    [String(ad).trim(), String(kod || '').trim(), String(birim || 'kg').trim(), Number(birimFiyat || 0), aktif ? 1 : 0, id],
+    function(err) {
+      if (err) return next(err);
+      res.json({
+        success: true,
+        data: {
+          id: Number(id),
+          ad: String(ad).trim(),
+          kod: String(kod || '').trim(),
+          birim: String(birim || 'kg').trim(),
+          birim_fiyat: Number(birimFiyat || 0),
+          aktif: Boolean(aktif)
+        }
+      });
+    }
+  );
+});
+
+app.get('/api/admin/prosesler', (req, res, next) => {
+  db.all(`SELECT * FROM proses_tanimlari ORDER BY ad ASC`, [], (err, rows) => {
+    if (err) return next(err);
+    res.json({ success: true, data: rows.map((row) => ({ ...row, aktif: Boolean(row.aktif), renk_bazli: Boolean(row.renk_bazli), birim_maliyet: Number(row.birim_maliyet || 0) })) });
+  });
+});
+
+app.get('/api/theme-settings', (req, res, next) => {
+  db.all(
+    `SELECT anahtar, deger FROM ui_ayarlari WHERE anahtar IN ('active_palette', 'app_logo', 'app_background')`,
+    [],
+    (err, rows) => {
+      if (err) return next(err);
+
+      const data = rows.reduce((acc, row) => {
+        acc[row.anahtar] = row.deger;
+        return acc;
+      }, {});
+
+      res.json({
+        success: true,
+        data: {
+          activePalette: data.active_palette || 'atelier',
+          appLogo: data.app_logo || '/nevres.png',
+          appBackground: data.app_background || '/showroom-bg.png'
+        }
+      });
+    }
+  );
+});
+
+app.put('/api/admin/theme-settings', (req, res, next) => {
+  const {
+    activePalette,
+    appLogo,
+    appBackground
+  } = req.body;
+
+  if (!activePalette || !String(activePalette).trim()) {
+    return res.status(400).json({ error: 'Tema seçimi zorunludur' });
+  }
+
+  const updates = [
+    ['active_palette', String(activePalette).trim()],
+    ['app_logo', String(appLogo || '/nevres.png').trim()],
+    ['app_background', String(appBackground || '/showroom-bg.png').trim()]
+  ];
+
+  db.serialize(() => {
+    db.run('BEGIN TRANSACTION');
+
+    let completed = 0;
+    let hasError = false;
+
+    updates.forEach(([key, value]) => {
+      db.run(
+        `INSERT INTO ui_ayarlari (anahtar, deger)
+         VALUES (?, ?)
+         ON CONFLICT(anahtar) DO UPDATE SET deger = excluded.deger, updated_at = CURRENT_TIMESTAMP`,
+        [key, value],
+        (err) => {
+          if (hasError) return;
+          if (err) {
+            hasError = true;
+            db.run('ROLLBACK');
+            return next(err);
+          }
+
+          completed += 1;
+          if (completed === updates.length) {
+            db.run('COMMIT', (commitErr) => {
+              if (commitErr) {
+                db.run('ROLLBACK');
+                return next(commitErr);
+              }
+
+              res.json({
+                success: true,
+                data: {
+                  activePalette: String(activePalette).trim(),
+                  appLogo: String(appLogo || '/nevres.png').trim(),
+                  appBackground: String(appBackground || '/showroom-bg.png').trim()
+                }
+              });
+            });
+          }
+        }
+      );
+    });
+  });
+});
+
+app.post('/api/admin/prosesler', (req, res, next) => {
+  const { ad, tip, birimMaliyet = 0, renkBazli = false, aktif = true } = req.body;
+  if (!ad || !String(ad).trim()) {
+    return res.status(400).json({ error: 'Proses adı zorunludur' });
+  }
+
+  db.run(
+    `INSERT INTO proses_tanimlari (ad, tip, birim_maliyet, renk_bazli, aktif) VALUES (?, ?, ?, ?, ?)`,
+    [String(ad).trim(), String(tip || '').trim(), Number(birimMaliyet || 0), renkBazli ? 1 : 0, aktif ? 1 : 0],
+    function(err) {
+      if (err) return next(err);
+      res.status(201).json({ success: true, data: { id: this.lastID, ad: String(ad).trim(), tip: String(tip || '').trim(), birim_maliyet: Number(birimMaliyet || 0), renk_bazli: Boolean(renkBazli), aktif: Boolean(aktif) } });
+    }
+  );
+});
+
+app.put('/api/admin/prosesler/:id', (req, res, next) => {
+  const { ad, tip, birimMaliyet = 0, renkBazli = false, aktif = true } = req.body;
+  const id = req.params.id;
+
+  if (!ad || !String(ad).trim()) {
+    return res.status(400).json({ error: 'Proses adı zorunludur' });
+  }
+
+  db.run(
+    `UPDATE proses_tanimlari
+     SET ad = ?, tip = ?, birim_maliyet = ?, renk_bazli = ?, aktif = ?
+     WHERE id = ?`,
+    [String(ad).trim(), String(tip || '').trim(), Number(birimMaliyet || 0), renkBazli ? 1 : 0, aktif ? 1 : 0, id],
+    function(err) {
+      if (err) return next(err);
+      res.json({
+        success: true,
+        data: {
+          id: Number(id),
+          ad: String(ad).trim(),
+          tip: String(tip || '').trim(),
+          birim_maliyet: Number(birimMaliyet || 0),
+          renk_bazli: Boolean(renkBazli),
+          aktif: Boolean(aktif)
+        }
+      });
+    }
+  );
+});
+
+app.get('/api/admin/mamuller/next-article-no/:mamulTuruId', (req, res, next) => {
   generateNextArticleNoForType(req.params.mamulTuruId, (err, data) => {
     if (err) return next(err);
     res.json({ success: true, data });
   });
 });
 
-app.get('/api/admin/mamuller', requireAuth(['admin']), (req, res, next) => {
+app.get('/api/admin/mamuller', (req, res, next) => {
   const term = String(req.query.term || '').trim();
   const params = [];
   let sql = `
@@ -1336,7 +1607,7 @@ app.get('/api/admin/mamuller', requireAuth(['admin']), (req, res, next) => {
   });
 });
 
-app.get('/api/admin/mamuller/:id', requireAuth(['admin', 'mamul']), (req, res, next) => {
+app.get('/api/admin/mamuller/:id', (req, res, next) => {
   const mamulId = req.params.id;
 
   loadMamulDetailByClause(`mk.id = ?`, [mamulId], (err, detail) => {
@@ -1346,7 +1617,7 @@ app.get('/api/admin/mamuller/:id', requireAuth(['admin', 'mamul']), (req, res, n
   });
 });
 
-app.get('/api/admin/mamul-lookup', requireAuth(['admin', 'staff', 'mamul']), (req, res, next) => {
+app.get('/api/admin/mamul-lookup', (req, res, next) => {
   const normalizedCode = normalizeLookupCode(req.query.code);
 
   if (!normalizedCode) {
@@ -1364,7 +1635,7 @@ app.get('/api/admin/mamul-lookup', requireAuth(['admin', 'staff', 'mamul']), (re
   );
 });
 
-app.post('/api/admin/mamuller', requireAuth(['admin']), (req, res, next) => {
+app.post('/api/admin/mamuller', (req, res, next) => {
   const {
     mamulAdi,
     mamulTuruId,
@@ -1381,9 +1652,7 @@ app.post('/api/admin/mamuller', requireAuth(['admin']), (req, res, next) => {
     materyalNotlari,
     gorselUrl,
     vurguEtiketi,
-    bakimTalimatlari,
     birKgSatisFiyati,
-    paraBirimi = 'TRY',
     aktif = true,
     iplikler = [],
     prosesler = []
@@ -1412,8 +1681,8 @@ app.post('/api/admin/mamuller', requireAuth(['admin']), (req, res, next) => {
         `INSERT INTO mamul_kartlari (
           mamul_adi, mamul_turu_id, article_no, article_code, koleksiyon_adi, yayin_durumu, renk, renk_kodu,
           kompozisyon_ozeti, en, gramaj, aciklama, tanitim_basligi, tanitim_hikayesi,
-          materyal_notlari, gorsel_url, vurgu_etiketi, bakim_talimatlari, bir_kg_maliyet, bir_kg_satis_fiyati, para_birimi, qr_slug, aktif
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
+          materyal_notlari, gorsel_url, vurgu_etiketi, bir_kg_maliyet, bir_kg_satis_fiyati, qr_slug, aktif
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
         [
           String(mamulAdi).trim(),
           mamulTuruId,
@@ -1432,10 +1701,8 @@ app.post('/api/admin/mamuller', requireAuth(['admin']), (req, res, next) => {
           String(materyalNotlari || '').trim(),
           String(gorselUrl || '').trim(),
           String(vurguEtiketi || '').trim(),
-          String(bakimTalimatlari || '').trim(),
           totalCost,
           Number(birKgSatisFiyati || 0),
-          String(paraBirimi || 'TRY').trim().toUpperCase(),
           qrSlug,
           aktif ? 1 : 0
         ],
@@ -1522,7 +1789,7 @@ app.post('/api/admin/mamuller', requireAuth(['admin']), (req, res, next) => {
   });
 });
 
-app.put('/api/admin/mamuller/:id', requireAuth(['admin']), (req, res, next) => {
+app.put('/api/admin/mamuller/:id', (req, res, next) => {
   const mamulId = req.params.id;
   const {
     mamulAdi,
@@ -1540,9 +1807,7 @@ app.put('/api/admin/mamuller/:id', requireAuth(['admin']), (req, res, next) => {
     materyalNotlari,
     gorselUrl,
     vurguEtiketi,
-    bakimTalimatlari,
     birKgSatisFiyati,
-    paraBirimi = 'TRY',
     aktif = true,
     iplikler = [],
     prosesler = []
@@ -1560,83 +1825,61 @@ app.put('/api/admin/mamuller/:id', requireAuth(['admin']), (req, res, next) => {
     if (findErr) return next(findErr);
     if (!existing) return res.status(404).json({ error: 'Mamül bulunamadı' });
 
-const qrSlug = slugify(`${existing.article_code}-${mamulAdi}-${renk || ''}`);
-        const calculatedYarnCost = calculateYarnCost(iplikler);
-        const calculatedProcessCost = calculateProcessCost(prosesler);
-        const totalCost = Number((calculatedYarnCost + calculatedProcessCost).toFixed(2));
-        const normalizedIplikler = iplikler.filter((item) => item.iplik_adi);
-        const normalizedProsesler = prosesler.filter((item) => item.proses_adi);
-        const formulJson = JSON.stringify({
-          editedAt: new Date().toISOString(),
-          source: 'admin_edit',
-          iplikler: normalizedIplikler.map(item => ({
-            iplik_adi: item.iplik_adi,
-            oran_yuzde: Number(item.oran_yuzde || 0),
-            birim_fiyat: Number(item.birim_fiyat || 0),
-            maliyet_tutari: Number(((Number(item.oran_yuzde || 0) / 100) * Number(item.birim_fiyat || 0)).toFixed(2))
-          })),
-          prosesler: normalizedProsesler.map(item => ({
-            proses_adi: item.proses_adi,
-            proses_tipi: item.proses_tipi,
-            birim_maliyet: Number(item.birim_maliyet || 0)
-          }))
-        });
+    const qrSlug = slugify(`${existing.article_code}-${mamulAdi}-${renk || ''}`);
+    const calculatedYarnCost = calculateYarnCost(iplikler);
+    const calculatedProcessCost = calculateProcessCost(prosesler);
+    const totalCost = Number((calculatedYarnCost + calculatedProcessCost).toFixed(2));
+    const normalizedIplikler = iplikler.filter((item) => item.iplik_adi);
+    const normalizedProsesler = prosesler.filter((item) => item.proses_adi);
 
-        db.serialize(() => {
-          db.run('BEGIN TRANSACTION');
+    db.serialize(() => {
+      db.run('BEGIN TRANSACTION');
 
       db.run(
-`UPDATE mamul_kartlari
-          SET mamul_adi = ?,
-              mamul_turu_id = ?,
-              koleksiyon_adi = ?,
-              yayin_durumu = ?,
-              renk = ?,
-              renk_kodu = ?,
-              kompozisyon_ozeti = ?,
-              en = ?,
-              gramaj = ?,
-              aciklama = ?,
-              tanitim_basligi = ?,
-              tanitim_hikayesi = ?,
-              materyal_notlari = ?,
-              gorsel_url = ?,
-              vurgu_etiketi = ?,
-              bakim_talimatlari = ?,
-              bir_kg_maliyet = ?,
-              bir_kg_satis_fiyati = ?,
-              para_birimi = ?,
-              qr_slug = ?,
-              aktif = ?,
-              excel_formul_json = ?,
-              excel_updated_at = CURRENT_TIMESTAMP,
-              updated_at = CURRENT_TIMESTAMP
-          WHERE id = ?`,
-          [
-            String(mamulAdi).trim(),
-            mamulTuruId,
-            String(koleksiyonAdi || '').trim(),
-            String(yayinDurumu || 'taslak').trim(),
-            String(renk || '').trim(),
-            String(renkKodu || '').trim(),
-            String(kompozisyonOzeti || '').trim(),
-            String(en || '').trim(),
-            String(gramaj || '').trim(),
-            String(aciklama || '').trim(),
-            String(tanitimBasligi || '').trim(),
-            String(tanitimHikayesi || '').trim(),
-            String(materyalNotlari || '').trim(),
-            String(gorselUrl || '').trim(),
-            String(vurguEtiketi || '').trim(),
-            String(bakimTalimatlari || '').trim(),
-            totalCost,
-            Number(birKgSatisFiyati || 0),
-            String(paraBirimi || 'TRY').trim().toUpperCase(),
-            qrSlug,
-            aktif ? 1 : 0,
-            formulJson,
-            mamulId
-          ],
+        `UPDATE mamul_kartlari
+         SET mamul_adi = ?,
+             mamul_turu_id = ?,
+             koleksiyon_adi = ?,
+             yayin_durumu = ?,
+             renk = ?,
+             renk_kodu = ?,
+             kompozisyon_ozeti = ?,
+             en = ?,
+             gramaj = ?,
+             aciklama = ?,
+             tanitim_basligi = ?,
+             tanitim_hikayesi = ?,
+             materyal_notlari = ?,
+             gorsel_url = ?,
+             vurgu_etiketi = ?,
+             bir_kg_maliyet = ?,
+             bir_kg_satis_fiyati = ?,
+             qr_slug = ?,
+             aktif = ?,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          String(mamulAdi).trim(),
+          mamulTuruId,
+          String(koleksiyonAdi || '').trim(),
+          String(yayinDurumu || 'taslak').trim(),
+          String(renk || '').trim(),
+          String(renkKodu || '').trim(),
+          String(kompozisyonOzeti || '').trim(),
+          String(en || '').trim(),
+          String(gramaj || '').trim(),
+          String(aciklama || '').trim(),
+          String(tanitimBasligi || '').trim(),
+          String(tanitimHikayesi || '').trim(),
+          String(materyalNotlari || '').trim(),
+          String(gorselUrl || '').trim(),
+          String(vurguEtiketi || '').trim(),
+          totalCost,
+          Number(birKgSatisFiyati || 0),
+          qrSlug,
+          aktif ? 1 : 0,
+          mamulId
+        ],
         (updateErr) => {
           if (updateErr) {
             db.run('ROLLBACK');
@@ -1778,67 +2021,37 @@ app.get('/api/public/mamuller/:slug', (req, res, next) => {
         (relatedErr, relatedRows) => {
           if (relatedErr) return next(relatedErr);
 
-          db.all(
-            `SELECT id, iplik_adi, oran_yuzde, sira_no
-             FROM mamul_iplik_detaylari
-             WHERE mamul_id = ?
-             ORDER BY sira_no ASC, id ASC`,
-            [mamul.id],
-            (yarnErr, yarnRows) => {
-              if (yarnErr) return next(yarnErr);
-
-              db.all(
-                `SELECT id, proses_adi, proses_tipi, aciklama, sira_no
-                 FROM mamul_proses_detaylari
-                 WHERE mamul_id = ?
-                 ORDER BY sira_no ASC, id ASC`,
-                [mamul.id],
-                (processErr, processRows) => {
-                  if (processErr) return next(processErr);
-
-                  res.json({
-                    success: true,
-                    data: {
-                      id: mamul.id,
-                      mamul_adi: mamul.mamul_adi,
-                      article_no: mamul.article_no,
-                      article_code: mamul.article_code,
-                      mamul_turu_adi: mamul.mamul_turu_adi,
-                      koleksiyon_adi: mamul.koleksiyon_adi || '',
-                      yayin_durumu: mamul.yayin_durumu || 'yayinda',
-                      renk: mamul.renk,
-                      kompozisyon_ozeti: mamul.kompozisyon_ozeti,
-                      en: mamul.en,
-                      gramaj: mamul.gramaj,
-                      aciklama: mamul.aciklama,
-                      qr_slug: mamul.qr_slug,
-                      tanitim_basligi: mamul.tanitim_basligi,
-                      tanitim_hikayesi: mamul.tanitim_hikayesi,
-                      materyal_notlari: mamul.materyal_notlari,
-                      gorsel_url: mamul.gorsel_url,
-                      vurgu_etiketi: mamul.vurgu_etiketi,
-                      bakim_talimatlari: mamul.bakim_talimatlari,
-                      bir_kg_maliyet: Number(mamul.bir_kg_maliyet || 0),
-                      bir_kg_satis_fiyati: Number(mamul.bir_kg_satis_fiyati || 0),
-                      iplikler: yarnRows.map((item) => ({
-                        ...item,
-                        oran_yuzde: Number(item.oran_yuzde || 0)
-                      })),
-                      prosesler: processRows,
-                      benzer_urunler: relatedRows
-                    }
-                  });
-                }
-              );
+          res.json({
+            success: true,
+            data: {
+              id: mamul.id,
+              mamul_adi: mamul.mamul_adi,
+              article_no: mamul.article_no,
+              article_code: mamul.article_code,
+              mamul_turu_adi: mamul.mamul_turu_adi,
+              koleksiyon_adi: mamul.koleksiyon_adi || '',
+              yayin_durumu: mamul.yayin_durumu || 'yayinda',
+              renk: mamul.renk,
+              kompozisyon_ozeti: mamul.kompozisyon_ozeti,
+              en: mamul.en,
+              gramaj: mamul.gramaj,
+              aciklama: mamul.aciklama,
+              qr_slug: mamul.qr_slug,
+              tanitim_basligi: mamul.tanitim_basligi,
+              tanitim_hikayesi: mamul.tanitim_hikayesi,
+              materyal_notlari: mamul.materyal_notlari,
+              gorsel_url: mamul.gorsel_url,
+              vurgu_etiketi: mamul.vurgu_etiketi,
+              benzer_urunler: relatedRows
             }
-          );
+          });
         }
       );
     }
   );
 });
 
-app.put('/api/admin/mamuller/:id/showcase', requireAuth(['admin']), (req, res, next) => {
+app.put('/api/admin/mamuller/:id/showcase', (req, res, next) => {
   const mamulId = req.params.id;
   const {
     tanitimBasligi,
@@ -1876,7 +2089,7 @@ app.put('/api/admin/mamuller/:id/showcase', requireAuth(['admin']), (req, res, n
   );
 });
 
-app.post('/api/admin/mamuller/:id/duplicate', requireAuth(['admin']), (req, res, next) => {
+app.post('/api/admin/mamuller/:id/duplicate', (req, res, next) => {
   const mamulId = req.params.id;
 
   loadMamulDetailByClause(`mk.id = ?`, [mamulId], (err, detail) => {
@@ -1988,10 +2201,35 @@ app.post('/api/admin/mamuller/:id/duplicate', requireAuth(['admin']), (req, res,
   });
 });
 
-// /api/mamul-labels route moved to server/routes/labeling.js
+app.get('/api/mamul-labels', (req, res, next) => {
+  const term = String(req.query.term || '').trim();
+  const params = [];
+  let sql = `
+    SELECT mk.*, mt.ad AS mamul_turu_adi, mt.kod_prefix
+    FROM mamul_kartlari mk
+    INNER JOIN mamul_turleri mt ON mt.id = mk.mamul_turu_id
+    WHERE 1 = 1
+  `;
 
-/*
-app.post('/api/orders', requireAuth(['admin', 'staff']), (req, res, next) => {
+  if (term) {
+    const likeTerm = `%${term}%`;
+    sql += ` AND (mk.mamul_adi LIKE ? OR mk.article_no LIKE ? OR mk.article_code LIKE ? OR mk.renk LIKE ?)`;
+    params.push(likeTerm, likeTerm, likeTerm, likeTerm);
+  }
+
+  sql += ` ORDER BY mk.updated_at DESC, mk.created_at DESC`;
+
+  db.all(sql, params, (err, rows) => {
+    if (err) return next(err);
+
+    res.json({
+      success: true,
+      data: rows.map(mapMamulCard)
+    });
+  });
+});
+
+app.post('/api/orders', (req, res, next) => {
   const {
     musteriAdi,
     firmaAdi,
@@ -2138,13 +2376,8 @@ app.post('/api/orders', requireAuth(['admin', 'staff']), (req, res, next) => {
                         data: {
                           siparisId,
                           toplamTutar,
-                          kalemSayisi: enrichedItems.length,
-                          emailStatus: { skipped: true, message: 'E-posta arka planda gönderiliyor' }
+                          kalemSayisi: enrichedItems.length
                         }
-                      });
-
-                      sendOrderEmailNotification(siparisId).catch((emailErr) => {
-                        console.error('Siparis email gonderme hatasi:', emailErr?.message || emailErr);
                       });
                     });
                   }
@@ -2158,7 +2391,92 @@ app.post('/api/orders', requireAuth(['admin', 'staff']), (req, res, next) => {
   );
 });
 
-app.put('/api/orders/:id', requireAuth(['admin', 'staff']), (req, res, next) => {
+app.get('/api/orders', (req, res, next) => {
+  db.all(
+    `SELECT s.*,
+            COUNT(sk.id) AS kalem_sayisi,
+            GROUP_CONCAT(DISTINCT sk.article_code) AS article_codes,
+            GROUP_CONCAT(DISTINCT sk.article_no) AS article_nos,
+            GROUP_CONCAT(DISTINCT sk.mamul_adi) AS mamul_adlari
+     FROM kartelix_orders s
+     LEFT JOIN kartelix_order_items sk ON sk.siparis_id = s.id
+     GROUP BY s.id
+     ORDER BY s.id DESC`,
+    [],
+    (err, rows) => {
+      if (err) return next(err);
+      res.json({
+        success: true,
+        data: rows.map(mapSiparisSummary)
+      });
+    }
+  );
+});
+
+app.get('/api/orders/:id', (req, res, next) => {
+  const siparisId = req.params.id;
+
+  db.get(`SELECT * FROM kartelix_orders WHERE id = ?`, [siparisId], (err, siparis) => {
+    if (err) return next(err);
+    if (!siparis) return res.status(404).json({ error: 'Siparis bulunamadi' });
+
+    db.all(
+      `SELECT * FROM kartelix_order_items WHERE siparis_id = ? ORDER BY id ASC`,
+      [siparisId],
+      (itemsErr, items) => {
+        if (itemsErr) return next(itemsErr);
+
+        res.json({
+          success: true,
+          data: {
+            ...mapSiparisSummary(siparis),
+            items: items.map(mapSiparisKalemi)
+          }
+        });
+      }
+    );
+  });
+});
+
+app.delete('/api/orders/:id', (req, res, next) => {
+  const siparisId = req.params.id;
+
+  db.serialize(() => {
+    db.run('BEGIN TRANSACTION');
+    db.run(`DELETE FROM kartelix_order_items WHERE siparis_id = ?`, [siparisId], (itemsErr) => {
+      if (itemsErr) {
+        db.run('ROLLBACK');
+        return next(itemsErr);
+      }
+
+      db.run(`DELETE FROM kartelix_orders WHERE id = ?`, [siparisId], function(orderErr) {
+        if (orderErr) {
+          db.run('ROLLBACK');
+          return next(orderErr);
+        }
+
+        if (this.changes === 0) {
+          db.run('ROLLBACK');
+          return res.status(404).json({ error: 'Siparis bulunamadi' });
+        }
+
+        db.run('COMMIT', (commitErr) => {
+          if (commitErr) {
+            db.run('ROLLBACK');
+            return next(commitErr);
+          }
+
+          res.json({
+            success: true,
+            message: 'Sipariş silindi'
+          });
+        });
+      });
+    });
+  });
+});
+
+app.put('/api/orders/:id', (req, res, next) => {
   const siparisId = req.params.id;
   const {
     musteriAdi,
@@ -2310,11 +2628,618 @@ app.put('/api/orders/:id', requireAuth(['admin', 'staff']), (req, res, next) => 
   });
 });
 
-*/
+app.get('/api/admin/reports/overview', (req, res, next) => {
+  db.serialize(() => {
+    db.get(`SELECT COUNT(*) AS count FROM mamul_kartlari`, [], (mamulErr, mamulRow) => {
+      if (mamulErr) return next(mamulErr);
+      db.get(`SELECT COUNT(*) AS count FROM mamul_kartlari WHERE aktif = 1`, [], (activeErr, activeRow) => {
+        if (activeErr) return next(activeErr);
+        db.get(`SELECT COUNT(*) AS count FROM kartelix_orders`, [], (orderErr, orderRow) => {
+          if (orderErr) return next(orderErr);
+          db.get(`SELECT COUNT(*) AS count FROM mamul_analitikleri WHERE olay_tipi = 'public_view'`, [], (viewErr, viewRow) => {
+            if (viewErr) return next(viewErr);
+            db.all(
+              `SELECT mk.id, mk.mamul_adi, mk.article_code, COUNT(ma.id) AS okutulma
+               FROM mamul_kartlari mk
+               LEFT JOIN mamul_analitikleri ma ON ma.mamul_id = mk.id AND ma.olay_tipi = 'public_view'
+               GROUP BY mk.id
+               ORDER BY okutulma DESC, mk.updated_at DESC
+               LIMIT 5`,
+              [],
+              (topErr, topRows) => {
+                if (topErr) return next(topErr);
+                db.all(
+                  `SELECT oi.mamul_id AS id, oi.mamul_adi, oi.article_code, SUM(oi.miktar_kg) AS toplam_kg
+                   FROM kartelix_order_items oi
+                   GROUP BY oi.mamul_id, oi.mamul_adi, oi.article_code
+                   ORDER BY toplam_kg DESC
+                   LIMIT 5`,
+                  [],
+                  (bestErr, bestRows) => {
+                    if (bestErr) return next(bestErr);
+                    res.json({
+                      success: true,
+                      data: {
+                        toplamMamul: Number(mamulRow.count || 0),
+                        publicAktifMamul: Number(activeRow.count || 0),
+                        toplamSiparis: Number(orderRow.count || 0),
+                        toplamPublicGoruntulenme: Number(viewRow.count || 0),
+                        enCokOkutulanlar: topRows.map((row) => ({ ...row, okutulma: Number(row.okutulma || 0) })),
+                        enCokSipariseGirenler: bestRows.map((row) => ({ ...row, toplam_kg: Number(row.toplam_kg || 0) }))
+                      }
+                    });
+                  }
+                );
+              }
+            );
+          });
+        });
+      });
+    });
+  });
+});
 
-// Legacy order endpoints are now handled by server/routes/orders.js.
+// --- YENİ SİPARİŞ YÖNETİMİ API ROTLARI ---
 
-app.post('/api/backup', requireAuth(['admin']), (req, res, next) => {
+// Yeni Sipariş Oluşturma
+
+app.post('/api/yeni-siparis', validateSiparis, (req, res, next) => {
+  const { musteriAdi, ilgiliKisi, telefon, kartelalar, aciklama } = req.body;
+  
+  db.serialize(() => {
+    db.run('BEGIN TRANSACTION');
+    
+    // Sipariş oluştur
+    const siparisSql = `
+      INSERT INTO siparisler (musteri_adi, ilgili_kisi, telefon, aciklama)
+      VALUES (?, ?, ?, ?)
+    `;
+    
+    db.run(siparisSql, [musteriAdi.trim(), ilgiliKisi?.trim() || '', telefon?.trim() || '', aciklama?.trim() || ''], 
+    function(err) {
+      if (err) {
+        db.run('ROLLBACK');
+        return next(err);
+      }
+      
+      const siparisId = this.lastID;
+      
+      if (kartelalar && kartelalar.length > 0) {
+        let completed = 0;
+        
+        kartelalar.forEach((kartela) => {
+          // Kartela bilgilerini kartelalar tablosundan al
+          const kartelaSql = `
+            INSERT INTO siparis_kartelalari (siparis_id, kartela_kodu, mamul_adi, article_no)
+            VALUES (?, ?, ?, ?)
+          `;
+          
+          db.run(kartelaSql, [
+            siparisId, 
+            kartela.kod,
+            kartela.mamul_adi,
+            kartela.article_no
+          ], function(kartelaErr) {
+            if (kartelaErr) {
+              console.error('Kartela ekleme hatası:', kartelaErr);
+            }
+            
+            completed++;
+            if (completed === kartelalar.length) {
+              db.run('COMMIT', (commitErr) => {
+                if (commitErr) {
+                  db.run('ROLLBACK');
+                  return next(commitErr);
+                }
+                
+                res.json({ 
+                  success: true, 
+                  data: { siparisId },
+                  message: `Sipariş başarıyla oluşturuldu (${kartelalar.length} kartela eklendi)` 
+                });
+              });
+            }
+          });
+        });
+      } else {
+        db.run('COMMIT', (commitErr) => {
+          if (commitErr) {
+            db.run('ROLLBACK');
+            return next(commitErr);
+          }
+          
+          res.json({ 
+            success: true, 
+            data: { siparisId },
+            message: 'Sipariş başarıyla oluşturuldu' 
+          });
+        });
+      }
+    });
+  });
+});
+
+// Sipariş Listesi
+app.get('/api/siparisler', (req, res, next) => {
+  const sql = `
+    SELECT s.*, 
+           COUNT(sk.id) as kartela_sayisi,
+           GROUP_CONCAT(sk.kartela_kodu) as kartela_kodlari
+    FROM siparisler s
+    LEFT JOIN siparis_kartelalari sk ON s.id = sk.siparis_id
+    GROUP BY s.id
+    ORDER BY s.created_at DESC
+  `;
+  
+  db.all(sql, [], (err, rows) => {
+    if (err) return next(err);
+    
+    res.json({
+      success: true,
+      data: {
+        siparisler: rows
+      }
+    });
+  });
+});
+
+// Sipariş Detayı
+app.get('/api/siparis/:id', (req, res, next) => {
+  const siparisId = req.params.id;
+  
+  const siparisSql = `SELECT * FROM siparisler WHERE id = ?`;
+  const kartelalarSql = `SELECT * FROM siparis_kartelalari WHERE siparis_id = ?`;
+  
+  db.get(siparisSql, [siparisId], (err, siparis) => {
+    if (err) return next(err);
+    if (!siparis) return res.status(404).json({ error: 'Sipariş bulunamadı' });
+    
+    db.all(kartelalarSql, [siparisId], (kartelaErr, kartelalar) => {
+      if (kartelaErr) return next(kartelaErr);
+      
+      res.json({
+        success: true,
+        data: {
+          siparis: siparis,
+          kartelalar: kartelalar
+        }
+      });
+    });
+  });
+});
+
+app.delete('/api/siparis/:id', (req, res, next) => {
+  const siparisId = req.params.id;
+
+  db.serialize(() => {
+    db.run(`DELETE FROM siparis_kartelalari WHERE siparis_id = ?`, [siparisId], (childErr) => {
+      if (childErr) return next(childErr);
+
+      db.run(`DELETE FROM siparisler WHERE id = ?`, [siparisId], function(err) {
+        if (err) return next(err);
+
+        if (this.changes === 0) {
+          return res.status(404).json({ error: 'Sipariş bulunamadı' });
+        }
+
+        res.json({
+          success: true,
+          message: 'Sipariş başarıyla silindi'
+        });
+      });
+    });
+  });
+});
+
+// --- ETİKET AYARLARI API ROTLARI ---
+
+// Etiket ayarlarını getir
+app.get('/api/etiket-ayarlari', (req, res, next) => {
+  db.all(
+    `SELECT * FROM etiket_ayarlari ORDER BY sira_no ASC`, 
+    [], 
+    (err, rows) => {
+      if (err) return next(err);
+      
+      res.json({
+        success: true,
+        data: rows
+      });
+    }
+  );
+});
+
+// Etiket ayarlarını güncelle
+app.put('/api/etiket-ayarlari', (req, res, next) => {
+  const { ayarlar } = req.body;
+  
+  if (!Array.isArray(ayarlar)) {
+    return res.status(400).json({ error: 'Geçersiz ayar formatı' });
+  }
+  
+  db.serialize(() => {
+    db.run('BEGIN TRANSACTION');
+    
+    // Önce tüm ayarları resetle
+    db.run(`UPDATE etiket_ayarlari SET sira_no = NULL, aktif = 0`);
+    
+    let completed = 0;
+    ayarlar.forEach((ayar, index) => {
+      db.run(
+        `UPDATE etiket_ayarlari SET sira_no = ?, aktif = ? WHERE alan_adi = ?`,
+        [index + 1, ayar.aktif ? 1 : 0, ayar.alan_adi],
+        function(err) {
+          if (err) console.error('Ayar güncelleme hatası:', err);
+          
+          completed++;
+          if (completed === ayarlar.length) {
+            db.run('COMMIT', (commitErr) => {
+              if (commitErr) {
+                db.run('ROLLBACK');
+                return next(commitErr);
+              }
+              
+              res.json({
+                success: true,
+                message: 'Etiket ayarları başarıyla güncellendi'
+              });
+            });
+          }
+        }
+      );
+    });
+  });
+});
+
+// --- KARTELALAR API ROTLARI ---
+
+// Kartela oluştur
+app.post('/api/kartelalar', (req, res, next) => {
+  const { kod, mamul_adi, tip, kompozisyon, en, gramaj, prefix } = req.body;
+  
+  if (!kod || kod.trim().length === 0) {
+    return res.status(400).json({ error: 'Kartela kodu zorunludur' });
+  }
+  
+  if (!mamul_adi || mamul_adi.trim().length === 0) {
+    return res.status(400).json({ error: 'Mamul adı zorunludur' });
+  }
+
+  // Benzersiz article_no oluştur
+  const tarih = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const selectedPrefix = prefix || 'PRD';
+  
+  db.get(
+    `SELECT COUNT(*) AS count FROM kartelalar WHERE article_no LIKE ?`,
+    [`${selectedPrefix}-${tarih}-%`],
+    (err, row) => {
+      if (err) return next(err);
+      
+      const count = row.count + 1;
+      const articleNo = `${selectedPrefix}-${tarih}-${String(count).padStart(5, '0')}`;
+      
+      // Kartelayı kaydet
+      db.run(
+        `INSERT INTO kartelalar (kod, mamul_adi, tip, kompozisyon, en, gramaj, article_no) 
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [kod.trim(), mamul_adi.trim(), tip?.trim() || '', kompozisyon?.trim() || '', 
+         en?.trim() || '', gramaj?.trim() || '', articleNo],
+        function(err) {
+          if (err) return next(err);
+          
+          res.json({
+            success: true,
+            data: { 
+              id: this.lastID,
+              articleNo: articleNo
+            },
+            message: 'Kartela başarıyla oluşturuldu'
+          });
+        }
+      );
+    }
+  );
+});
+
+// Kartela listesi
+app.get('/api/kartelalar', (req, res, next) => {
+  const { search, page = 1, limit = 10 } = req.query;
+  const offset = (page - 1) * limit;
+  
+  let sql = `SELECT * FROM kartelalar`;
+  let countSql = `SELECT COUNT(*) as total FROM kartelalar`;
+  let params = [];
+  
+  if (search && search.trim().length > 0) {
+    const searchTerm = `%${search.trim()}%`;
+    sql += ` WHERE kod LIKE ? OR mamul_adi LIKE ? OR article_no LIKE ?`;
+    countSql += ` WHERE kod LIKE ? OR mamul_adi LIKE ? OR article_no LIKE ?`;
+    params = [searchTerm, searchTerm, searchTerm];
+  }
+  
+  sql += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+  
+  db.get(countSql, params, (countErr, countRow) => {
+    if (countErr) return next(countErr);
+    
+    db.all(sql, [...params, limit, offset], (err, rows) => {
+      if (err) return next(err);
+      
+      res.json({
+        success: true,
+        data: {
+          kartelalar: rows,
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: countRow.total,
+            totalPages: Math.ceil(countRow.total / limit)
+          }
+        }
+      });
+    });
+  });
+});
+
+// Kartela detayı
+app.get('/api/kartelalar/:id', (req, res, next) => {
+  const kartelaId = req.params.id;
+  
+  db.get(
+    `SELECT * FROM kartelalar WHERE id = ?`,
+    [kartelaId],
+    (err, row) => {
+      if (err) return next(err);
+      
+      if (!row) {
+        return res.status(404).json({ error: 'Kartela bulunamadı' });
+      }
+      
+      res.json({
+        success: true,
+        data: row
+      });
+    }
+  );
+});
+
+// Kartela sil
+app.delete('/api/kartelalar/:id', (req, res, next) => {
+  const kartelaId = req.params.id;
+  
+  db.run(
+    `DELETE FROM kartelalar WHERE id = ?`,
+    [kartelaId],
+    function(err) {
+      if (err) return next(err);
+      
+      res.json({
+        success: true,
+        message: 'Kartela başarıyla silindi'
+      });
+    }
+  );
+});
+
+// --- PREFIX AYARLARI API ROTLARI ---
+
+// Prefix ayarlarını getir
+app.get('/api/prefix-ayarlari', (req, res, next) => {
+  db.all(
+    `SELECT * FROM prefix_ayarlari ORDER BY prefix ASC`, 
+    [], 
+    (err, rows) => {
+      if (err) return next(err);
+      
+      res.json({
+        success: true,
+        data: rows
+      });
+    }
+  );
+});
+
+// Yeni prefix ekle
+app.post('/api/prefix-ayarlari', (req, res, next) => {
+  const { prefix, aciklama } = req.body;
+  
+  if (!prefix || prefix.trim().length === 0) {
+    return res.status(400).json({ error: 'Prefix zorunludur' });
+  }
+  
+  db.run(
+    `INSERT INTO prefix_ayarlari (prefix, aciklama) VALUES (?, ?)`,
+    [prefix.trim().toUpperCase(), aciklama?.trim() || ''],
+    function(err) {
+      if (err) return next(err);
+      
+      res.json({
+        success: true,
+        data: { id: this.lastID },
+        message: 'Prefix başarıyla eklendi'
+      });
+    }
+  );
+});
+
+// Prefix sil
+app.delete('/api/prefix-ayarlari/:id', (req, res, next) => {
+  const prefixId = req.params.id;
+  
+  db.run(
+    `DELETE FROM prefix_ayarlari WHERE id = ?`,
+    [prefixId],
+    function(err) {
+      if (err) return next(err);
+      
+      res.json({
+        success: true,
+        message: 'Prefix başarıyla silindi'
+      });
+    }
+  );
+});
+
+// Prefix güncelle
+app.put('/api/prefix-ayarlari/:id', (req, res, next) => {
+  const prefixId = req.params.id;
+  const { prefix, aciklama } = req.body;
+  
+  if (!prefix || prefix.trim().length === 0) {
+    return res.status(400).json({ error: 'Prefix zorunludur' });
+  }
+  
+  db.run(
+    `UPDATE prefix_ayarlari SET prefix = ?, aciklama = ? WHERE id = ?`,
+    [prefix.trim().toUpperCase(), aciklama?.trim() || '', prefixId],
+    function(err) {
+      if (err) return next(err);
+      
+      res.json({
+        success: true,
+        message: 'Prefix başarıyla güncellendi'
+      });
+    }
+  );
+});
+// --- SİPARİŞ İÇİN KARTELA ARAMA API ROTLARI ---
+
+// Siparişe kartela eklemek için arama
+app.get('/api/siparis-kartela-ara', (req, res, next) => {
+  const term = req.query.term ? String(req.query.term).trim() : '';
+  
+  if (term.length < 2) {
+    return res.json({ 
+      success: true, 
+      data: { kartelalar: [] },
+      message: 'Arama için en az 2 karakter girin'
+    });
+  }
+
+  const searchTerm = `%${term}%`;
+  const sql = `
+    SELECT id, kod, mamul_adi, tip, article_no
+    FROM kartelalar
+    WHERE kod LIKE ? OR mamul_adi LIKE ? OR article_no LIKE ?
+    ORDER BY 
+      CASE 
+        WHEN kod LIKE ? THEN 1
+        WHEN mamul_adi LIKE ? THEN 2
+        ELSE 3
+      END
+    LIMIT 20
+  `;
+  
+  db.all(sql, [searchTerm, searchTerm, searchTerm, `%${term}%`, `%${term}%`], (err, rows) => {
+    if (err) return next(err);
+    
+    res.json({ 
+      success: true, 
+      data: { kartelalar: rows } 
+    });
+  });
+});
+
+// QR kod ile kartela bulma (sipariş için)
+app.get('/api/siparis-kartela/:kod', (req, res, next) => {
+  const kartelaKod = req.params.kod;
+  
+  db.get(
+    `SELECT id, kod, mamul_adi, tip, article_no 
+     FROM kartelalar 
+     WHERE kod = ?`,
+    [kartelaKod],
+    (err, row) => {
+      if (err) return next(err);
+      
+      if (!row) {
+        return res.status(404).json({ 
+          success: false, 
+          error: 'Kartela bulunamadı' 
+        });
+      }
+      
+      res.json({
+        success: true,
+        data: row
+      });
+    }
+  );
+});
+
+// Benzersiz kartela kodu kontrolü
+app.get('/api/kartela-kodu-kontrol/:kod', (req, res, next) => {
+  const kartelaKod = req.params.kod;
+  
+  db.get(
+    `SELECT COUNT(*) as count FROM kartelalar WHERE kod = ?`,
+    [kartelaKod],
+    (err, row) => {
+      if (err) return next(err);
+      
+      res.json({
+        success: true,
+        data: {
+          mevcut: row.count > 0,
+          mesaj: row.count > 0 ? 'Bu kartela kodu zaten mevcut' : 'Kod kullanılabilir'
+        }
+      });
+    }
+  );
+});
+// --- EMAIL GÖNDERME API ROTU ---
+
+app.post('/api/siparis-email-gonder', (req, res, next) => {
+  const { siparisId, email } = req.body;
+  
+  // Burada email gönderme servisi entegre edilecek
+  // Şimdilik simüle ediyoruz
+  
+  console.log(`📧 Email gönderiliyor: Sipariş #${siparisId} -> ${email}`);
+  
+  // Simüle edilmiş başarılı response
+  setTimeout(() => {
+    res.json({
+      success: true,
+      message: 'Email başarıyla gönderildi'
+    });
+  }, 1000);
+});
+
+app.get('/api/stats', (req, res, next) => {
+  const stats = {
+    totalSiparis: 0,
+    totalFirma: 0,
+    totalMamul: 0,
+    totalKullanici: 0
+  };
+
+  db.serialize(() => {
+    db.get(`SELECT COUNT(*) AS count FROM kartelix_orders`, [], (err, row) => {
+      if (err) return next(err);
+      stats.totalSiparis = row?.count || 0;
+
+      db.get(`SELECT COUNT(*) AS count FROM firmalar`, [], (firmaErr, firmaRow) => {
+        if (firmaErr) return next(firmaErr);
+        stats.totalFirma = firmaRow?.count || 0;
+
+        db.get(`SELECT COUNT(*) AS count FROM mamul_kartlari`, [], (mamulErr, mamulRow) => {
+          if (mamulErr) return next(mamulErr);
+          stats.totalMamul = mamulRow?.count || 0;
+
+          db.get(`SELECT COUNT(*) AS count FROM kullanicilar`, [], (userErr, userRow) => {
+            if (userErr) return next(userErr);
+            stats.totalKullanici = userRow?.count || 0;
+
+            res.json(stats);
+          });
+        });
+      });
+    });
+  });
+});
+
+app.post('/api/backup', (req, res, next) => {
   try {
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
@@ -2334,7 +3259,7 @@ app.post('/api/backup', requireAuth(['admin']), (req, res, next) => {
   }
 });
 
-app.post('/api/clean-database', requireAuth(['admin']), (req, res, next) => {
+app.post('/api/clean-database', (req, res, next) => {
   db.serialize(() => {
     db.run('BEGIN TRANSACTION');
     db.run(`DELETE FROM kartelix_order_items`);
@@ -2364,119 +3289,73 @@ app.post('/api/clean-database', requireAuth(['admin']), (req, res, next) => {
   });
 });
 
-// --- GENEL AYARLAR ---
-const defaultGenelAyarlar = { publicProsesGoster: false, publicFiyatGoster: false };
+// --- QR KOD API ROTLARI ---
 
-app.get('/api/genel-ayarlar', async (req, res, next) => {
-  try {
-    const row = await dbGetAsync('SELECT deger FROM ui_ayarlari WHERE anahtar = ?', ['genel_ayarlar']);
-    const parsed = row ? JSON.parse(row.deger || '{}') : {};
-    res.json({ success: true, data: { ...defaultGenelAyarlar, ...parsed } });
-  } catch (err) { next(err); }
-});
-
-app.put('/api/genel-ayarlar', requireAuth(['admin']), async (req, res, next) => {
-  try {
-    const existing = await dbGetAsync('SELECT deger FROM ui_ayarlari WHERE anahtar = ?', ['genel_ayarlar']);
-    const parsed = existing ? JSON.parse(existing.deger || '{}') : {};
-    const nextVal = { ...defaultGenelAyarlar, ...parsed, ...req.body };
-    await dbRunAsync(
-      'INSERT INTO ui_ayarlari (anahtar, deger) VALUES (?, ?) ON CONFLICT(anahtar) DO UPDATE SET deger = excluded.deger, updated_at = CURRENT_TIMESTAMP',
-      ['genel_ayarlar', JSON.stringify(nextVal)]
-    );
-    res.json({ success: true, data: nextVal });
-  } catch (err) { next(err); }
+// QR koddan mamül bilgisi getir
+app.get('/api/qr-scan/:kod', (req, res, next) => {
+  const qrKod = req.params.kod;
+  
+  // Önce mamuller tablosunda ara
+  db.get(
+    `SELECT kod, ad, tip, stok FROM mamuller WHERE kod = ?`,
+    [qrKod],
+    (err, mamul) => {
+      if (err) return next(err);
+      
+      if (mamul) {
+        return res.json({
+          success: true,
+          data: {
+            tip: 'mamul',
+            ...mamul
+          }
+        });
+      }
+      
+      // Mamul bulunamazsa, kartela kodlarına bak
+      db.get(
+        `SELECT kartela_kodu, mamul_adi, article_no FROM siparis_kartelalari WHERE kartela_kodu = ?`,
+        [qrKod],
+        (kartelaErr, kartela) => {
+          if (kartelaErr) return next(kartelaErr);
+          
+          if (kartela) {
+            return res.json({
+              success: true,
+              data: {
+                tip: 'kartela',
+                ...kartela
+              }
+            });
+          }
+          
+          res.status(404).json({
+            success: false,
+            error: 'QR kod ile eşleşen kayıt bulunamadı'
+          });
+        }
+      );
+    }
+  );
 });
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   db.get('SELECT 1 as status', (err) => {
     if (err) {
-      return res.status(503).json({
-        status: 'error',
-        database: 'disconnected',
-        timestamp: new Date().toISOString()
+      return res.status(503).json({ 
+        status: 'error', 
+        database: 'disconnected' 
       });
     }
-
-    res.json({
-      status: 'ok',
+    
+    res.json({ 
+      status: 'ok', 
       database: 'connected',
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development'
+      timestamp: new Date().toISOString()
     });
   });
 });
-
-// Görsel upload ayarları
-const uploadsDir = path.join(__dirname, '..', 'public', 'uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
-const gorselStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-    cb(null, `mamul-${req.params.id}-${Date.now()}${ext}`);
-  }
-});
-
-const gorselUpload = multer({
-  storage: gorselStorage,
-  limits: { fileSize: 8 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    cb(null, /^image\/(jpeg|png|webp|gif)$/.test(file.mimetype));
-  }
-});
-
-app.post('/api/admin/mamuller/:id/gorsel', requireAuth(['admin']), gorselUpload.single('gorsel'), (req, res, next) => {
-  if (!req.file) return res.status(400).json({ error: 'Geçerli bir görsel dosyası seçin (jpg, png, webp)' });
-
-  const mamulId = req.params.id;
-  const gorselUrl = `/uploads/${req.file.filename}`;
-
-  // Eski görseli sil
-  db.get(`SELECT gorsel_url FROM mamul_kartlari WHERE id = ?`, [mamulId], (err, row) => {
-    if (!err && row?.gorsel_url && row.gorsel_url.startsWith('/uploads/')) {
-      const oldPath = path.join(__dirname, '..', 'public', row.gorsel_url);
-      fs.unlink(oldPath, () => {});
-    }
-
-    db.run(
-      `UPDATE mamul_kartlari SET gorsel_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-      [gorselUrl, mamulId],
-      function(updateErr) {
-        if (updateErr) return next(updateErr);
-        if (this.changes === 0) return res.status(404).json({ error: 'Mamül bulunamadı' });
-        res.json({ success: true, data: { gorsel_url: gorselUrl } });
-      }
-    );
-  });
-});
-
-app.delete('/api/admin/mamuller/:id/gorsel', requireAuth(['admin']), (req, res, next) => {
-  const mamulId = req.params.id;
-  db.get(`SELECT gorsel_url FROM mamul_kartlari WHERE id = ?`, [mamulId], (err, row) => {
-    if (err) return next(err);
-    if (!row) return res.status(404).json({ error: 'Mamül bulunamadı' });
-
-    if (row.gorsel_url && row.gorsel_url.startsWith('/uploads/')) {
-      const oldPath = path.join(__dirname, '..', 'public', row.gorsel_url);
-      fs.unlink(oldPath, () => {});
-    }
-
-    db.run(
-      `UPDATE mamul_kartlari SET gorsel_url = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-      [mamulId],
-      (updateErr) => {
-        if (updateErr) return next(updateErr);
-        res.json({ success: true });
-      }
-    );
-  });
-});
-
-// /uploads klasörünü serve et
-app.use('/uploads', express.static(uploadsDir));
 
 if (fs.existsSync(buildDir)) {
   app.use(express.static(buildDir));
@@ -2499,12 +3378,14 @@ app.use(errorHandler);
 
 // Sunucuyu başlat
 const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, () => {
   console.log(`✅ ARKA PLAN İŞLEMLERİ DEVREDE: http://localhost:${PORT}`);
-  console.log(`✅ Ortam: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`✅ CORS origin: ${ALLOWED_ORIGIN}`);
-  console.log(`✅ Excel sync: ${excelInboxDir} (poll: ${excelPollMs}ms)`);
+  console.log(`✅ Yeni özellikler aktif:`);
+  console.log(`   📦 Sipariş yönetimi API'leri`);
+  console.log(`   🏷️ Etiket ayarları API'leri`);
+  console.log(`   🔤 Prefix ayarları API'leri`);
+  console.log(`   📧 Email gönderme API'leri`);
+  console.log(`   📱 QR kod okuma API'leri`);
 });
 
 // Graceful shutdown
