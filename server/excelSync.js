@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const XLSX = require('xlsx');
 
 const SOURCE_ORDER = [
@@ -119,6 +120,26 @@ const cellValue = (sheet, address, fallback = '') => {
 const cellNumber = (sheet, address, fallback = 0) => toNumber(cellValue(sheet, address, fallback), fallback);
 
 const compactText = (value) => String(value ?? '').replace(/\s+/g, ' ').trim();
+
+const getFileFingerprint = async (filePath) => {
+  const stat = await fs.promises.stat(filePath).catch(() => null);
+  if (!stat) return null;
+
+  const buffer = await fs.promises.readFile(filePath);
+  const hash = crypto.createHash('sha256');
+  hash.update(buffer);
+  return {
+    size: stat.size,
+    sha256: hash.digest('hex')
+  };
+};
+
+const hasFileChanged = async (filePath, previousFingerprint) => {
+  if (!previousFingerprint) return true;
+  const fingerprint = await getFileFingerprint(filePath);
+  if (!fingerprint) return true;
+  return fingerprint.sha256 !== previousFingerprint.sha256 || fingerprint.size !== previousFingerprint.size;
+};
 
 const getFileTypePrefix = (fileName) => {
   const match = String(fileName || '').match(/(\d{2})\d{3}/);
@@ -1004,10 +1025,87 @@ const startExcelSync = ({
     running: false,
     pollMs: defaultIntervalMs,
     sources: [],
-    lastSeenBySource: {}
+    lastSeenBySource: {},
+    lastFingerprintBySource: {}
   };
 
   let timer = null;
+
+  const processConfiguredSources = async () => {
+    const sources = await loadSources(db);
+    let importedRows = 0;
+    const previews = [];
+
+    for (const source of sources) {
+      if (source.sourceType === 'urge_fiyat_listesi') continue;
+
+      const configuredFile = findConfiguredFile(directory, source.fileName, source.extension);
+      if (!configuredFile) continue;
+
+      const stat = fs.statSync(configuredFile.filePath);
+      const sourceKey = `source:${source.id}`;
+      const alreadySeen = state.lastSeenBySource[sourceKey];
+      const previousFingerprint = state.lastFingerprintBySource[sourceKey];
+      const fingerprint = await getFileFingerprint(configuredFile.filePath);
+      const changed = !alreadySeen || alreadySeen.filePath !== configuredFile.filePath || !previousFingerprint || fingerprint?.sha256 !== previousFingerprint?.sha256;
+
+      if (!changed) {
+        continue;
+      }
+
+      const workbook = XLSX.readFile(configuredFile.filePath, { cellDates: true, cellFormula: true });
+      const targetSheet = source.sheetName && workbook.SheetNames.includes(source.sheetName)
+        ? source.sheetName
+        : workbook.SheetNames[0];
+      const sheet = workbook.Sheets?.[targetSheet];
+      if (!sheet) continue;
+
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+      const importer = importers[source.sourceType];
+
+      let result = { importedRows: 0 };
+      let error = null;
+
+      if (importer) {
+        try {
+          result = await importer(db, rows);
+        } catch (err) {
+          error = err?.message || String(err);
+        }
+      }
+
+      importedRows += result.importedRows || 0;
+      const preview = {
+        sourceType: source.sourceType,
+        fileName: configuredFile.fileName,
+        sheetName: targetSheet,
+        importedRows: result.importedRows || 0
+      };
+      if (error) preview.error = error;
+      previews.push(preview);
+
+      await insertSnapshot(db, {
+        filePath: configuredFile.filePath,
+        fileMtimeMs: stat.mtimeMs || 0,
+        fileSize: stat.size || 0,
+        sourceType: source.sourceType,
+        sourceId: source.id,
+        status: error ? 'error' : 'imported',
+        importedRows: result.importedRows || 0,
+        message: error || `${configuredFile.fileName} icin ${source.sourceType} import tamamlandi`,
+        summary: parseWorkbookSummary(workbook),
+        preview
+      });
+
+      state.lastSeenBySource[sourceKey] = {
+        filePath: configuredFile.filePath,
+        mtimeMs: stat.mtimeMs || 0
+      };
+      state.lastFingerprintBySource[sourceKey] = fingerprint;
+    }
+
+    return { importedRows, files: previews };
+  };
 
   const processUrgeDirectory = async () => {
     const entries = fs.readdirSync(directory)
@@ -1023,12 +1121,11 @@ const startExcelSync = ({
       const stat = fs.statSync(filePath);
       const sourceKey = `urge:${fileName}`;
       const alreadySeen = state.lastSeenBySource[sourceKey];
+      const previousFingerprint = state.lastFingerprintBySource[sourceKey];
+      const fingerprint = await getFileFingerprint(filePath);
+      const changed = !alreadySeen || alreadySeen.filePath !== filePath || !previousFingerprint || fingerprint?.sha256 !== previousFingerprint?.sha256;
 
-      if (
-        alreadySeen &&
-        alreadySeen.filePath === filePath &&
-        Number(alreadySeen.mtimeMs) === Number(stat.mtimeMs || 0)
-      ) {
+      if (!changed) {
         continue;
       }
 
@@ -1076,6 +1173,7 @@ const startExcelSync = ({
         filePath,
         mtimeMs: stat.mtimeMs || 0
       };
+      state.lastFingerprintBySource[sourceKey] = fingerprint;
     }
 
     return { importedRows, skippedRows, files: previews };
@@ -1102,6 +1200,9 @@ const startExcelSync = ({
 
       const urgeResult = await processUrgeDirectory();
       state.urgeLastResult = urgeResult;
+
+      const sourcesResult = await processConfiguredSources();
+      state.sources = sourcesResult.files || [];
 
       state.lastError = null;
     } catch (err) {
@@ -1199,4 +1300,4 @@ const startExcelSync = ({
   };
 };
 
-module.exports = { startExcelSync, SOURCE_ORDER };
+module.exports = { startExcelSync, SOURCE_ORDER, getFileFingerprint, hasFileChanged };
