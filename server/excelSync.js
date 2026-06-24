@@ -121,6 +121,27 @@ const cellNumber = (sheet, address, fallback = 0) => toNumber(cellValue(sheet, a
 
 const compactText = (value) => String(value ?? '').replace(/\s+/g, ' ').trim();
 
+const normalizeHeaderKey = (value) => normalizeHeader(String(value ?? ''));
+
+const findHeaderColumn = (sheet, rowNumber, candidates) => {
+  const row = sheet?.[`${rowNumber}`];
+  if (!row) return null;
+
+  const normalizedCandidates = candidates.map((candidate) => normalizeHeaderKey(candidate));
+  const headers = Object.keys(row || {})
+    .filter((key) => key && key !== '!ref')
+    .map((key) => ({ key, normalized: normalizeHeaderKey(key) }));
+
+  const matched = headers.find((header) => normalizedCandidates.includes(header.normalized));
+  return matched ? matched.key : null;
+};
+
+const getCellValueByHeader = (sheet, rowNumber, candidates, fallback = '') => {
+  const column = findHeaderColumn(sheet, rowNumber, candidates);
+  if (!column) return fallback;
+  return cellValue(sheet, `${column}${rowNumber + 1}`, fallback);
+};
+
 const getFileFingerprint = async (filePath) => {
   const stat = await fs.promises.stat(filePath).catch(() => null);
   if (!stat) return null;
@@ -789,9 +810,24 @@ const importUrgeWorkbook = async (db, configuredFile, workbook, sheetName) => {
   let imported = 0;
   let skipped = 0;
 
+  const headerRowNumber = 2;
+  const articleColumn = findHeaderColumn(sheet, headerRowNumber, ['article no', 'article_no', 'articleno', 'article']);
+  const productColumn = findHeaderColumn(sheet, headerRowNumber, ['product', 'urun', 'urun_adi', 'mamul']);
+  const colorColumn = findHeaderColumn(sheet, headerRowNumber, ['color', 'renk', 'renk_adi']);
+  const compositionColumn = findHeaderColumn(sheet, headerRowNumber, ['kompozisyon', 'kompozisyon_ozeti', 'composition']);
+  const dyeProcessColumn = findHeaderColumn(sheet, headerRowNumber, ['dye_process', 'boya_proses', 'boya_islemleri', 'proses']);
+  const descriptionColumn = findHeaderColumn(sheet, headerRowNumber, ['description', 'aciklama', 'not']);
+  const widthColumn = findHeaderColumn(sheet, headerRowNumber, ['width', 'en', 'cm']);
+  const weightColumn = findHeaderColumn(sheet, headerRowNumber, ['weight', 'gramaj', 'gr_m2']);
+  const yarnDescriptionColumn = findHeaderColumn(sheet, headerRowNumber, ['iplik_tanimi', 'iplik_tanimi', 'tanimi']);
+  const hamCostColumn = findHeaderColumn(sheet, headerRowNumber, ['ham_maliyet', 'ham_kumas_maliyeti', 'ham fiyat', 'aj']);
+  const processCostColumn = findHeaderColumn(sheet, headerRowNumber, ['proses_maliyeti', 'proses', 'an']);
+  const mamulCostColumn = findHeaderColumn(sheet, headerRowNumber, ['mamul_maliyeti', 'mamul_kumas_maliyeti', 'am']);
+  const fasonOrguColumn = findHeaderColumn(sheet, headerRowNumber, ['fason_orgu', 'orgu', 'ai']);
+
   for (let rowNumber = 3; rowNumber <= range.e.r + 1; rowNumber += 1) {
-    const rawArticleNo = compactText(cellValue(sheet, `D${rowNumber}`));
-    const product = compactText(cellValue(sheet, `N${rowNumber}`));
+    const rawArticleNo = compactText(cellValue(sheet, articleColumn ? `${articleColumn}${rowNumber}` : `D${rowNumber}`));
+    const product = compactText(cellValue(sheet, productColumn ? `${productColumn}${rowNumber}` : `N${rowNumber}`));
 
     if (!rawArticleNo || !/^\d+/.test(rawArticleNo)) continue;
     if (!product) {
@@ -810,18 +846,18 @@ const importUrgeWorkbook = async (db, configuredFile, workbook, sheetName) => {
       continue;
     }
 
-    const color = compactText(cellValue(sheet, `E${rowNumber}`));
-    const composition = compactText(cellValue(sheet, `AK${rowNumber}`));
-    const dyeProcesses = compactText(cellValue(sheet, `AL${rowNumber}`));
-    const description = compactText(cellValue(sheet, `BI${rowNumber}`));
-    const width = compactText(cellValue(sheet, `R${rowNumber}`));
-    const weight = compactText(cellValue(sheet, `Q${rowNumber}`));
-    const yarnDescription = compactText(cellValue(sheet, `M${rowNumber}`));
-    const hamMaliyet = cellNumber(sheet, `AJ${rowNumber}`, 0);
-    const prosesMaliyeti = cellNumber(sheet, `AN${rowNumber}`, 0);
-    const mamulMaliyeti = cellNumber(sheet, `AM${rowNumber}`, 0) || (hamMaliyet + prosesMaliyeti);
+    const color = compactText(cellValue(sheet, colorColumn ? `${colorColumn}${rowNumber}` : `E${rowNumber}`));
+    const composition = compactText(cellValue(sheet, compositionColumn ? `${compositionColumn}${rowNumber}` : `AK${rowNumber}`));
+    const dyeProcesses = compactText(cellValue(sheet, dyeProcessColumn ? `${dyeProcessColumn}${rowNumber}` : `AL${rowNumber}`));
+    const description = compactText(cellValue(sheet, descriptionColumn ? `${descriptionColumn}${rowNumber}` : `BI${rowNumber}`));
+    const width = compactText(cellValue(sheet, widthColumn ? `${widthColumn}${rowNumber}` : `R${rowNumber}`));
+    const weight = compactText(cellValue(sheet, weightColumn ? `${weightColumn}${rowNumber}` : `Q${rowNumber}`));
+    const yarnDescription = compactText(cellValue(sheet, yarnDescriptionColumn ? `${yarnDescriptionColumn}${rowNumber}` : `M${rowNumber}`));
+    const hamMaliyet = cellNumber(sheet, hamCostColumn ? `${hamCostColumn}${rowNumber}` : `AJ${rowNumber}`, 0);
+    const prosesMaliyeti = cellNumber(sheet, processCostColumn ? `${processCostColumn}${rowNumber}` : `AN${rowNumber}`, 0);
+    const mamulMaliyeti = cellNumber(sheet, mamulCostColumn ? `${mamulCostColumn}${rowNumber}` : `AM${rowNumber}`, 0) || (hamMaliyet + prosesMaliyeti);
     const satisFiyati = mamulMaliyeti > 0 ? Number((mamulMaliyeti * (1 + karYuzdesi / 100)).toFixed(2)) : 0;
-    const fasonOrgu = cellNumber(sheet, `AI${rowNumber}`, 0);
+    const fasonOrgu = cellNumber(sheet, fasonOrguColumn ? `${fasonOrguColumn}${rowNumber}` : `AI${rowNumber}`, 0);
     const qrSlug = slugify(`${articleNo}-${product}-${color}`);
     const yarns = parseUrgeYarns(sheet, rowNumber);
     const processes = parseUrgeProcesses(sheet, rowNumber);

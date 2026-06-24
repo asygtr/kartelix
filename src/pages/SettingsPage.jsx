@@ -335,6 +335,16 @@ const SettingsPage = () => {
     setExcelStatus('Senkronizasyon tamamlandı.');
     setExcelSyncStatus(result.data);
     await loadDefinitions();
+
+    try {
+      const mamulResponse = await fetch('/api/admin/mamuller', { headers: authHeaders() });
+      const mamulResult = await mamulResponse.json();
+      if (mamulResponse.ok && mamulResult.success) {
+        window.dispatchEvent(new CustomEvent('mamul-list-updated', { detail: mamulResult.data }));
+      }
+    } catch {
+      // ignore refresh errors and keep the sync status visible
+    }
   };
 
   const saveOrderEmailSettings = async () => {

@@ -126,7 +126,21 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
   };
 
   useEffect(() => {
+    const handleMamulListRefresh = (event) => {
+      const refreshedList = Array.isArray(event?.detail) ? event.detail : null;
+      if (refreshedList) {
+        setMamulList(refreshedList);
+      } else {
+        fetchInitial();
+      }
+    };
+
+    window.addEventListener('mamul-list-updated', handleMamulListRefresh);
     fetchInitial();
+
+    return () => {
+      window.removeEventListener('mamul-list-updated', handleMamulListRefresh);
+    };
   }, []);
 
   const selectedColor = useMemo(
