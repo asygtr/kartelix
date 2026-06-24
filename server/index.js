@@ -652,78 +652,72 @@ const initDatabase = () => {
 
                     const toplamTutar = Number(enrichedItems.reduce((sum, item) => sum + item.tutar, 0).toFixed(2));
 
-                    db.serialize(() => {
-                      db.run('BEGIN TRANSACTION');
-                      db.run(
-                        `INSERT INTO kartelix_orders (
-                          musteri_adi, firma_adi, ilgili_kisi, telefon, email, fuar_adi, aciklama,
-                          durum, personel_username, toplam_tutar, para_birimi
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                        [
-                          siparis.musteriAdi,
-                          siparis.firmaAdi,
-                          siparis.ilgiliKisi,
-                          siparis.telefon,
-                          siparis.email,
-                          siparis.fuarAdi,
-                          siparis.aciklama,
-                          siparis.durum,
-                          siparis.personelUsername,
-                          toplamTutar,
-                          siparis.paraBirimi
-                        ],
-                        function(insertErr) {
-                          if (insertErr) {
-                            console.error('Demo siparis ekleme hatasi:', insertErr);
-                            db.run('ROLLBACK');
-                            finishSeed();
-                            return;
-                          }
-
-                          const siparisId = this.lastID;
-                          let kalanKalem = enrichedItems.length;
-
-                          enrichedItems.forEach((item) => {
-                            db.run(
-                              `INSERT INTO kartelix_order_items (
-                                siparis_id, mamul_id, mamul_adi, article_no, article_code, renk,
-                                miktar_kg, birim_fiyat, tutar
-                              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                              [
-                                siparisId,
-                                item.mamulId,
-                                item.mamul_adi,
-                                item.article_no,
-                                item.article_code,
-                                item.renk,
-                                item.miktar_kg,
-                                item.birim_fiyat,
-                                item.tutar
-                              ],
-                              (itemErr) => {
-                                if (itemErr) {
-                                  console.error('Demo siparis kalemi ekleme hatasi:', itemErr);
-                                  db.run('ROLLBACK');
-                                  finishSeed();
-                                  return;
-                                }
-
-                                kalanKalem -= 1;
-                                if (kalanKalem === 0) {
-                                  db.run('COMMIT', (commitErr) => {
-                                    if (commitErr) {
-                                      console.error('Demo siparis commit hatasi:', commitErr);
-                                      db.run('ROLLBACK');
-                                    }
-                                    finishSeed();
-                                  });
-                                }
-                              }
-                            );
-                          });
+                    db.run(
+                      `INSERT INTO kartelix_orders (
+                        musteri_adi, firma_adi, ilgili_kisi, telefon, email, fuar_adi, aciklama,
+                        durum, personel_username, toplam_tutar, para_birimi
+                      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                      [
+                        siparis.musteriAdi,
+                        siparis.firmaAdi,
+                        siparis.ilgiliKisi,
+                        siparis.telefon,
+                        siparis.email,
+                        siparis.fuarAdi,
+                        siparis.aciklama,
+                        siparis.durum,
+                        siparis.personelUsername,
+                        toplamTutar,
+                        siparis.paraBirimi
+                      ],
+                      function(insertErr) {
+                        if (insertErr) {
+                          console.error('Demo siparis ekleme hatasi:', insertErr);
+                          finishSeed();
+                          return;
                         }
-                      );
-                    });
+
+                        const siparisId = this.lastID;
+                        let kalanKalem = enrichedItems.length;
+
+                        if (kalanKalem === 0) {
+                          finishSeed();
+                          return;
+                        }
+
+                        enrichedItems.forEach((item) => {
+                          db.run(
+                            `INSERT INTO kartelix_order_items (
+                              siparis_id, mamul_id, mamul_adi, article_no, article_code, renk,
+                              miktar_kg, birim_fiyat, tutar
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                            [
+                              siparisId,
+                              item.mamulId,
+                              item.mamul_adi,
+                              item.article_no,
+                              item.article_code,
+                              item.renk,
+                              item.miktar_kg,
+                              item.birim_fiyat,
+                              item.tutar
+                            ],
+                            (itemErr) => {
+                              if (itemErr) {
+                                console.error('Demo siparis kalemi ekleme hatasi:', itemErr);
+                                finishSeed();
+                                return;
+                              }
+
+                              kalanKalem -= 1;
+                              if (kalanKalem === 0) {
+                                finishSeed();
+                              }
+                            }
+                          );
+                        });
+                      }
+                    );
                   }
                 );
               });
