@@ -75,7 +75,7 @@ const SettingsPage = () => {
   const [themeStatus, setThemeStatus] = useState('');
   const [brandingForm, setBrandingForm] = useState({ appLogo: '/nevres.png', appBackground: '/showroom-bg.png' });
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { genelAyarlar: ctxGenelAyarlar, saveGenelAyarlar: ctxSaveGenelAyarlar, loadGenelAyarlar: ctxLoadGenelAyarlar } = useGenelAyarlar();
+  const { genelAyarlar: ctxGenelAyarlar, saveGenelAyarlar: ctxSaveGenelAyarlar } = useGenelAyarlar();
   const [genelAyarlar, setGenelAyarlar] = useState({ publicProsesGoster: false, publicFiyatGoster: false, publicHikayeGoster: true, publicHammaddeGoster: true, karYuzdesi: 0 });
   const [genelAyarlarStatus, setGenelAyarlarStatus] = useState('');
   const [drawerVisible, setDrawerVisible] = useState(false);

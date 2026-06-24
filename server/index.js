@@ -21,17 +21,15 @@ const { createLabelingRouter } = require('./routes/labeling');
 const { createCatalogRouter } = require('./routes/catalog');
 const { createAdminRouter } = require('./routes/admin');
 
-if (!process.env.JWT_SECRET) {
-  console.error('HATA: JWT_SECRET ortam değişkeni zorunludur. .env dosyasına ekleyin. Sunucu durduruluyor.');
-  process.exit(1);
-}
-const JWT_SECRET = process.env.JWT_SECRET;
+const DEFAULT_ALLOWED_ORIGIN = 'http://localhost:3000';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-only-change-me';
 const BCRYPT_ROUNDS = 12;
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || DEFAULT_ALLOWED_ORIGIN;
 
 const app = express();
 app.disable('x-powered-by');
 app.use(helmet());
-app.use(cors({ origin: process.env.ALLOWED_ORIGIN || 'http://localhost:3000' }));
+app.use(cors({ origin: ALLOWED_ORIGIN, credentials: true }));
 app.use(express.json());
 
 // Veritabanı bağlantısı
@@ -2394,16 +2392,18 @@ app.put('/api/genel-ayarlar', requireAuth(['admin']), async (req, res, next) => 
 app.get('/api/health', (req, res) => {
   db.get('SELECT 1 as status', (err) => {
     if (err) {
-      return res.status(503).json({ 
-        status: 'error', 
-        database: 'disconnected' 
+      return res.status(503).json({
+        status: 'error',
+        database: 'disconnected',
+        timestamp: new Date().toISOString()
       });
     }
-    
-    res.json({ 
-      status: 'ok', 
+
+    res.json({
+      status: 'ok',
       database: 'connected',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development'
     });
   });
 });
@@ -2502,13 +2502,9 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`✅ ARKA PLAN İŞLEMLERİ DEVREDE: http://localhost:${PORT}`);
-  console.log(`✅ Yeni özellikler aktif:`);
-  console.log(`   📦 Sipariş yönetimi API'leri`);
-  console.log(`   🏷️ Etiket ayarları API'leri`);
-  console.log(`   🔤 Prefix ayarları API'leri`);
-  console.log(`   📧 Email gönderme API'leri`);
-  console.log(`   📱 QR kod okuma API'leri`);
-  console.log(`   📊 Excel sync: ${excelInboxDir} (poll: ${excelPollMs}ms)`);
+  console.log(`✅ Ortam: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`✅ CORS origin: ${ALLOWED_ORIGIN}`);
+  console.log(`✅ Excel sync: ${excelInboxDir} (poll: ${excelPollMs}ms)`);
 });
 
 // Graceful shutdown

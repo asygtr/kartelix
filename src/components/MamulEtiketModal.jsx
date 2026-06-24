@@ -38,7 +38,6 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
         if (res.success) {
           const list = res.data || [];
           setTemplates(list);
-          // Eğer activeTemplateId henüz set edilmediyse ilk şablonu otomatik seç
           if (!activeTemplateId && list.length > 0) {
             const firstId = list[0].template_id || list[0].id;
             setActiveTemplateId(firstId);
@@ -46,7 +45,7 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [activeTemplateId]);
 
   useEffect(() => {
     const loadTemplate = async () => {
