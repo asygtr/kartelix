@@ -1,70 +1,44 @@
-# Getting Started with Create React App
+# Kartelix
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Kartelix, tekstil showroom ve mamül yönetimi için tasarlanmış bir dijital çalışma alanıdır. Amaç, ürünleri daha düzenli sunmak, siparişleri daha hızlı yönetmek ve showroom içi/harici paylaşımı daha kolay hale getirmektir.
 
-## Available Scripts
+Bu uygulama sayesinde bir showroom ya da satış ekibi, mamülleri katalog gibi yönetebilir, QR ile ürün bilgilerine hızlı erişim sağlayabilir, siparişleri kaydedebilir ve fiyat/etiket süreçlerini daha kontrollü bir şekilde yürütmeye başlayabilir.
 
-In the project directory, you can run:
+## Kartelix ne işe yarar?
 
-### `npm start`
+- Mamül ve ürün kartlarını merkezi bir yapıda yönetme
+- Ürünleri showroomda veya müşteriye daha iyi sunma
+- QR kod üzerinden ürün detaylarına erişim sağlama
+- Sipariş oluşturma ve takip etme
+- Etiket ve fiyatlandırma süreçlerini düzenli tutma
+- Yönetici, personel ve müşteri görünümü arasında iş akışını ayrıştırma
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Özellikler
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- Admin ve personel paneli
+- Mamül yönetimi
+- Sipariş yönetimi
+- QR bazlı ürün paylaşımı
+- Etiket tasarımı ve baskı desteği
+- Ayarlar ve genel yapılandırma
+- Raporlar ve özet istatistikler
 
-### `npm test`
+## Geliştirme ortamında çalıştırma
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Projeyi yerelde çalıştırmak için:
 
-### `npm run build`
+```bash
+npm install
+npm run build
+node server/index.js
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Veya geliştirme akışı için:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```bash
+npm start
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Not
 
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Bu proje, tekstil sektöründe showroom ve mamül yönetimini daha pratik hale getirmek için oluşturulmuş bir üretim odaklı uygulamadır. Amacı sade, hızlı ve kullanışlı bir çalışma ortamı sunmaktır.
