@@ -31,6 +31,17 @@ const isActiveLink = (pathname, target) => {
   return pathname === target || pathname.startsWith(`${target}/`);
 };
 
+export const useNavItems = (role, onSearchOpen) => useMemo(() => {
+  const items = [];
+  items.push({ key: 'home', label: 'Ana Sayfa', icon: <HomeIcon />, to: role === 'admin' ? '/admin' : role === 'mamul' ? '/mamul' : '/staff/orders/new' });
+  items.push({ key: 'search', label: 'Ara', icon: <SearchIcon />, action: () => onSearchOpen() });
+  items.push({ key: 'orders', label: 'Siparişler', icon: <OrderIcon />, to: role === 'admin' ? '/admin/orders' : role === 'staff' ? '/staff/orders/new' : null });
+  items.push({ key: 'labels', label: 'Etiket Bas', icon: <LabelIcon />, to: role === 'admin' || role === 'mamul' ? '/mamul/labels' : null });
+  items.push({ key: 'mamul', label: 'Mamül', icon: <FabricIcon />, to: role === 'admin' ? '/admin/mamuller' : role === 'mamul' ? '/mamul/create' : null });
+  if (role === 'admin') items.push({ key: 'reports', label: 'Raporlar', icon: <ReportIcon />, to: '/admin/reports' });
+  return items.filter((item) => item.to || item.action);
+}, [role, onSearchOpen]);
+
 const isMobileNavActive = (pathname, item, searchOpen) => {
   if (item.action) {
     return searchOpen;
