@@ -1162,8 +1162,10 @@ const SettingsPage = () => {
           <section className="app-panel p-6 app-reveal-up app-reveal-delay-1">
             <div className="grid gap-8 xl:grid-cols-[0.95fr,1.05fr]">
               <div>
-                <div className="app-chip">{tabs.find((tab) => tab.id === activeTab)?.label}</div>
-                <h2 className="mt-4 text-2xl font-semibold text-slate-900">{current.title}</h2>
+                <h2 className="text-2xl font-semibold text-slate-900">{current.title}</h2>
+                {current.description ? (
+                  <p className="mt-3 text-sm text-slate-600">{current.description}</p>
+                ) : null}
                 <div className="mt-6">{current.form}</div>
               </div>
 

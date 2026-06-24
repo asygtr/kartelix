@@ -7,6 +7,8 @@ import { Upload, Trash2 } from '../components/icons.jsx';
 import { useHaptic } from '../utils/useHaptic';
 import PullToRefresh from '../components/PullToRefresh';
 import { SkeletonList } from '../components/Skeleton';
+import { normalizeGenelAyarlar, resolveDisplayPrice } from '../utils/generalSettings';
+import { useGenelAyarlar } from '../theme/ThemeProvider';
 
 const emptyYarn = { iplik_tanim_id: '', iplik_adi: '', oran_yuzde: '', birim_fiyat: '' };
 const emptyProcess = { proses_tanim_id: '', proses_adi: '', proses_tipi: '', birim_maliyet: '', renk_bazli: false, aciklama: '' };
@@ -57,6 +59,8 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
   const [form, setForm] = useState(createEmptyForm);
   const [gorselUploading, setGorselUploading] = useState(false);
   const gorselInputRef = useRef(null);
+  const { genelAyarlar: contextGenelAyarlar } = useGenelAyarlar();
+  const normalizedGenelAyarlar = useMemo(() => normalizeGenelAyarlar(contextGenelAyarlar), [contextGenelAyarlar]);
 
   const uploadGorsel = async (file) => {
     if (!selectedMamulDetail?.id) return;
@@ -180,6 +184,8 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
     if (!maliyet || !satis || maliyet === satis) return null;
     return (((satis - maliyet) / maliyet) * 100).toFixed(1);
   }, [totalCost, form.birKgSatisFiyati]);
+
+  const displayPrice = useMemo(() => resolveDisplayPrice(totalCost, form.birKgSatisFiyati, normalizedGenelAyarlar), [totalCost, form.birKgSatisFiyati, normalizedGenelAyarlar]);
 
   const applyKarYuzdesi = (yuzde) => {
     const maliyet = Number(totalCost);
@@ -511,6 +517,9 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                     </span>
                   )}
                 </div>
+                <div className="md:col-span-3 text-sm text-[color:var(--app-text-muted)]">
+                  Genel ayara göre önerilen satış fiyatı: <span className="font-semibold text-[color:var(--app-text)]">{displayPrice.toFixed(2)} {form.paraBirimi}</span>
+                </div>
 
                 <div className="md:col-span-3 flex flex-wrap gap-2">
                   <span className="text-xs text-[color:var(--app-text-muted)] self-center mr-1">Hızlı kâr:</span>
@@ -661,7 +670,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                     <div className="app-data-row"><div className="app-data-key">Kompozisyon</div><div className="app-data-value">{selectedMamulDetail.kompozisyon_ozeti || '-'}</div></div>
                     <div className="app-data-row"><div className="app-data-key">Ölçü</div><div className="app-data-value">{selectedMamulDetail.en || '-'} EN / {selectedMamulDetail.gramaj || '-'} GR</div></div>
                     <div className="app-data-row"><div className="app-data-key">1 kg maliyet</div><div className="app-data-value">{Number(selectedMamulDetail.bir_kg_maliyet || 0).toFixed(2)} {selectedMamulDetail.para_birimi || 'TRY'}</div></div>
-                    <div className="app-data-row"><div className="app-data-key">1 kg satış</div><div className="app-data-value">{Number(selectedMamulDetail.bir_kg_satis_fiyati || 0).toFixed(2)} {selectedMamulDetail.para_birimi || 'TRY'}{Number(selectedMamulDetail.bir_kg_maliyet || 0) > 0 && Number(selectedMamulDetail.bir_kg_satis_fiyati || 0) > 0 && Number(selectedMamulDetail.bir_kg_satis_fiyati) !== Number(selectedMamulDetail.bir_kg_maliyet) ? <span className={`ml-2 text-xs font-semibold ${Number(selectedMamulDetail.bir_kg_satis_fiyati) >= Number(selectedMamulDetail.bir_kg_maliyet) ? 'text-[color:var(--app-success)]' : 'text-red-500'}`}>%{(((Number(selectedMamulDetail.bir_kg_satis_fiyati) - Number(selectedMamulDetail.bir_kg_maliyet)) / Number(selectedMamulDetail.bir_kg_maliyet)) * 100).toFixed(1)} kâr</span> : null}</div></div>
+                    <div className="app-data-row"><div className="app-data-key">1 kg satış</div><div className="app-data-value">{resolveDisplayPrice(selectedMamulDetail.bir_kg_maliyet, selectedMamulDetail.bir_kg_satis_fiyati, normalizedGenelAyarlar).toFixed(2)} {selectedMamulDetail.para_birimi || 'TRY'}{Number(selectedMamulDetail.bir_kg_maliyet || 0) > 0 && Number(selectedMamulDetail.bir_kg_satis_fiyati || 0) > 0 && Number(selectedMamulDetail.bir_kg_satis_fiyati) !== Number(selectedMamulDetail.bir_kg_maliyet) ? <span className={`ml-2 text-xs font-semibold ${Number(selectedMamulDetail.bir_kg_satis_fiyati) >= Number(selectedMamulDetail.bir_kg_maliyet) ? 'text-[color:var(--app-success)]' : 'text-red-500'}`}>%{(((Number(selectedMamulDetail.bir_kg_satis_fiyati) - Number(selectedMamulDetail.bir_kg_maliyet)) / Number(selectedMamulDetail.bir_kg_maliyet)) * 100).toFixed(1)} kâr</span> : null}</div></div>
                     <div className="app-data-row"><div className="app-data-key">Durum</div><div className="app-data-value">{selectedMamulDetail.yayin_durumu || '-'}</div></div>
                   </div>
 
@@ -716,7 +725,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                     <div className="font-semibold text-[color:var(--app-text)]">{item.mamul_adi}</div>
                     <div className="text-sm text-[color:var(--app-text-muted)]">{item.article_code} / {item.article_no}</div>
                     <div className="text-sm text-[color:var(--app-text-muted)]">{item.mamul_turu_adi}{extractColorName(item.renk) ? ` · ${extractColorName(item.renk)}` : ''}<span style={resolveColorHex(item) ? { display: 'inline-block', width: '10px', height: '10px', backgroundColor: resolveColorHex(item), border: '1px solid #999', borderRadius: '2px', marginLeft: '4px', verticalAlign: 'middle' } : {}} /></div>
-                    <div className="text-sm font-semibold text-[color:var(--app-success)]">{Number(item.bir_kg_satis_fiyati || 0).toFixed(2)}</div>
+                    <div className="text-sm font-semibold text-[color:var(--app-success)]">{resolveDisplayPrice(item.bir_kg_maliyet, item.bir_kg_satis_fiyati, normalizedGenelAyarlar).toFixed(2)}</div>
                     <div className="app-mamul-actions-pc" style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', minWidth: 0 }}>
                       <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary" style={{ whiteSpace: 'nowrap', fontSize: '0.75rem', padding: '0.3rem 0.65rem', lineHeight: 1.4 }}>Detay</button>
                       <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary" style={{ whiteSpace: 'nowrap', fontSize: '0.75rem', padding: '0.3rem 0.65rem', lineHeight: 1.4, textDecoration: 'none', display: 'inline-block' }}>Görüntüle</a>
@@ -726,28 +735,31 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                 {filteredMamulList.map((item) => (
                   <div key={`mobile-${item.id}`} className="app-mamul-card md:hidden">
                     <div className="app-mamul-primary">{item.mamul_adi}</div>
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      <div>
+                    <div className="app-mamul-mobile-grid">
+                      <div className="app-mamul-mobile-field">
                         <div className="app-mamul-secondary-label">Kayıt No</div>
-                        <div className="text-sm">{item.article_code} / {item.article_no}</div>
+                        <div className="app-mamul-mobile-value">{item.article_code} / {item.article_no}</div>
                       </div>
-                      <div>
+                      <div className="app-mamul-mobile-field">
                         <div className="app-mamul-secondary-label">Satış</div>
-                        <div className="text-sm font-semibold text-[color:var(--app-success)]">{Number(item.bir_kg_satis_fiyati || 0).toFixed(2)}</div>
+                        <div className="app-mamul-mobile-value app-mamul-mobile-value-success">{resolveDisplayPrice(item.bir_kg_maliyet, item.bir_kg_satis_fiyati, normalizedGenelAyarlar).toFixed(2)}</div>
                       </div>
-                      <div>
+                      <div className="app-mamul-mobile-field">
                         <div className="app-mamul-secondary-label">Tür</div>
-                        <div className="text-sm">{item.mamul_turu_adi}</div>
+                        <div className="app-mamul-mobile-value app-mamul-mobile-value-muted">{item.mamul_turu_adi}</div>
                       </div>
-                      <div>
-<div className="app-mamul-secondary-label">Renk</div>
-                         <div className="text-sm">{item.renk || '-'}<span style={resolveColorHex(item) ? { display: 'inline-block', width: '10px', height: '10px', backgroundColor: resolveColorHex(item), border: '1px solid #999', borderRadius: '2px', marginLeft: '4px', verticalAlign: 'middle' } : {}} /></div>
+                      <div className="app-mamul-mobile-field">
+                        <div className="app-mamul-secondary-label">Renk</div>
+                        <div className="app-mamul-mobile-value app-mamul-mobile-value-muted">
+                          <span>{item.renk || '-'}</span>
+                          <span style={resolveColorHex(item) ? { display: 'inline-block', width: '10px', height: '10px', backgroundColor: resolveColorHex(item), border: '1px solid #999', borderRadius: '2px', marginLeft: '4px', verticalAlign: 'middle' } : {}} />
+                        </div>
                       </div>
                     </div>
-<div className="app-mamul-actions flex gap-2">
-                       <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary px-3 py-1 text-sm flex-1">Detay</button>
-                       <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary px-3 py-1 text-sm flex-1 text-center">Görüntüle</a>
-                     </div>
+                    <div className="app-mamul-actions">
+                      <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary">Detay</button>
+                      <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary app-mamul-link-button">Görüntüle</a>
+                    </div>
                   </div>
                 ))}
                 {listLoading ? <SkeletonList count={4} /> : null}

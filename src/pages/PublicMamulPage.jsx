@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { motion, useScroll, useTransform, useSpring, useInView } from 'framer-motion';
 import { resolveColorPalette, isDarkPalette } from '../utils/colorPalette';
 import { authHeaders } from '../utils/auth';
+import { normalizeGenelAyarlar, resolveDisplayPrice } from '../utils/generalSettings';
+import { useGenelAyarlar } from '../theme/ThemeProvider';
 
 const v = (val) => String(val || '').trim() || null;
 const EASE = [0.16, 1, 0.3, 1];
@@ -148,7 +150,8 @@ const PublicMamulPage = ({ mode = 'public' }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lang, setLang] = useState('TR');
-  const [genelAyarlar, setGenelAyarlar] = useState(null);
+  const { genelAyarlar: contextGenelAyarlar, loadGenelAyarlar } = useGenelAyarlar();
+  const normalizedGenelAyarlar = useMemo(() => normalizeGenelAyarlar(contextGenelAyarlar), [contextGenelAyarlar]);
   const [shareMsg, setShareMsg] = useState('');
   const pageRef = useRef(null);
   const t = T[lang];
@@ -166,18 +169,16 @@ const PublicMamulPage = ({ mode = 'public' }) => {
       ? fetch(`/api/admin/mamul-lookup?code=${encodeURIComponent(slug)}`, { headers: authHeaders() }).then(r => r.json())
       : fetch(`/api/public/mamuller/${slug}`).then(r => r.json());
 
-    const ayarRequest = fetch('/api/genel-ayarlar').then(r => r.json()).catch(() => ({ success: false }));
-
-    Promise.all([
-      mamulRequest,
-      ayarRequest
-    ]).then(([mamulRes, ayarRes]) => {
+    mamulRequest.then((mamulRes) => {
       if (!mamulRes.success) throw new Error(mamulRes.error || 'Bulunamadı');
       setMamul(mamulRes.data);
-      setGenelAyarlar(ayarRes.success ? ayarRes.data : { publicProsesGoster: false, publicFiyatGoster: false, publicHikayeGoster: true, karYuzdesi: 0 });
     }).catch(err => setError(err.message))
       .finally(() => setLoading(false));
   }, [slug, isInternal]);
+
+  useEffect(() => {
+    loadGenelAyarlar();
+  }, [loadGenelAyarlar]);
 
   const P    = useMemo(() => resolveColorPalette(mamul?.renk), [mamul?.renk]);
   const dark = isDarkPalette(P);
@@ -196,26 +197,20 @@ const PublicMamulPage = ({ mode = 'public' }) => {
   };
 
   const composition  = v(mamul?.kompozisyon_ozeti);
-  const prosesAcik   = isInternal || genelAyarlar?.publicProsesGoster === true;
-  const hikayeAcik   = isInternal || genelAyarlar?.publicHikayeGoster !== false;
+  const prosesAcik   = isInternal || normalizedGenelAyarlar.publicProsesGoster === true;
+  const hikayeAcik   = isInternal || normalizedGenelAyarlar.publicHikayeGoster !== false;
   const story        = hikayeAcik ? (v(mamul?.tanitim_hikayesi) || v(mamul?.aciklama) || v(mamul?.materyal_notlari)) : null;
-  const hasYarn = mamul?.iplikler?.length > 0 && (isInternal || genelAyarlar?.publicHammaddeGoster !== false);
+  const hasYarn = mamul?.iplikler?.length > 0 && (isInternal || normalizedGenelAyarlar.publicHammaddeGoster !== false);
   const hasRelated   = mamul?.benzer_urunler?.length > 0;
   const hasProsesler = prosesAcik && mamul?.prosesler?.length > 0;
   const careItems    = useMemo(() => parseCare(mamul?.bakim_talimatlari), [mamul?.bakim_talimatlari]);
   const gorselUrl    = v(mamul?.gorsel_url);
-  const karYuzdesi   = Number(genelAyarlar?.karYuzdesi || 0);
-  const satisFiyati  = useMemo(() => {
-    const maliyet = Number(mamul?.bir_kg_maliyet || 0);
-    const satis   = Number(mamul?.bir_kg_satis_fiyati || 0);
-    if (karYuzdesi > 0 && maliyet > 0) return maliyet * (1 + karYuzdesi / 100);
-    return satis > 0 ? satis : maliyet;
-  }, [mamul?.bir_kg_maliyet, mamul?.bir_kg_satis_fiyati, karYuzdesi]);
+  const satisFiyati  = useMemo(() => resolveDisplayPrice(mamul?.bir_kg_maliyet, mamul?.bir_kg_satis_fiyati, normalizedGenelAyarlar), [mamul?.bir_kg_maliyet, mamul?.bir_kg_satis_fiyati, normalizedGenelAyarlar]);
   const hasPrice = isInternal
     ? (Number(mamul?.bir_kg_satis_fiyati || 0) > 0 || Number(mamul?.bir_kg_maliyet || 0) > 0)
-    : (genelAyarlar?.publicFiyatGoster === true && satisFiyati > 0);
+    : (normalizedGenelAyarlar.publicFiyatGoster === true && satisFiyati > 0);
 
-  if (loading || genelAyarlar === null) return (
+  if (loading || contextGenelAyarlar === null) return (
     <div style={{ minHeight: isInternal ? '60vh' : '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isInternal ? 'transparent' : '#f3efe7' }}>
       <div style={{ display: 'flex', gap: '0.5rem' }}>
         {[0,1,2].map(i => (
@@ -553,29 +548,39 @@ const PublicMamulPage = ({ mode = 'public' }) => {
             </div>
           </div>
 
-          {!isInternal && (
-            <motion.button
-              initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.42, duration: 0.55, ease: EASE }}
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              style={{
-                marginTop: '1.75rem', width: '100%',
-                padding: '0.95rem 1.25rem', borderRadius: '999px',
-                background: `linear-gradient(135deg, ${P.accent}, ${P.accentDeep})`,
-                color: 'white', border: 'none',
-                fontSize: '0.88rem', fontWeight: 800, letterSpacing: '0.03em',
-                boxShadow: `0 14px 36px ${P.glow}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >
-              <span style={{ fontSize: '0.7rem' }}>✦</span>
-              <span>{t.order}</span>
-            </motion.button>
-          )}
-        </motion.section>
+{!isInternal && (
+           <motion.button
+             initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+             transition={{ delay: 0.42, duration: 0.55, ease: EASE }}
+             whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+             style={{
+               marginTop: '1.75rem', width: '100%',
+               padding: '0.95rem 1.25rem', borderRadius: '999px',
+               background: `linear-gradient(135deg, ${P.accent}, ${P.accentDeep})`,
+               color: 'white', border: 'none',
+               fontSize: '0.88rem', fontWeight: 800, letterSpacing: '0.03em',
+               boxShadow: `0 14px 36px ${P.glow}`,
+               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+               cursor: 'pointer', fontFamily: 'inherit',
+             }}
+           >
+             <span style={{ fontSize: '0.7rem' }}>✦</span>
+             <span>{t.order}</span>
+           </motion.button>
+         )}
 
-        {/* ╔╔ GÖRSEL (büyük – varsa) ╔╔ */}
+         {/* Hero sonrası Hikaye (mobil için - ekranın tamamına yayılır) */}
+         {!isInternal && story && (
+           <div style={{ marginTop: '2rem', padding: '0 0.25rem' }}>
+             <div style={{ ...cardStyle(P, dark), borderRadius: '1.4rem' }}>
+               <SectionLabel P={P}>{t.fabric}</SectionLabel>
+               <p style={{ margin: '1rem 0 0', fontSize: '0.95rem', lineHeight: 1.82, color: P.textMuted }}>{story}</p>
+             </div>
+           </div>
+         )}
+       </motion.section>
+
+        {/* GÖRSEL (büyük – varsa) */}
         {gorselUrl && (
           <Reveal delay={0.03}>
             <div style={{ marginBottom: '0.85rem', borderRadius: '1.1rem', overflow: 'hidden', boxShadow: `0 18px 48px ${P.glow}` }}>
@@ -588,17 +593,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
           </Reveal>
         )}
 
-        {/* ╔╔ HİKAYE ╔╔ */}
-        {story && (
-          <Reveal delay={0.04}>
-            <div style={{ ...cardStyle(P, dark), marginBottom: '0.85rem' }}>
-              <SectionLabel P={P}>{t.fabric}</SectionLabel>
-              <p style={{ margin: '0.7rem 0 0', fontSize: '0.9rem', lineHeight: 1.82, color: P.textMuted }}>{story}</p>
-            </div>
-          </Reveal>
-        )}
-
-        {/* ╔╔ BAKIM TALİMATLARI ╔╔ */}
+        {/* BAKIM TALİMATLARI */}
         {careItems.length > 0 && (
           <Reveal delay={0.05}>
             <div style={{ ...cardStyle(P, dark), marginBottom: '0.85rem' }}>

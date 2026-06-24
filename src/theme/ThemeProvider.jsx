@@ -73,7 +73,7 @@ export const ThemeProvider = ({ children }) => {
 export const useTheme = () => useContext(ThemeContext);
 
 
-const DEFAULT_GENEL_AYARLAR = { publicProsesGoster: false, publicFiyatGoster: false, publicHikayeGoster: true };
+const DEFAULT_GENEL_AYARLAR = { publicProsesGoster: false, publicFiyatGoster: false, publicHikayeGoster: true, publicHammaddeGoster: true, karYuzdesi: 0 };
 
 const GenelAyarlarContext = createContext({
   genelAyarlar: DEFAULT_GENEL_AYARLAR,

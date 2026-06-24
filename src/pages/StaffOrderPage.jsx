@@ -6,6 +6,8 @@ import { Plus, Pencil, Trash2, X, CreditCard, Minus } from '../components/icons.
 import { useHaptic } from '../utils/useHaptic';
 import PullToRefresh from '../components/PullToRefresh';
 import { SkeletonList } from '../components/Skeleton';
+import { useGenelAyarlar } from '../theme/ThemeProvider';
+import { normalizeGenelAyarlar, resolveDisplayPrice } from '../utils/generalSettings';
 
 const emptyCustomerForm = {
   musteriAdi: '', firmaAdi: '', ilgiliKisi: '', telefon: '', email: '',
@@ -93,6 +95,8 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
   const [loading, setLoading] = useState(false);
   const [cardProcessing, setCardProcessing] = useState(false);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  const { genelAyarlar: contextGenelAyarlar } = useGenelAyarlar();
+  const normalizedGenelAyarlar = useMemo(() => normalizeGenelAyarlar(contextGenelAyarlar), [contextGenelAyarlar]);
 
   const recentLimit = isMobile ? 5 : 8;
 
@@ -125,7 +129,7 @@ const StaffOrderPage = ({ mode = 'staff' }) => {
   const searchableDeleteOrders = useMemo(() => orders.filter(o => matchesOrderSearch(o, orderDeleteTerm)), [orders, orderDeleteTerm]);
 
   const addItem = (item) => setSelectedItems(prev => {
-    const bp = Number(item.bir_kg_satis_fiyati || 0);
+    const bp = resolveDisplayPrice(item.bir_kg_maliyet, item.bir_kg_satis_fiyati, normalizedGenelAyarlar);
     return prev.concat({ lineId: createLineId(), mamulId: item.id, mamul_adi: item.mamul_adi, article_code: item.article_code, article_no: item.article_no, renk: item.renk || '', birimFiyat: canSeePrices ? bp : 0, miktarKg: 1, tutar: Number((canSeePrices ? bp : 0).toFixed(2)) });
   });
 

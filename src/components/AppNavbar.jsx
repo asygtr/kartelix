@@ -5,6 +5,7 @@ import { useGenelAyarlar } from '../theme/ThemeProvider';
 import { getSession, authHeaders } from '../utils/auth';
 import QrCameraModal from './QrCameraModal';
 import { isMobileCameraDevice } from '../utils/qr';
+import { normalizeGenelAyarlar, resolveDisplayPrice } from '../utils/generalSettings';
 import { Home, Search, ClipboardList, Tag, Layers, BarChart2, Settings, LogOut, X, QrCode, Menu } from './icons.jsx';
 
 const navSets = {
@@ -101,6 +102,7 @@ const AppNavbar = ({ title, action, onLogout, searchOpen, setSearchOpen }) => {
 
   const canSeeSearchPrices = role === 'admin';
   const { genelAyarlar } = useGenelAyarlar();
+  const normalizedGenelAyarlar = normalizeGenelAyarlar(genelAyarlar);
 
   return (
     <>
@@ -248,18 +250,12 @@ const AppNavbar = ({ title, action, onLogout, searchOpen, setSearchOpen }) => {
                 </div>
               ) : null}
 
-              {(canSeeSearchPrices || genelAyarlar.publicFiyatGoster) ? (
+              {(canSeeSearchPrices || normalizedGenelAyarlar.publicFiyatGoster) ? (
                 <div className="app-mobile-search-pricing">
                   <div className="app-mobile-search-price-card">
                     <div className="app-mobile-search-summary-label">1 kg satış</div>
                     <div className="app-mobile-search-price-value">
-                      {(() => {
-                        const maliyet = Number(searchResult.bir_kg_maliyet || 0);
-                        const satis   = Number(searchResult.bir_kg_satis_fiyati || 0);
-                        const kar     = Number(genelAyarlar.karYuzdesi || 0);
-                        const fiyat   = kar > 0 && maliyet > 0 ? maliyet * (1 + kar / 100) : satis;
-                        return fiyat.toFixed(2);
-                      })()} {searchResult.para_birimi || 'TRY'}
+                      {resolveDisplayPrice(searchResult.bir_kg_maliyet, searchResult.bir_kg_satis_fiyati, normalizedGenelAyarlar).toFixed(2)} {searchResult.para_birimi || 'TRY'}
                     </div>
                   </div>
                   <div className="app-mobile-search-price-card">
