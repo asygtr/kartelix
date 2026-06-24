@@ -6,6 +6,7 @@ services:
       - "5000:5000"
     volumes:
       - ./database:/app/database
+      - ./xls:/app/xls
     env_file:
       - path: .env
         required: false

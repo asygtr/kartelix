@@ -124,10 +124,23 @@ const compactText = (value) => String(value ?? '').replace(/\s+/g, ' ').trim();
 const normalizeHeaderKey = (value) => normalizeHeader(String(value ?? ''));
 
 const findHeaderColumn = (sheet, rowNumber, candidates) => {
+  const normalizedCandidates = candidates.map((candidate) => normalizeHeaderKey(candidate));
+
+  if (sheet?.['!ref']) {
+    const range = XLSX.utils.decode_range(sheet['!ref']);
+    for (let colIndex = range.s.c; colIndex <= range.e.c; colIndex += 1) {
+      const address = XLSX.utils.encode_cell({ r: rowNumber - 1, c: colIndex });
+      const cell = sheet?.[address];
+      const value = cell && cell.v !== undefined && cell.v !== null ? cell.v : '';
+      if (normalizedCandidates.includes(normalizeHeaderKey(value))) {
+        return XLSX.utils.encode_col(colIndex);
+      }
+    }
+  }
+
   const row = sheet?.[`${rowNumber}`];
   if (!row) return null;
 
-  const normalizedCandidates = candidates.map((candidate) => normalizeHeaderKey(candidate));
   const headers = Object.keys(row || {})
     .filter((key) => key && key !== '!ref')
     .map((key) => ({ key, normalized: normalizeHeaderKey(key) }));
@@ -809,6 +822,7 @@ const importUrgeWorkbook = async (db, configuredFile, workbook, sheetName) => {
   const karYuzdesi = await loadKarYuzdesi(db);
   let imported = 0;
   let skipped = 0;
+  const skippedDetails = [];
 
   const headerRowNumber = 2;
   const articleColumn = findHeaderColumn(sheet, headerRowNumber, ['article no', 'article_no', 'articleno', 'article']);
@@ -825,20 +839,38 @@ const importUrgeWorkbook = async (db, configuredFile, workbook, sheetName) => {
   const mamulCostColumn = findHeaderColumn(sheet, headerRowNumber, ['mamul_maliyeti', 'mamul_kumas_maliyeti', 'am']);
   const fasonOrguColumn = findHeaderColumn(sheet, headerRowNumber, ['fason_orgu', 'orgu', 'ai']);
 
+  if (process.env.DEBUG_EXCEL_IMPORT === '1') {
+    console.log(`[excel-import] file=${fileName} headerRow=${headerRowNumber} articleColumn=${articleColumn || 'fallback(D)'} productColumn=${productColumn || 'fallback(N)'} articleHeader=${articleColumn || 'D'} productHeader=${productColumn || 'N'} range=${range.e.r + 1}`);
+  }
+
   for (let rowNumber = 3; rowNumber <= range.e.r + 1; rowNumber += 1) {
     const rawArticleNo = compactText(cellValue(sheet, articleColumn ? `${articleColumn}${rowNumber}` : `D${rowNumber}`));
     const product = compactText(cellValue(sheet, productColumn ? `${productColumn}${rowNumber}` : `N${rowNumber}`));
 
-    if (!rawArticleNo || !/^\d+/.test(rawArticleNo)) continue;
+    // Allow article values that contain prefixes/letters by extracting first continuous digit sequence
+    const articleDigitsMatch = String(rawArticleNo || '').match(/\d+/);
+    if (!articleDigitsMatch) {
+      skipped += 1;
+      skippedDetails.push({ row: rowNumber, reason: 'invalid_article_no', rawArticleNo, product });
+      if (process.env.DEBUG_EXCEL_IMPORT === '1') {
+        console.log(`[excel-import] skip row=${rowNumber} reason=invalid_article_no article=${JSON.stringify(rawArticleNo)} product=${JSON.stringify(product)} file=${fileName}`);
+      }
+      continue;
+    }
+    const rawArticleDigits = articleDigitsMatch[0];
     if (!product) {
       skipped += 1;
+      skippedDetails.push({ row: rowNumber, reason: 'missing_product', rawArticleNo, product });
+      if (process.env.DEBUG_EXCEL_IMPORT === '1') {
+        console.log(`[excel-import] skip row=${rowNumber} reason=missing_product article=${JSON.stringify(rawArticleNo)} product=${JSON.stringify(product)} file=${fileName}`);
+      }
       continue;
     }
 
-    const articlePrefix = rawArticleNo.slice(0, 2);
+    const articlePrefix = rawArticleDigits.slice(0, 2);
     const articleNo = typePrefix && articlePrefix !== typePrefix
-      ? `${typePrefix}${rawArticleNo.slice(typePrefix.length)}`
-      : rawArticleNo;
+      ? `${typePrefix}${rawArticleDigits.slice(typePrefix.length)}`
+      : rawArticleDigits;
 
     const resolvedType = typeInfo || await upsertUrgeType(db, articleNo.slice(0, 2), fileName);
     if (!resolvedType) {
@@ -1020,7 +1052,7 @@ const importUrgeWorkbook = async (db, configuredFile, workbook, sheetName) => {
     imported += 1;
   }
 
-  return { importedRows: imported, skippedRows: skipped, typePrefix };
+  return { importedRows: imported, skippedRows: skipped, skippedDetails, typePrefix };
 };
 
 const insertSnapshot = async (db, payload) => {
@@ -1066,6 +1098,7 @@ const startExcelSync = ({
   };
 
   let timer = null;
+  let watcher = null;
 
   const processConfiguredSources = async () => {
     const sources = await loadSources(db);
@@ -1189,6 +1222,7 @@ const startExcelSync = ({
         sheetName: targetSheet,
         importedRows: result.importedRows || 0,
         skippedRows: result.skippedRows || 0,
+        skippedDetails: result.skippedDetails || [],
         typePrefix: result.typePrefix || ''
       });
 
@@ -1250,6 +1284,31 @@ const startExcelSync = ({
   };
 
   runOnce();
+
+  // Start a filesystem watcher to trigger immediate sync when Excel files change.
+  const startWatcher = () => {
+    try {
+      if (watcher) return;
+      watcher = fs.watch(directory, { persistent: false }, (eventType, filename) => {
+        if (!filename) return;
+        if (!isExcelFile(filename)) return;
+        if (state._watchDebounce) clearTimeout(state._watchDebounce);
+        state._watchDebounce = setTimeout(() => {
+          runOnce();
+        }, 500);
+      });
+    } catch (err) {
+      // non-fatal: if watcher can't be created, rely on polling
+    }
+  };
+
+  // ensure directory exists then start watcher
+  try {
+    if (!fs.existsSync(directory)) fs.mkdirSync(directory, { recursive: true });
+    startWatcher();
+  } catch (e) {
+    // ignore
+  }
 
   return {
     getStatus: async () => {
@@ -1332,8 +1391,25 @@ const startExcelSync = ({
       await runOnce();
       return true;
     },
-    stop: () => clearTimeout(timer)
+    stop: () => {
+      clearTimeout(timer);
+      if (watcher) {
+        try { watcher.close(); } catch (e) {}
+        watcher = null;
+      }
+      if (state._watchDebounce) {
+        clearTimeout(state._watchDebounce);
+        state._watchDebounce = null;
+      }
+    }
   };
 };
 
-module.exports = { startExcelSync, SOURCE_ORDER, getFileFingerprint, hasFileChanged };
+module.exports = {
+  startExcelSync,
+  SOURCE_ORDER,
+  getFileFingerprint,
+  hasFileChanged,
+  findHeaderColumn,
+  importUrgeWorkbook
+};
