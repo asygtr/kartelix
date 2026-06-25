@@ -1,107 +1,221 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { clearSession } from '../utils/auth';
-import AppNavbar from '../components/AppNavbar';
+import { motion, useInView } from 'framer-motion';
+import { getSession } from '../utils/auth';
+import { authHeaders } from '../utils/auth';
 
-const cards = [
-  {
-    icon: 'fabric',
-    title: 'Mamul Ekle',
-    description: 'Teknik veri, article yapısı, reçete, proses, maliyet ve satış bilgilerini yönetin.',
-    to: '/admin/mamuller'
-  },
-  {
-    icon: 'orders',
-    title: 'Siparişler',
-    description: 'Staff ekranının birebir akışına girin, sipariş toplayın ve QR bağlamlarını test edin.',
-    to: '/staff/orders/new'
-  },
-  {
-    icon: 'label',
-    title: 'Etiket Bas',
-    description: 'Mamül tarafındaki etiket merkezi, QR önizleme ve baskı akışlarını görün.',
-    to: '/mamul/labels'
-  },
-  {
-    icon: 'story',
-    title: 'Ürün Tanıtımı',
-    description: 'Müşteriye giden tanıtım hikâyesi, görsel dili ve vitrin metinlerini yönetin.',
-    to: '/mamul/showcase'
-  },
-  {
-    icon: 'settings',
-    title: 'Üretim Altyapısı',
-    description: 'Mamül türleri, renkler, iplikler, prosesler ve marka varlıkları gibi temel sistemi yönetin.',
-    to: '/admin/settings'
-  },
-  {
-    icon: 'reports',
-    title: 'Raporlar',
-    description: 'Public görüntülenme, en çok okutulan mamüller ve sipariş performansını izleyin.',
-    to: '/admin/reports'
-  }
-];
+const EASE = [0.2, 0.8, 0.2, 1];
 
-const iconMap = {
-  fabric: (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-      <path d="M6 4h12v4l-2 1.5V20H8V9.5L6 8V4Zm2 2v1l2 1.5V18h4V8.5L16 7V6H8Z" fill="currentColor" />
-    </svg>
-  ),
-  orders: (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-      <path d="M5 4h11l3 3v13H5V4Zm2 2v12h10V8.2L15.8 6H7Zm2 3h6v2H9V9Zm0 4h6v2H9v-2Z" fill="currentColor" />
-    </svg>
-  ),
-  label: (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-      <path d="M4 7a3 3 0 0 1 3-3h6l7 7-8 8-7-7V7Zm4 1.5A1.5 1.5 0 1 0 8 5.5a1.5 1.5 0 0 0 0 3Z" fill="currentColor" />
-    </svg>
-  ),
-  story: (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-      <path d="M6 5h12a2 2 0 0 1 2 2v12l-4-2-4 2-4-2-4 2V7a2 2 0 0 1 2-2Zm0 2v8.76l2-.98 4 2 4-2 2 .98V7H6Zm2 2h8v2H8V9Zm0 4h5v2H8v-2Z" fill="currentColor" />
-    </svg>
-  ),
-  settings: (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-      <path d="M19.14 12.94a7.43 7.43 0 0 0 .05-.94 7.43 7.43 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.12 7.12 0 0 0-1.63-.94l-.36-2.54a.49.49 0 0 0-.49-.42h-3.84a.49.49 0 0 0-.49.42l-.36 2.54a7.12 7.12 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.43 7.43 0 0 0-.05.94 7.43 7.43 0 0 0 .05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.39 1.04.71 1.63.94l.36 2.54a.49.49 0 0 0 .49.42h3.84a.49.49 0 0 0 .49-.42l.36-2.54c.59-.23 1.13-.55 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64ZM12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5Z" fill="currentColor" />
-    </svg>
-  ),
-  reports: (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-      <path d="M5 5h14v14H5V5Zm2 2v10h10V7H7Zm1 7h2v2H8v-2Zm3-4h2v6h-2v-6Zm3-3h2v9h-2V7Z" fill="currentColor" />
-    </svg>
-  )
+/* ─── Odometer / slot-machine sayaç ─────────────────────────────────────── */
+const DIGIT_H = 32;
+
+const Digit = ({ digit }) => (
+  <div style={{ height: DIGIT_H, overflow: 'hidden', display: 'inline-block', lineHeight: `${DIGIT_H}px` }}>
+    <motion.div
+      animate={{ y: -digit * DIGIT_H }}
+      transition={{ duration: 0.55, ease: [0.2, 0.8, 0.2, 1] }}
+      style={{ display: 'flex', flexDirection: 'column' }}
+    >
+      {[0,1,2,3,4,5,6,7,8,9].map(n => (
+        <div key={n} style={{ height: DIGIT_H, lineHeight: `${DIGIT_H}px` }}>{n}</div>
+      ))}
+    </motion.div>
+  </div>
+);
+
+const Counter = ({ to }) => {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true });
+  const digits = String(inView ? (Number(to) || 0) : 0).split('').map(Number);
+  return (
+    <span ref={ref} style={{ display: 'inline-flex' }}>
+      {digits.map((d, i) => <Digit key={i} digit={d} />)}
+    </span>
+  );
 };
 
-const AdminLandingPage = () => {
-  const handleLogout = () => {
-    clearSession();
-    window.location.href = '/';
-  };
+/* ─── Mini bar chart (SVG, chart.js gerektirmez) ─────────────────────────── */
+const MiniBar = ({ value, max, color }) => {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true });
+  const pct = max > 0 ? (value / max) * 100 : 0;
 
   return (
-    <div className="app-page">
-      <div className="app-container space-y-6">
-        <AppNavbar
-          eyebrow="Kartelix / Yönetim"
-          title="Merkezi kontrol paneli"
-          onLogout={handleLogout}
-        />
+    <div ref={ref} style={{ height: 4, borderRadius: 999, background: 'rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+      <motion.div
+        style={{ height: '100%', borderRadius: 999, background: color }}
+        initial={{ width: 0 }}
+        animate={inView ? { width: `${pct}%` } : {}}
+        transition={{ duration: 0.9, ease: EASE }}
+      />
+    </div>
+  );
+};
 
-        <div className="app-card-grid md:grid-cols-2 xl:grid-cols-3">
-          {cards.map((card) => (
-            <Link key={card.to} to={card.to} className="app-card app-quick-card">
-              <div className="app-quick-card-icon">{iconMap[card.icon]}</div>
-              <div className="app-quick-card-copy">
-                <h3 className="text-xl font-semibold text-[color:var(--app-text)]">{card.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-[color:var(--app-text-muted)]">{card.description}</p>
-              </div>
-            </Link>
-          ))}
+/* ─── Stat kart ──────────────────────────────────────────────────────────── */
+const StatCard = ({ label, value, icon, color, delay = 0, sub }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5, delay, ease: EASE }}
+    className="app-stat"
+    style={{ position: 'relative', overflow: 'hidden' }}
+  >
+    <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 3, background: color, borderRadius: '999px 0 0 999px' }} />
+    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
+      <div>
+        <div className="app-stat-label">{label}</div>
+        <div className="app-stat-value" style={{ color }}>
+          <Counter to={Number(value) || 0} />
         </div>
+        {sub && <div style={{ fontSize: '0.7rem', color: 'var(--app-text-muted)', marginTop: '0.15rem' }}>{sub}</div>}
       </div>
+      <div style={{ fontSize: '1.4rem', opacity: 0.5, marginTop: '0.15rem' }}>{icon}</div>
+    </div>
+  </motion.div>
+);
+
+/* ─── Nav kart ───────────────────────────────────────────────────────────── */
+const NavCard = ({ to, icon, title, desc, color, delay }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 14 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.32, delay, ease: [0.32, 0.72, 0, 1] }}
+    whileHover={{ y: -2, transition: { duration: 0.14 } }}
+    whileTap={{ scale: 0.96, transition: { type: 'spring', stiffness: 400, damping: 17 } }}
+  >
+    <Link to={to} className="app-card" style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', padding: '0.95rem 1.1rem', textDecoration: 'none' }}>
+      <div style={{ width: '2.6rem', height: '2.6rem', borderRadius: '0.7rem', background: color + '18', border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+        {icon}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--app-text)', letterSpacing: '-0.01em' }}>{title}</div>
+        {desc && <div style={{ fontSize: '0.72rem', color: 'var(--app-text-muted)', marginTop: '0.1rem' }}>{desc}</div>}
+      </div>
+      <div style={{ fontSize: '0.85rem', color, opacity: 0.6 }}>›</div>
+    </Link>
+  </motion.div>
+);
+
+/* ─── Ana bileşen ────────────────────────────────────────────────────────── */
+const AdminLandingPage = () => {
+  const [report, setReport] = useState(null);
+  const session = getSession();
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Günaydın' : hour < 18 ? 'İyi günler' : 'İyi akşamlar';
+
+  useEffect(() => {
+    fetch('/api/admin/reports/overview', { headers: authHeaders() })
+      .then(r => r.json())
+      .then(res => { if (res.success) setReport(res.data); })
+      .catch(() => {});
+  }, []);
+
+  const maxOkutulma = Math.max(...(report?.enCokOkutulanlar?.map(i => i.okutulma) || [1]));
+  const maxKg       = Math.max(...(report?.enCokSipariseGirenler?.map(i => i.toplam_kg) || [1]));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+      {/* Karşılama */}
+      <motion.div
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: EASE }}
+        className="app-panel"
+        style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}
+      >
+        <div>
+          <div style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--app-text-muted)' }}>
+            {new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </div>
+          <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--app-text)', marginTop: '0.15rem' }}>
+            {greeting}, {session?.username || 'yönetici'} 👋
+          </div>
+        </div>
+        <div style={{ fontSize: '1.5rem' }}>
+          {hour < 6 ? '🌙' : hour < 12 ? '☀️' : hour < 18 ? '🌤' : '🌆'}
+        </div>
+      </motion.div>
+
+      {/* Stat kartları — masaüstünde görünür, mobilde gizli */}
+      {report && (
+        <div className="hidden md:grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+          <StatCard label="Toplam Mamül"   value={report.toplamMamul}               icon="🧵" color="var(--app-primary)"  delay={0.05} />
+          <StatCard label="Aktif Ürün"     value={report.publicAktifMamul}          icon="✦"  color="var(--app-accent)"   delay={0.1}  />
+          <StatCard label="Sipariş"        value={report.toplamSiparis}             icon="📋" color="#7c3aed"             delay={0.15} />
+          <StatCard label="QR Görüntüleme" value={report.toplamPublicGoruntulenme}  icon="👁" color="#0891b2"             delay={0.2}  />
+        </div>
+      )}
+
+      {/* En çok okutulanlar — masaüstünde görünür, mobilde gizli */}
+      {report?.enCokOkutulanlar?.length > 0 && (
+        <motion.section
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.48, delay: 0.25, ease: EASE }}
+          className="app-panel hidden md:block"
+          style={{ padding: '1.1rem 1.25rem' }}
+        >
+          <div style={{ fontSize: '0.62rem', fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--app-text-muted)', marginBottom: '0.85rem' }}>
+            En Çok Okutulan
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            {report.enCokOkutulanlar.map((item, i) => (
+              <div key={item.id}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--app-text)' }}>{item.mamul_adi}</span>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--app-primary)' }}>{item.okutulma}×</span>
+                </div>
+                <MiniBar value={item.okutulma} max={maxOkutulma} color="var(--app-primary)" />
+              </div>
+            ))}
+          </div>
+        </motion.section>
+      )}
+
+      {/* En çok siparişe girenler — masaüstünde görünür, mobilde gizli */}
+      {report?.enCokSipariseGirenler?.length > 0 && (
+        <motion.section
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.48, delay: 0.3, ease: EASE }}
+          className="app-panel hidden md:block"
+          style={{ padding: '1.1rem 1.25rem' }}
+        >
+          <div style={{ fontSize: '0.62rem', fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--app-text-muted)', marginBottom: '0.85rem' }}>
+            En Çok Sipariş
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            {report.enCokSipariseGirenler.map((item) => (
+              <div key={item.id}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--app-text)' }}>{item.mamul_adi}</span>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--app-accent)' }}>{Number(item.toplam_kg).toFixed(0)} kg</span>
+                </div>
+                <MiniBar value={item.toplam_kg} max={maxKg} color="var(--app-accent)" />
+              </div>
+            ))}
+          </div>
+        </motion.section>
+      )}
+
+      {/* Hızlı erişim başlığı — masaüstünde görünür, mobilde gizli */}
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+        transition={{ delay: 0.35, duration: 0.4 }}
+        className="hidden md:block"
+        style={{ fontSize: '0.62rem', fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--app-text-muted)', paddingLeft: '0.25rem' }}
+      >
+        Hızlı Erişim
+      </motion.div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+        <NavCard to="/admin/mamuller"    icon="🧵" title="Mamül Kartları"     desc="Kumaş detayları ve fiyatlar"    color="var(--app-primary)"  delay={0.38} />
+        <NavCard to="/staff/orders/new" icon="📋" title="Siparişler"         desc="Yeni sipariş ve takip"          color="#7c3aed"             delay={0.42} />
+        <NavCard to="/mamul/labels"     icon="🏷" title="Etiket Bas"         desc="QR etiket oluştur"              color="var(--app-accent)"   delay={0.46} />
+        <NavCard to="/admin/reports"    icon="📊" title="Raporlar"           desc="Satış ve görüntülenme analizi"  color="#0891b2"             delay={0.5}  />
+        <NavCard to="/admin/settings"   icon="⚙️" title="Üretim Altyapısı"  desc="Ayarlar ve yapılandırma"        color="#64748b"             delay={0.54} />
+      </div>
+
     </div>
   );
 };

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { authHeaders, getSession } from '../utils/auth';
 import { AnimatePresence, motion } from 'framer-motion';
 import PageSearchBar from '../components/PageSearchBar';
-import { extractColorName, resolveColorHex } from '../utils/labelTemplate';
+import { extractColorName, formatArticleLabel, resolveColorHex } from '../utils/labelTemplate';
 import { Upload, Trash2 } from '../components/icons.jsx';
 import { useHaptic } from '../utils/useHaptic';
 import PullToRefresh from '../components/PullToRefresh';
@@ -737,7 +737,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                     transition={{ duration: 0.18 }}
                   >
                     <div className="font-semibold text-[color:var(--app-text)]">{item.mamul_adi}</div>
-                    <div className="text-sm text-[color:var(--app-text-muted)]">{item.article_code} / {item.article_no}</div>
+                    <div className="text-sm text-[color:var(--app-text-muted)]">{formatArticleLabel(item.article_code, item.article_no)}</div>
                     <div className="text-sm text-[color:var(--app-text-muted)]">{item.mamul_turu_adi}{extractColorName(item.renk) ? ` · ${extractColorName(item.renk)}` : ''}<span style={resolveColorHex(item) ? { display: 'inline-block', width: '10px', height: '10px', backgroundColor: resolveColorHex(item), border: '1px solid #999', borderRadius: '2px', marginLeft: '4px', verticalAlign: 'middle' } : {}} /></div>
                     <div className="text-sm font-semibold text-[color:var(--app-success)]">{resolveDisplayPrice(item.bir_kg_maliyet, item.bir_kg_satis_fiyati, normalizedGenelAyarlar).toFixed(2)}</div>
                     <div className="app-mamul-actions-pc" style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', minWidth: 0 }}>
@@ -752,7 +752,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                     <div className="app-mamul-mobile-grid">
                       <div className="app-mamul-mobile-field">
                         <div className="app-mamul-secondary-label">Kayıt No</div>
-                        <div className="app-mamul-mobile-value">{item.article_code} / {item.article_no}</div>
+                        <div className="app-mamul-mobile-value">{formatArticleLabel(item.article_code, item.article_no)}</div>
                       </div>
                       <div className="app-mamul-mobile-field">
                         <div className="app-mamul-secondary-label">Satış</div>

@@ -1,11 +1,6 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-
-const CloseIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-    <path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5Z" fill="currentColor" />
-  </svg>
-);
+import { X } from './icons.jsx';
 
 const isMobileDevice = () => {
   if (typeof navigator === 'undefined') return false;
@@ -53,13 +48,13 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
 
     const startScanner = async () => {
       if (!mobileOnly) {
-        setStatus('QR okutma bu uygulamada sadece mobil cihazin yerlesik arka kamerasiyla kullanilir.');
+        setStatus('QR okutma bu uygulamada sadece mobil cihazın yerleşik arka kamerasıyla kullanılır.');
         setShowFallback(false);
         return;
       }
 
       if (!canUseLiveCamera) {
-        setStatus('Canli kamera akisi bu baglantida acilamadi. Asagidaki butonla arka kamerayi acip QR fotografi cekebilirsiniz.');
+        setStatus('Canlı kamera akışı bu bağlantıda açılamadı. Aşağıdaki butonla arka kamerayı açıp QR fotoğrafı çekebilirsiniz.');
         setShowFallback(true);
         return;
       }
@@ -93,7 +88,7 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
         );
 
         if (mounted) {
-          setStatus('QR kodu arka kameraya hizalayin.');
+          setStatus('QR kodu arka kameraya hizalayın.');
           setShowFallback(true);
         }
       } catch (error) {
@@ -126,7 +121,7 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
     if (!file) return;
 
     try {
-      setStatus('QR gorseli okunuyor...');
+      setStatus('QR görseli okunuyor...');
       const scanner = html5QrRef.current || new Html5Qrcode(scannerId, {
         formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
       });
@@ -144,8 +139,8 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/78 p-4">
-      <div className="app-panel w-full max-w-xl p-4 sm:p-6">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4" style={{ background: 'rgba(7,12,20,0.88)' }}>
+      <div className="app-panel w-full max-w-xl p-4 sm:p-6" style={{ maxHeight: '90dvh', overflowY: 'auto', position: 'relative' }}>
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-[color:var(--app-text)]">{title}</h2>
@@ -155,10 +150,10 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
             type="button"
             onClick={onClose}
             className="app-nav-icon-button"
-            aria-label="Kamerayi kapat"
-            title="Kamerayi kapat"
+            aria-label="Kamerayı kapat"
+            title="Kamerayı kapat"
           >
-            <CloseIcon />
+            <X className="app-nav-icon-svg" />
           </button>
         </div>
 
@@ -181,10 +176,10 @@ const QrCameraModal = ({ title, onClose, onDetected }) => {
             onClick={() => fileInputRef.current?.click()}
             className="app-btn-secondary w-full sm:w-auto"
           >
-            QR gorseli sec
+            QR görseli seç
           </button>
           <p className="text-center text-xs leading-6 text-[color:var(--app-text-muted)]">
-            Canli okumada zorlaniyorsa QR kodu daha yakin cekip gorsel olarak secin.
+            Canlı okumada zorlanıyorsa QR kodu daha yakın çekip görsel olarak seçin.
           </p>
         </div>
         ) : null}

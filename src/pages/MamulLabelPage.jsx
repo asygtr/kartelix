@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import MamulEtiketModal from '../components/MamulEtiketModal';
 import PageSearchBar from '../components/PageSearchBar';
-import { defaultLabelTemplate, mergeLabelTemplate, printLabels } from '../utils/labelTemplate';
+import { defaultLabelTemplate, formatArticleLabel, mergeLabelTemplate, printLabels } from '../utils/labelTemplate';
 import { authHeaders } from '../utils/auth';
 
 const normalizeSearchValue = (value) => String(value || '').trim().toLowerCase();
@@ -150,7 +150,7 @@ const MamulLabelPage = () => {
           setSelectedRecord(item);
         }}
         getResultPrimary={(item) => item.mamul_adi}
-        getResultSecondary={(item) => `${item.article_code} / ${item.article_no}${item.renk ? ` / ${item.renk}` : ''}`}
+        getResultSecondary={(item) => `${formatArticleLabel(item.article_code, item.article_no)}${item.renk ? ` / ${item.renk}` : ''}`}
         emptyResultsText="Bu aramaya uygun etiket bulunamadı."
       />
 
@@ -223,7 +223,7 @@ const MamulLabelPage = () => {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1 cursor-pointer" onClick={() => setSelectedRecord(item)}>
                       <div className="truncate text-sm font-semibold text-slate-900">{item.mamul_adi}</div>
-                      <div className="mt-0.5 text-xs text-slate-500">{item.article_code} / {item.article_no}</div>
+                      <div className="mt-0.5 text-xs text-slate-500">{formatArticleLabel(item.article_code, item.article_no)}</div>
                       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500">
                         <span>{item.mamul_turu_adi || '-'}</span>
                         <span>{item.renk || '-'}</span>

@@ -180,6 +180,19 @@ const getFileTypePrefix = (fileName) => {
   return match ? match[1] : '';
 };
 
+const resolveUrgeArticleNumber = (rawArticleNo, typePrefix) => {
+  const rawDigitsMatch = String(rawArticleNo || '').match(/\d+/);
+  if (!rawDigitsMatch) return '';
+
+  const rawArticleDigits = rawDigitsMatch[0];
+  if (!typePrefix) return rawArticleDigits;
+  if (rawArticleDigits.length >= 5) return rawArticleDigits;
+
+  const suffixLength = Math.max(0, 5 - typePrefix.length);
+  const suffix = rawArticleDigits.slice(-suffixLength).padStart(suffixLength, '0');
+  return `${typePrefix}${suffix}`;
+};
+
 const ensureColumn = async (db, tableName, columnName, definition) => {
   const columns = await dbAll(db, `PRAGMA table_info(${tableName})`);
   if (columns.some((column) => column.name === columnName)) return;
@@ -501,11 +514,13 @@ const importProsesler = async (db, rows) => {
   return { importedRows: imported };
 };
 
-const importMamuller = async (db, rows) => {
+const importMamuller = async (db, rows, configuredFile = null) => {
   let imported = 0;
   const touchedMamulIds = [];
+  const processedArticleCodes = [];
 
-  for (const row of rows) {
+  for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+    const row = rows[rowIndex];
     const mamulAdi = String(getRowValue(row, ['mamul_adi', 'ad', 'urun_adi'], '')).trim();
     if (!mamulAdi) continue;
 
@@ -551,7 +566,7 @@ const importMamuller = async (db, rows) => {
          SET mamul_adi = ?, mamul_turu_id = ?, article_no = ?, article_code = ?, koleksiyon_adi = ?, yayin_durumu = ?,
              renk = ?, renk_kodu = ?, kompozisyon_ozeti = ?, en = ?, gramaj = ?, aciklama = ?, tanitim_basligi = ?,
              tanitim_hikayesi = ?, materyal_notlari = ?, gorsel_url = ?, vurgu_etiketi = ?, bir_kg_satis_fiyati = ?,
-             aktif = ?, qr_slug = ?, updated_at = CURRENT_TIMESTAMP
+            aktif = ?, qr_slug = ?, excel_kaynak_dosyasi = ?, excel_satir_no = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
         [
           payload.mamulAdi,
@@ -574,18 +589,21 @@ const importMamuller = async (db, rows) => {
           payload.birKgSatisFiyati,
           payload.aktif,
           payload.qrSlug,
+          configuredFile ? String(configuredFile.fileName || '') : null,
+          rowIndex + 1,
           existing.id
         ]
       );
       touchedMamulIds.push(existing.id);
+      processedArticleCodes.push(articleCode);
     } else {
       const result = await dbRun(
         db,
         `INSERT INTO mamul_kartlari (
           mamul_adi, mamul_turu_id, article_no, article_code, koleksiyon_adi, yayin_durumu, renk, renk_kodu,
           kompozisyon_ozeti, en, gramaj, aciklama, tanitim_basligi, tanitim_hikayesi, materyal_notlari,
-          gorsel_url, vurgu_etiketi, bir_kg_maliyet, bir_kg_satis_fiyati, qr_slug, aktif
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          gorsel_url, vurgu_etiketi, bir_kg_maliyet, bir_kg_satis_fiyati, qr_slug, aktif, excel_kaynak_dosyasi, excel_satir_no
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           payload.mamulAdi,
           payload.mamulTuruId,
@@ -607,17 +625,20 @@ const importMamuller = async (db, rows) => {
           0,
           payload.birKgSatisFiyati,
           payload.qrSlug,
-          payload.aktif
+          payload.aktif,
+          configuredFile ? String(configuredFile.fileName || '') : null,
+          rowIndex + 1
         ]
       );
       touchedMamulIds.push(result.lastID);
+      processedArticleCodes.push(articleCode);
     }
 
     imported += 1;
   }
 
   await recalculateCosts(db, touchedMamulIds);
-  return { importedRows: imported };
+  return { importedRows: imported, processedArticleCodes };
 };
 
 const importMamulIplikleri = async (db, rows) => {
@@ -823,6 +844,7 @@ const importUrgeWorkbook = async (db, configuredFile, workbook, sheetName) => {
   let imported = 0;
   let skipped = 0;
   const skippedDetails = [];
+  const processedArticleCodes = [];
 
   const headerRowNumber = 2;
   const articleColumn = findHeaderColumn(sheet, headerRowNumber, ['article no', 'article_no', 'articleno', 'article']);
@@ -867,10 +889,7 @@ const importUrgeWorkbook = async (db, configuredFile, workbook, sheetName) => {
       continue;
     }
 
-    const articlePrefix = rawArticleDigits.slice(0, 2);
-    const articleNo = typePrefix && articlePrefix !== typePrefix
-      ? `${typePrefix}${rawArticleDigits.slice(typePrefix.length)}`
-      : rawArticleDigits;
+    const articleNo = resolveUrgeArticleNumber(rawArticleNo, typePrefix);
 
     const resolvedType = typeInfo || await upsertUrgeType(db, articleNo.slice(0, 2), fileName);
     if (!resolvedType) {
@@ -986,6 +1005,7 @@ const importUrgeWorkbook = async (db, configuredFile, workbook, sheetName) => {
           mamulId
         ]
       );
+      processedArticleCodes.push(articleNo);
     } else {
       const result = await dbRun(
         db,
@@ -1027,6 +1047,7 @@ const importUrgeWorkbook = async (db, configuredFile, workbook, sheetName) => {
         ]
       );
       mamulId = result.lastID;
+      processedArticleCodes.push(articleNo);
     }
 
     await dbRun(db, `DELETE FROM mamul_iplik_detaylari WHERE mamul_id = ?`, [mamulId]);
@@ -1052,7 +1073,7 @@ const importUrgeWorkbook = async (db, configuredFile, workbook, sheetName) => {
     imported += 1;
   }
 
-  return { importedRows: imported, skippedRows: skipped, skippedDetails, typePrefix };
+  return { importedRows: imported, skippedRows: skipped, skippedDetails, typePrefix, processedArticleCodes };
 };
 
 const insertSnapshot = async (db, payload) => {
@@ -1137,10 +1158,28 @@ const startExcelSync = ({
 
       if (importer) {
         try {
-          result = await importer(db, rows);
+          // pass configuredFile so importers can mark rows with the source file name
+          result = await importer(db, rows, configuredFile);
         } catch (err) {
           error = err?.message || String(err);
         }
+      }
+
+      // If importer returned processedArticleCodes, remove DB entries that were previously
+      // linked to this file but no longer present in the current rows. This prevents stale
+      // records from lingering when rows are deleted in the Excel source.
+      try {
+        if (result && Array.isArray(result.processedArticleCodes) && result.processedArticleCodes.length > 0) {
+          const fileName = configuredFile.fileName;
+          // Delete mamul_kartlari rows that reference this excel file but whose article_no is
+          // not in the processedArticleCodes list.
+          const placeholders = result.processedArticleCodes.map(() => '?').join(',') || "''";
+          const sql = `DELETE FROM mamul_kartlari WHERE excel_kaynak_dosyasi = ? AND (article_no NOT IN (${placeholders}) AND article_code NOT IN (${placeholders}))`;
+          await dbRun(db, sql, [fileName, ...result.processedArticleCodes, ...result.processedArticleCodes]);
+        }
+      } catch (e) {
+        // non-fatal: log and continue
+        console.warn('Failed to cleanup stale mamul_kartlari for', configuredFile?.fileName, e?.message || e);
       }
 
       importedRows += result.importedRows || 0;
@@ -1244,6 +1283,17 @@ const startExcelSync = ({
         mtimeMs: stat.mtimeMs || 0
       };
       state.lastFingerprintBySource[sourceKey] = fingerprint;
+      // Cleanup stale mamul rows that were previously imported from this URGE file
+      try {
+        const processed = result.processedArticleCodes || [];
+        if (processed.length > 0) {
+          const placeholders = processed.map(() => '?').join(',');
+          const sql = `DELETE FROM mamul_kartlari WHERE excel_kaynak_dosyasi = ? AND (article_no NOT IN (${placeholders}) AND article_code NOT IN (${placeholders}))`;
+          await dbRun(db, sql, [fileName, ...processed, ...processed]);
+        }
+      } catch (e) {
+        console.warn('Failed to remove stale URGE mamul rows for', fileName, e?.message || e);
+      }
     }
 
     return { importedRows, skippedRows, files: previews };
@@ -1277,6 +1327,7 @@ const startExcelSync = ({
       state.lastError = null;
     } catch (err) {
       state.lastError = err?.message || String(err);
+      console.error('Excel sync failed:', state.lastError, { directory, lastRunAt: state.lastRunAt });
     } finally {
       state.running = false;
       scheduleNext();
@@ -1411,5 +1462,6 @@ module.exports = {
   getFileFingerprint,
   hasFileChanged,
   findHeaderColumn,
-  importUrgeWorkbook
+  importUrgeWorkbook,
+  resolveUrgeArticleNumber
 };

@@ -1,24 +1,24 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../theme/ThemeProvider';
-import { getSession } from '../utils/auth';
+import { useGenelAyarlar } from '../theme/ThemeProvider';
+import { getSession, authHeaders } from '../utils/auth';
 import QrCameraModal from './QrCameraModal';
 import { isMobileCameraDevice } from '../utils/qr';
+import { normalizeGenelAyarlar, resolveDisplayPrice } from '../utils/generalSettings';
+import { formatArticleLabel } from '../utils/labelTemplate';
+import { Home, Search, ClipboardList, Tag, Layers, BarChart2, Settings, LogOut, X, QrCode, Menu } from './icons.jsx';
 
 const navSets = {
   admin: [
     { to: '/admin', label: 'Yönetim' },
     { to: '/admin/mamuller', label: 'Mamül Kartı' },
     { to: '/mamul/labels', label: 'Etiket Bas' },
-    { to: '/mamul/showcase', label: 'Ürün Tanıtımı' },
     { to: '/staff/orders/new', label: 'Siparişler' },
     { to: '/admin/reports', label: 'Raporlar' }
   ],
   mamul: [
-    { to: '/mamul', label: 'Mamül Merkezi' },
-    { to: '/mamul/create', label: 'Mamül Ekle' },
-    { to: '/mamul/labels', label: 'Etiket Bas' },
-    { to: '/mamul/showcase', label: 'Ürün Tanıtımı' }
+    { to: '/mamul/labels', label: 'Etiket Bas' }
   ],
   staff: [
     { to: '/staff/orders/new', label: 'Sipariş Oluştur' }
@@ -28,82 +28,33 @@ const navSets = {
 
 const isActiveLink = (pathname, target) => {
   if (target === '/') return pathname === '/';
+  if (target === '/admin' || target === '/mamul') {
+    return pathname === target;
+  }
   return pathname === target || pathname.startsWith(`${target}/`);
 };
 
+
 export const useNavItems = (role, onSearchOpen) => useMemo(() => {
   const items = [];
-  items.push({ key: 'home', label: 'Ana Sayfa', icon: <HomeIcon />, to: role === 'admin' ? '/admin' : role === 'mamul' ? '/mamul' : '/staff/orders/new' });
-  items.push({ key: 'search', label: 'Ara', icon: <SearchIcon />, action: () => onSearchOpen() });
-  items.push({ key: 'orders', label: 'Siparişler', icon: <OrderIcon />, to: role === 'admin' ? '/admin/orders' : role === 'staff' ? '/staff/orders/new' : null });
-  items.push({ key: 'labels', label: 'Etiket Bas', icon: <LabelIcon />, to: role === 'admin' || role === 'mamul' ? '/mamul/labels' : null });
-  items.push({ key: 'mamul', label: 'Mamül', icon: <FabricIcon />, to: role === 'admin' ? '/admin/mamuller' : role === 'mamul' ? '/mamul/create' : null });
-  if (role === 'admin') items.push({ key: 'reports', label: 'Raporlar', icon: <ReportIcon />, to: '/admin/reports' });
+  items.push({ key: 'home', label: 'Ana Sayfa', icon: <Home className="app-nav-icon-svg" />, to: role === 'admin' ? '/admin' : role === 'mamul' ? '/mamul' : '/staff/orders/new' });
+  items.push({ key: 'search', label: 'Ara', icon: <Search className="app-nav-icon-svg" />, action: () => onSearchOpen() });
+  items.push({ key: 'orders', label: 'Siparişler', icon: <ClipboardList className="app-nav-icon-svg" />, to: role === 'admin' ? '/admin/orders' : role === 'staff' ? '/staff/orders/new' : null });
+  items.push({ key: 'labels', label: 'Etiket Bas', icon: <Tag className="app-nav-icon-svg" />, to: role === 'admin' || role === 'mamul' ? '/mamul/labels' : null });
+  items.push({ key: 'mamul', label: 'Mamül', icon: <Layers className="app-nav-icon-svg" />, to: role === 'admin' ? '/admin/mamuller' : null });
+  if (role === 'admin') items.push({ key: 'reports', label: 'Raporlar', icon: <BarChart2 className="app-nav-icon-svg" />, to: '/admin/reports' });
   return items.filter((item) => item.to || item.action);
 }, [role, onSearchOpen]);
 
-const isMobileNavActive = (pathname, item, searchOpen) => {
-  if (item.action) {
-    return searchOpen;
-  }
-
-  if (!item.to) {
-    return false;
-  }
-
-  if (item.key === 'home') {
-    return pathname === item.to;
-  }
-
-  return isActiveLink(pathname, item.to);
-};
-
-const HomeIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-    <path d="M12 4 4 10.5V20h5.5v-5h5V20H20v-9.5L12 4Z" fill="currentColor" />
-  </svg>
-);
-
-const SearchIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-    <path d="M10.5 4a6.5 6.5 0 1 0 4.03 11.6l4.43 4.43 1.41-1.41-4.43-4.43A6.5 6.5 0 0 0 10.5 4Zm0 2a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z" fill="currentColor" />
-  </svg>
-);
-
-const OrderIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-    <path d="M5 4h11l3 3v13H5V4Zm2 2v12h10V8.2L15.8 6H7Zm2 3h6v2H9V9Zm0 4h6v2H9v-2Z" fill="currentColor" />
-  </svg>
-);
-
-const LabelIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-    <path d="M4 7a3 3 0 0 1 3-3h6l7 7-8 8-7-7V7Zm4 1.5A1.5 1.5 0 1 0 8 5.5a1.5 1.5 0 0 0 0 3Z" fill="currentColor" />
-  </svg>
-);
-
-const FabricIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-    <path d="M6 4h12v4l-2 1.5V20H8V9.5L6 8V4Zm2 2v1l2 1.5V18h4V8.5L16 7V6H8Z" fill="currentColor" />
-  </svg>
-);
-
-const ReportIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-    <path d="M5 5h14v14H5V5Zm2 2v10h10V7H7Zm1 7h2v2H8v-2Zm3-4h2v6h-2v-6Zm3-3h2v9h-2V7Z" fill="currentColor" />
-  </svg>
-);
-
-const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }) => {
+const AppNavbar = ({ title, action, onLogout, searchOpen, setSearchOpen }) => {
   const { appLogo } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const session = getSession();
   const role = session?.yetki || 'guest';
   const primaryLinks = navSets[role] || navSets.guest;
-  const showSettings = role === 'admin';
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
+  const showSettings = role === 'admin' && location.pathname !== '/admin/settings';
+  const showSettingsMenu = role === 'admin' && location.pathname === '/admin/settings';
   const [searchValue, setSearchValue] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchMessage, setSearchMessage] = useState('');
@@ -112,65 +63,13 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
   const [canUseMobileQr] = useState(() => isMobileCameraDevice());
 
   useEffect(() => {
-    setMenuOpen(false);
-  }, [location.pathname]);
-
-  useEffect(() => {
     if (searchOpen) {
       setSearchMessage('');
       setSearchResult(null);
+    } else {
+      setSearchValue(''); // Clear search input when popup is closed
     }
   }, [searchOpen]);
-
-  const mobileNavItems = useMemo(() => {
-    const items = [];
-
-    items.push({
-      key: 'home',
-      label: 'Ana Sayfa',
-      icon: <HomeIcon />,
-      to: role === 'admin' ? '/admin' : role === 'mamul' ? '/mamul' : '/staff/orders/new'
-    });
-
-    items.push({
-      key: 'search',
-      label: 'Ara',
-      icon: <SearchIcon />,
-      action: () => setSearchOpen(true)
-    });
-
-    items.push({
-      key: 'orders',
-      label: 'Siparişler',
-      icon: <OrderIcon />,
-      to: role === 'admin' ? '/admin/orders' : role === 'staff' ? '/staff/orders/new' : null
-    });
-
-    items.push({
-      key: 'labels',
-      label: 'Etiket Bas',
-      icon: <LabelIcon />,
-      to: role === 'admin' || role === 'mamul' ? '/mamul/labels' : null
-    });
-
-    items.push({
-      key: 'mamul',
-      label: 'Mamül',
-      icon: <FabricIcon />,
-      to: role === 'admin' ? '/admin/mamuller' : role === 'mamul' ? '/mamul/create' : null
-    });
-
-    if (role === 'admin') {
-      items.push({
-        key: 'reports',
-        label: 'Raporlar',
-        icon: <ReportIcon />,
-        to: '/admin/reports'
-      });
-    }
-
-    return items.filter((item) => item.to || item.action);
-  }, [role]);
 
   const runGlobalSearch = async (incomingValue) => {
     const lookupCode = String(incomingValue ?? searchValue).trim();
@@ -184,15 +83,16 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
     try {
       setSearchLoading(true);
       setSearchMessage('');
-      const response = await fetch(`/api/admin/mamul-lookup?code=${encodeURIComponent(lookupCode)}`);
+      const response = await fetch(`/api/admin/mamul-lookup?code=${encodeURIComponent(lookupCode)}`, { headers: authHeaders() });
       const result = await response.json();
 
       if (!response.ok || !result.success) {
         throw new Error(result.error || 'Ürün bulunamadı');
       }
 
-      setSearchValue(lookupCode);
-      setSearchResult(result.data);
+      setSearchOpen(false);
+      setSearchValue('');
+      navigate(`/mamul/preview/${result.data.qr_slug}`);
     } catch (error) {
       setSearchResult(null);
       setSearchMessage(error.message);
@@ -202,6 +102,8 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
   };
 
   const canSeeSearchPrices = role === 'admin';
+  const { genelAyarlar } = useGenelAyarlar();
+  const normalizedGenelAyarlar = normalizeGenelAyarlar(genelAyarlar);
 
   return (
     <>
@@ -213,7 +115,7 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
             <img src={appLogo} alt="Kartelix logo" className="app-nav-logo-image" />
           </Link>
           <div className="app-nav-brand-copy">
-            <div className="app-nav-brand-name">Kartelix</div>
+            <div className="app-nav-brand-name">KARTELIX</div>
             <div className="app-nav-mobile-title">{title}</div>
           </div>
         </div>
@@ -235,114 +137,37 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
         ) : null}
 
         <div className="app-nav-actions">
+          {showSettingsMenu ? (
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('settings-menu:open'))}
+              className="app-nav-icon-button"
+              aria-label="Ayar bölümlerini aç"
+              title="Ayar bölümlerini aç"
+            >
+              <Menu className="app-nav-icon-svg" />
+            </button>
+          ) : null}
           {showSettings ? (
-            <Link to="/admin/settings" className="app-nav-icon-button" aria-label="Ayarlar" title="Ayarlar">
-              <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-                <path d="M19.14 12.94a7.43 7.43 0 0 0 .05-.94 7.43 7.43 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.12 7.12 0 0 0-1.63-.94l-.36-2.54a.49.49 0 0 0-.49-.42h-3.84a.49.49 0 0 0-.49.42l-.36 2.54a7.12 7.12 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.43 7.43 0 0 0-.05.94 7.43 7.43 0 0 0 .05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.39 1.04.71 1.63.94l.36 2.54a.49.49 0 0 0 .49.42h3.84a.49.49 0 0 0 .49-.42l.36-2.54c.59-.23 1.13-.55 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64ZM12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5Z" fill="currentColor" />
-              </svg>
+            <Link
+              to="/admin/settings"
+              className="app-nav-icon-button"
+              aria-label="Ayarlar"
+              title="Ayarlar"
+              onClick={() => setTimeout(() => window.dispatchEvent(new CustomEvent('settings-menu:open')), 80)}
+            >
+              <Settings className="app-nav-icon-svg" />
             </Link>
           ) : null}
           {onLogout ? (
             <button type="button" onClick={onLogout} className="app-nav-icon-button" aria-label="Çıkış yap" title="Çıkış yap">
-              <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-                <path d="M10 17v-2h5V9h-5V7h5a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2Zm-4 3a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5v2H6v12h5v2Zm11.59-7L14 9.41 15.41 8 21.83 14.41 15.41 20.83 14 19.41 17.59 16H9v-2Z" fill="currentColor" />
-              </svg>
+              <LogOut className="app-nav-icon-svg" />
             </button>
           ) : null}
           {action ? <div className="app-nav-utility">{action}</div> : null}
-          <button
-            type="button"
-            className="app-nav-toggle"
-            aria-label="Menüyü aç"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((prev) => !prev)}
-          >
-            <span />
-            <span />
-            <span />
-          </button>
         </div>
       </div>
-
-      <div className="app-nav-meta">
-        <div className="app-nav-meta-copy">
-          <p className="app-eyebrow">{eyebrow}</p>
-          <div className="app-nav-page-title">{title}</div>
-          {description ? <p className="app-nav-page-description">{description}</p> : null}
-        </div>
-      </div>
-
-      {primaryLinks.length ? (
-        <nav className={`app-nav-primary-wrap ${menuOpen ? 'is-open' : ''}`} aria-label="Ana gezinme">
-          <div className="app-nav-links">
-            {primaryLinks.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className={`app-nav-link ${isActiveLink(location.pathname, link.to) ? 'is-active' : ''}`}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-        </nav>
-      ) : null}
-
-      {links.length ? (
-        <nav className={`app-nav-links-wrap ${menuOpen ? 'is-open' : ''}`} aria-label="Sayfa içi gezinme">
-          <div className="app-nav-subhead">Bu ekranda</div>
-          <div className="app-nav-links app-nav-links-secondary">
-            {links.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className={`app-nav-link app-nav-link-secondary ${isActiveLink(location.pathname, link.to) ? 'is-active' : ''}`}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-        </nav>
-      ) : null}
     </header>
-    ) : null}
-    {!searchOpen && role !== 'guest' ? (
-      <nav className="app-mobile-bottom-nav" aria-label="Mobil alt gezinme">
-        {mobileNavItems.map((item) => {
-          const isDisabled = !item.to && !item.action;
-          const isActive = isMobileNavActive(location.pathname, item, searchOpen);
-
-          if (item.action) {
-            return (
-              <button
-                key={item.key}
-                type="button"
-                className={`app-mobile-nav-item ${isActive ? 'is-active' : ''}`}
-                onClick={item.action}
-              >
-                <span className="app-mobile-nav-icon">{item.icon}</span>
-                <span className="app-mobile-nav-label">{item.label}</span>
-              </button>
-            );
-          }
-
-          if (isDisabled) {
-            return (
-              <button key={item.key} type="button" className="app-mobile-nav-item is-disabled" disabled>
-                <span className="app-mobile-nav-icon">{item.icon}</span>
-                <span className="app-mobile-nav-label">{item.label}</span>
-              </button>
-            );
-          }
-
-          return (
-            <Link key={item.key} to={item.to} className={`app-mobile-nav-item ${isActive ? 'is-active' : ''}`}>
-              <span className="app-mobile-nav-icon">{item.icon}</span>
-              <span className="app-mobile-nav-label">{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
     ) : null}
 
     {searchOpen ? (
@@ -361,9 +186,7 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
               aria-label="Aramayı kapat"
               title="Aramayı kapat"
             >
-              <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-                <path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5Z" fill="currentColor" />
-              </svg>
+              <X className="app-nav-icon-svg" />
             </button>
           </div>
 
@@ -383,7 +206,7 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
               />
               <div className="app-searchbar-actions">
                 <button type="submit" className="app-searchbar-submit" aria-label="Ara" title="Ara">
-                  <SearchIcon />
+                  <Search className="app-nav-icon-svg" />
                 </button>
                 {canUseMobileQr ? (
                   <button
@@ -393,9 +216,7 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
                     aria-label="QR okut"
                     title="QR okut"
                   >
-                    <svg viewBox="0 0 24 24" aria-hidden="true" className="app-nav-icon-svg">
-                      <path d="M4 4h5v2H6v3H4V4Zm10 0h6v6h-2V6h-4V4ZM4 15h2v3h3v2H4v-5Zm14 3v-3h2v5h-5v-2h3ZM8 8h8v8H8V8Zm2 2v4h4v-4h-4Z" fill="currentColor" />
-                    </svg>
+                    <QrCode className="app-nav-icon-svg" />
                   </button>
                 ) : null}
               </div>
@@ -409,45 +230,45 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
             <div className="app-panel mt-4 p-5">
               <div className="text-xs uppercase tracking-[0.3em] text-[color:var(--app-text-muted)]">{searchResult.mamul_turu_adi}</div>
               <div className="mt-2 text-xl font-semibold text-[color:var(--app-text)]">{searchResult.mamul_adi}</div>
-              <div className="mt-2 text-sm text-[color:var(--app-text-muted)]">{searchResult.article_code} / {searchResult.article_no}</div>
+              <div className="mt-2 text-sm text-[color:var(--app-text-muted)]">{formatArticleLabel(searchResult.article_code, searchResult.article_no)}</div>
               <div className="mt-4 grid gap-3 md:grid-cols-2 text-sm text-[color:var(--app-text-muted)]">
                 <div>Renk: <span className="font-semibold text-[color:var(--app-text)]">{searchResult.renk || '-'}</span></div>
                 <div>Kompozisyon: <span className="font-semibold text-[color:var(--app-text)]">{searchResult.kompozisyon_ozeti || '-'}</span></div>
               </div>
 
-              <div className="app-mobile-search-summary">
-                <div className="app-mobile-search-summary-card">
-                  <div className="app-mobile-search-summary-label">Yayın</div>
-                  <div className="app-mobile-search-summary-value">{searchResult.yayin_durumu || '-'}</div>
-                </div>
-                <div className="app-mobile-search-summary-card">
-                  <div className="app-mobile-search-summary-label">Ölçü</div>
-                  <div className="app-mobile-search-summary-value">{searchResult.en || '-'} EN / {searchResult.gramaj || '-'} GR</div>
-                </div>
-              </div>
 
-              {canSeeSearchPrices ? (
-                <div className="app-mobile-search-pricing">
-                  <div className="app-mobile-search-price-card">
-                    <div className="app-mobile-search-summary-label">1 kg satış</div>
-                    <div className="app-mobile-search-price-value">{Number(searchResult.bir_kg_satis_fiyati || 0).toFixed(2)} TRY</div>
-                  </div>
-                  <div className="app-mobile-search-price-card">
-                    <div className="app-mobile-search-summary-label">1 kg maliyet</div>
-                    <div className="app-mobile-search-price-value">{Number(searchResult.bir_kg_maliyet || 0).toFixed(2)} TRY</div>
+
+              {searchResult.prosesler?.length > 0 ? (
+                <div className="app-soft-panel mt-3 p-3">
+                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--app-text-muted)] mb-2">Prosesler</div>
+                  <div className="space-y-1">
+                    {searchResult.prosesler.map((p, i) => (
+                      <div key={i} className="text-sm text-[color:var(--app-text)]">
+                        {p.proses_adi}{p.proses_tipi ? <span className="text-[color:var(--app-text-muted)]"> / {p.proses_tipi}</span> : null}
+                      </div>
+                    ))}
                   </div>
                 </div>
               ) : null}
 
-              {role === 'staff' ? (
-                <div className="app-soft-panel mt-4 p-4 text-sm text-[color:var(--app-text-muted)]">
-                  Bu görünüm ürünün ne olduğunu hızlıca doğrulamak içindir. Fiyatlar yalnızca yönetici aramasında görünür.
+              {(canSeeSearchPrices || normalizedGenelAyarlar.publicFiyatGoster) ? (
+                <div className="app-mobile-search-pricing">
+                  <div className="app-mobile-search-price-card">
+                    <div className="app-mobile-search-summary-label">1 kg satış</div>
+                    <div className="app-mobile-search-price-value">
+                      {resolveDisplayPrice(searchResult.bir_kg_maliyet, searchResult.bir_kg_satis_fiyati, normalizedGenelAyarlar).toFixed(2)} {searchResult.para_birimi || 'TRY'}
+                    </div>
+                  </div>
+                  <div className="app-mobile-search-price-card">
+                    <div className="app-mobile-search-summary-label">1 kg maliyet</div>
+                    <div className="app-mobile-search-price-value">{Number(searchResult.bir_kg_maliyet || 0).toFixed(2)} {searchResult.para_birimi || 'TRY'}</div>
+                  </div>
                 </div>
               ) : null}
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <a href={`/u/${searchResult.qr_slug}`} className="app-btn-secondary text-center" onClick={() => setSearchOpen(false)}>
-                  Ürün bilgisi
+                  Müşteri görünümü
                 </a>
                 {(role === 'admin' || role === 'mamul') ? (
                   <button
@@ -455,7 +276,7 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
                     className="app-btn-secondary"
                     onClick={() => {
                       setSearchOpen(false);
-                      navigate(role === 'admin' ? '/admin/mamuller' : '/mamul/create');
+                      navigate(role === 'admin' ? `/admin/mamuller?id=${searchResult.mamul_id}` : `/mamul?id=${searchResult.mamul_id}`);
                     }}
                   >
                     Mamüle git
@@ -479,7 +300,7 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
                     className="app-btn-secondary"
                     onClick={() => {
                       setSearchOpen(false);
-                      navigate('/mamul/labels');
+                      navigate(`/mamul/labels?mamulId=${searchResult.mamul_id}`);
                     }}
                   >
                     Etikete git
@@ -494,12 +315,14 @@ const AppNavbar = ({ eyebrow, title, description, links = [], action, onLogout }
 
     {scannerOpen && canUseMobileQr ? (
       <QrCameraModal
-        title="QR ile urun ac"
+        title="QR ile ürün aç"
         onClose={() => setScannerOpen(false)}
         onDetected={(value) => {
           setScannerOpen(false);
-          setSearchValue(value);
-          runGlobalSearch(value);
+          setSearchOpen(false);
+          setSearchValue('');
+          const slug = value.includes('/u/') ? value.split('/u/')[1].split(/[?#]/)[0] : value.trim();
+          navigate(`/mamul/preview/${slug}`);
         }}
       />
     ) : null}

@@ -93,6 +93,14 @@ export const extractColorName = (value) => {
   return str;
 };
 
+export const formatArticleLabel = (articleCode, articleNo) => {
+  const code = String(articleCode || '').trim();
+  const no = String(articleNo || '').trim();
+  if (!code && !no) return '';
+  if (code && no && code === no) return code;
+  return [code, no].filter(Boolean).join(' / ');
+};
+
 const colorNameToHex = (colorName) => {
   if (!colorName) return null;
   const normalized = extractColorName(colorName).toLowerCase();
