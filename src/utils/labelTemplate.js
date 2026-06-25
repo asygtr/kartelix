@@ -1,3 +1,7 @@
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { QRCodeSVG } from 'qrcode.react';
+
 const STORAGE_KEY = 'kartelix-label-template-library-v1';
 
 export const labelFieldCatalog = [
@@ -435,6 +439,15 @@ export const getResolvedLabelMetrics = (templateInput) => {
 
 export const buildPublicUrl = (record) => `${window.location.origin}/u/${record?.qr_slug || ''}`;
 
+const buildQrSvgMarkup = (value) => renderToStaticMarkup(
+  React.createElement(QRCodeSVG, {
+    value: String(value || ''),
+    size: 256,
+    level: 'M',
+    includeMargin: false
+  })
+);
+
 const getCardLayout = (template) => {
   const hasBrandRail = template.showBrandRail;
   const hasQr = template.showQr;
@@ -534,7 +547,7 @@ export const buildLabelPrintMarkup = (record, templateInput, lang = 'tr') => {
         </div>
         ${template.showQr ? `
           <div class="qr" style="${layout.qrStyle}">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(publicUrl)}" alt="QR" />
+            ${buildQrSvgMarkup(publicUrl)}
             ${scanText ? `<div class="scan">${normalizeLabelText(scanText, lang)}</div>` : ''}
           </div>
         ` : ''}
@@ -636,7 +649,7 @@ export const buildLabelPrintDocument = (records, templateInput, lang = 'tr') => 
         }
         .wash-icon { height:4mm; border:.3mm solid ${template.borderColor}; border-radius:${template.borderRadiusMm}mm; display:flex; align-items:center; justify-content:center; font-size:2.65pt; font-weight:700; }
         .qr { display:flex; flex-direction:column; align-items:flex-end; justify-content:flex-start; align-self:start; text-align:center; min-width:0; }
-        .qr img { width:${template.qrSizeMm}mm; height:${template.qrSizeMm}mm; }
+        .qr svg { width:${template.qrSizeMm}mm; height:${template.qrSizeMm}mm; display:block; }
         .scan { font-size:4.2pt; font-weight:800; margin-top:.55mm; line-height:1; transform:none; align-self:center; }
       </style>
     </head>
