@@ -1315,6 +1315,12 @@ code {
   grid-template-columns: minmax(130px, 1.4fr) minmax(110px, 0.9fr) minmax(130px, 1fr) 90px auto;
 }
 
+@media (max-width: 767px) {
+  .app-mamul-table.hidden {
+    display: none !important;
+  }
+}
+
 @media (min-width: 1024px) {
   .app-mamul-table {
     grid-template-columns: minmax(150px, 1.5fr) minmax(130px, 1fr) minmax(140px, 1.1fr) 100px auto;
@@ -1784,6 +1790,136 @@ code {
   color: var(--app-primary-strong);
   font-size: 1.05rem;
   font-weight: 800;
+}
+
+/* Fix: ensure mobile mamul cards have consistent layout and prevent layout-jump */
+.app-mamul-card {
+  align-items: stretch;
+  min-height: auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  contain: layout style;
+}
+
+.app-mamul-card .app-mamul-primary {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  height: 2.6rem;
+  flex-shrink: 0;
+}
+
+.app-mamul-card .app-mamul-mobile-grid {
+  align-items: stretch;
+  flex: 1;
+}
+
+.app-mamul-card .app-mamul-mobile-field {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 2.2rem;
+}
+
+.app-mamul-card .app-mamul-actions {
+  margin-top: 0.5rem;
+  flex-shrink: 0;
+}
+
+.app-mamul-card .app-mamul-mobile-value {
+  min-height: 1.05rem;
+  display: flex;
+  align-items: center;
+}
+
+@media (max-width: 767px) {
+  .app-mamul-list-shell {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.35rem;
+    border: 0;
+    background: transparent;
+  }
+
+  .app-mamul-card {
+    gap: 0.45rem;
+    padding: 0.58rem 0.68rem;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow:
+      0 8px 18px rgba(17, 23, 25, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+
+  .app-mamul-card.is-expanded {
+    padding-bottom: 0.68rem;
+    border-color: color-mix(in srgb, var(--app-accent) 46%, white 54%);
+  }
+
+  .app-mamul-mobile-summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    min-height: 2.25rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .app-mamul-card .app-mamul-primary {
+    height: auto;
+    min-height: 0;
+    font-size: 0.86rem;
+    line-height: 1.2;
+    -webkit-line-clamp: 1;
+  }
+
+  .app-mamul-mobile-summary-meta {
+    display: grid;
+    gap: 0.12rem;
+    justify-items: end;
+    color: var(--app-text-muted);
+    font-size: 0.7rem;
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+
+  .app-mamul-mobile-summary-meta strong {
+    color: var(--app-success);
+    font-size: 0.78rem;
+  }
+
+  .app-mamul-card .app-mamul-mobile-grid {
+    padding-top: 0.5rem;
+    border-top: 1px solid color-mix(in srgb, var(--app-border) 55%, white 45%);
+    gap: 0.4rem 0.55rem;
+  }
+
+  .app-mamul-card .app-mamul-mobile-field {
+    min-height: 1.85rem;
+  }
+
+  .app-mamul-card .app-mamul-secondary-label {
+    font-size: 0.58rem;
+  }
+
+  .app-mamul-card .app-mamul-mobile-value {
+    min-height: 0.95rem;
+    font-size: 0.74rem;
+  }
+
+  .app-mamul-card .app-mamul-actions {
+    margin-top: 0.15rem;
+  }
 }
 
 @media (max-width: 1024px) {

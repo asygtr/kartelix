@@ -76,7 +76,7 @@ const createLabelingRouter = ({ db, jwt, jwtSecret, excelSync }) => {
     }
   });
 
-  router.get('/admin/label-templates', requireAuth(['admin']), async (req, res, next) => {
+  router.get('/admin/label-templates', requireAuth(['admin', 'mamul']), async (req, res, next) => {
     try {
       const data = await labelingService.listLabelTemplates();
       return sendSuccess(res, data);
@@ -85,7 +85,7 @@ const createLabelingRouter = ({ db, jwt, jwtSecret, excelSync }) => {
     }
   });
 
-  router.get('/admin/label-templates/:templateId', requireAuth(['admin']), async (req, res, next) => {
+  router.get('/admin/label-templates/:templateId', requireAuth(['admin', 'mamul']), async (req, res, next) => {
     try {
       const data = await labelingService.getLabelTemplate(req.params.templateId);
       if (!data) {

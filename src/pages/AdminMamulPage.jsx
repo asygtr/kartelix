@@ -56,6 +56,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
   const [selectedMamulDetail, setSelectedMamulDetail] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showEditor, setShowEditor] = useState(false);
+  const [expandedMobileMamulId, setExpandedMobileMamulId] = useState(null);
   const [form, setForm] = useState(createEmptyForm);
   const [gorselUploading, setGorselUploading] = useState(false);
   const gorselInputRef = useRef(null);
@@ -352,6 +353,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
           onSearch={(term) => {
             const match = resolveMamulMatch(term);
             if (match) {
+              setSearchTerm('');
               setMessage('');
               showMamulDetail(match.id);
               return;
@@ -363,6 +365,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
           onQrDetected={(detectedValue) => {
             const match = resolveMamulMatch(detectedValue);
             if (match) {
+              setSearchTerm('');
               setMessage('');
               showMamulDetail(match.id);
             } else {
@@ -372,7 +375,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
           showResults={Boolean(normalizeSearchValue(searchTerm))}
           results={filteredMamulList.slice(0, 6)}
           onResultSelect={(item) => {
-            setSearchTerm(item.article_code || item.article_no || item.mamul_adi || '');
+            setSearchTerm('');
             setMessage('');
             showMamulDetail(item.id);
           }}
@@ -747,33 +750,52 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                   </motion.div>
                 ))}
                 {filteredMamulList.map((item) => (
-                  <div key={`mobile-${item.id}`} className="app-mamul-card md:hidden">
-                    <div className="app-mamul-primary">{item.mamul_adi}</div>
-                    <div className="app-mamul-mobile-grid">
-                      <div className="app-mamul-mobile-field">
-                        <div className="app-mamul-secondary-label">Kayıt No</div>
-                        <div className="app-mamul-mobile-value">{formatArticleLabel(item.article_code, item.article_no)}</div>
+                  <div
+                    key={`mobile-${item.id}`}
+                    className={`app-mamul-card md:hidden ${expandedMobileMamulId === item.id ? 'is-expanded' : ''}`}
+                  >
+                    <button
+                      type="button"
+                      className="app-mamul-mobile-summary"
+                      aria-expanded={expandedMobileMamulId === item.id}
+                      onClick={() => setExpandedMobileMamulId((currentId) => (currentId === item.id ? null : item.id))}
+                    >
+                      <div className="app-mamul-primary">{item.mamul_adi}</div>
+                      <div className="app-mamul-mobile-summary-meta">
+                        <span>{formatArticleLabel(item.article_code, item.article_no)}</span>
+                        <strong>{resolveDisplayPrice(item.bir_kg_maliyet, item.bir_kg_satis_fiyati, normalizedGenelAyarlar).toFixed(2)}</strong>
                       </div>
-                      <div className="app-mamul-mobile-field">
-                        <div className="app-mamul-secondary-label">Satış</div>
-                        <div className="app-mamul-mobile-value app-mamul-mobile-value-success">{resolveDisplayPrice(item.bir_kg_maliyet, item.bir_kg_satis_fiyati, normalizedGenelAyarlar).toFixed(2)}</div>
-                      </div>
-                      <div className="app-mamul-mobile-field">
-                        <div className="app-mamul-secondary-label">Tür</div>
-                        <div className="app-mamul-mobile-value app-mamul-mobile-value-muted">{item.mamul_turu_adi}</div>
-                      </div>
-                      <div className="app-mamul-mobile-field">
-                        <div className="app-mamul-secondary-label">Renk</div>
-                        <div className="app-mamul-mobile-value app-mamul-mobile-value-muted">
-                          <span>{item.renk || '-'}</span>
-                          <span style={resolveColorHex(item) ? { display: 'inline-block', width: '10px', height: '10px', backgroundColor: resolveColorHex(item), border: '1px solid #999', borderRadius: '2px', marginLeft: '4px', verticalAlign: 'middle' } : {}} />
+                    </button>
+
+                    {expandedMobileMamulId === item.id ? (
+                      <>
+                        <div className="app-mamul-mobile-grid">
+                          <div className="app-mamul-mobile-field">
+                            <div className="app-mamul-secondary-label">Kayıt No</div>
+                            <div className="app-mamul-mobile-value">{formatArticleLabel(item.article_code, item.article_no)}</div>
+                          </div>
+                          <div className="app-mamul-mobile-field">
+                            <div className="app-mamul-secondary-label">Satış</div>
+                            <div className="app-mamul-mobile-value app-mamul-mobile-value-success">{resolveDisplayPrice(item.bir_kg_maliyet, item.bir_kg_satis_fiyati, normalizedGenelAyarlar).toFixed(2)}</div>
+                          </div>
+                          <div className="app-mamul-mobile-field">
+                            <div className="app-mamul-secondary-label">Tür</div>
+                            <div className="app-mamul-mobile-value app-mamul-mobile-value-muted">{item.mamul_turu_adi}</div>
+                          </div>
+                          <div className="app-mamul-mobile-field">
+                            <div className="app-mamul-secondary-label">Renk</div>
+                            <div className="app-mamul-mobile-value app-mamul-mobile-value-muted">
+                              <span>{item.renk || '-'}</span>
+                              <span style={resolveColorHex(item) ? { display: 'inline-block', width: '10px', height: '10px', backgroundColor: resolveColorHex(item), border: '1px solid #999', borderRadius: '2px', marginLeft: '4px', verticalAlign: 'middle' } : {}} />
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                    <div className="app-mamul-actions">
-                      <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary">Detay</button>
-                      <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary app-mamul-link-button">Görüntüle</a>
-                    </div>
+                        <div className="app-mamul-actions" onClick={(event) => event.stopPropagation()}>
+                          <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary">Detay</button>
+                          <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary app-mamul-link-button">Görüntüle</a>
+                        </div>
+                      </>
+                    ) : null}
                   </div>
                 ))}
                 {listLoading ? <SkeletonList count={4} /> : null}
