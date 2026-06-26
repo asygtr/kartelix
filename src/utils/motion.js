@@ -30,11 +30,10 @@ export const tapMotion = {
 };
 
 export const navTapMotion = {
-  scale: [1, 1.13, 0.96, 1],
+  scale: 0.96,
   transition: {
-    duration: 0.26,
+    duration: 0.08,
     ease: iosEase,
-    times: [0, 0.34, 0.68, 1],
   },
 };
 

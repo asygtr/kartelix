@@ -262,6 +262,9 @@ const PublicMamulPage = ({ mode = 'public' }) => {
   const { genelAyarlar: contextGenelAyarlar, loadGenelAyarlar } = useGenelAyarlar();
   const normalizedGenelAyarlar = useMemo(() => normalizeGenelAyarlar(contextGenelAyarlar), [contextGenelAyarlar]);
   const [shareMsg, setShareMsg] = useState('');
+  const [isMobileViewport, setIsMobileViewport] = useState(() => (
+    typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
+  ));
   const pageRef = useRef(null);
   const t = T[lang];
 
@@ -286,6 +289,14 @@ const PublicMamulPage = ({ mode = 'public' }) => {
   useEffect(() => {
     loadGenelAyarlar();
   }, [loadGenelAyarlar]);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 768px)');
+    const updateViewport = () => setIsMobileViewport(media.matches);
+    updateViewport();
+    media.addEventListener('change', updateViewport);
+    return () => media.removeEventListener('change', updateViewport);
+  }, []);
 
   const P    = useMemo(() => resolveColorPalette(mamul?.renk), [mamul?.renk]);
   const dark = isDarkPalette(P);
@@ -352,15 +363,15 @@ const PublicMamulPage = ({ mode = 'public' }) => {
     const colorLabel = v(mamul.renk) || '-';
     const typeLabel = formatTypeLabel(mamul.mamul_turu_adi);
     return (
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
-        style={{ fontFamily: 'Manrope, Inter, sans-serif', color: 'var(--app-text)', minHeight: '100%', overflowY: 'auto', paddingBottom: '2rem' }}>
+      <motion.div className="public-mamul-internal-detail" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
+        style={{ fontFamily: 'Manrope, Inter, sans-serif', color: 'var(--app-text)', minHeight: '100%', paddingBottom: '2rem' }}>
         {/* Üst bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+        <div className="public-mamul-internal-topbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
           <button type="button" onClick={() => navigate(-1)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.7rem', borderRadius: '999px', background: 'var(--app-surface)', border: '1px solid var(--app-border)', color: 'var(--app-text)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.75rem', fontWeight: 700 }}>
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6"/></svg>
             Geri
           </button>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div className="public-mamul-internal-actions" style={{ display: 'flex', gap: '0.5rem', minWidth: 0 }}>
             <a href={`/u/${mamul.qr_slug}`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.8rem', borderRadius: '999px', background: 'var(--app-surface)', border: '1px solid var(--app-border)', color: 'var(--app-text)', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               Müşteri nasıl görüyor?
@@ -369,7 +380,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
         </div>
 
         {/* Ana grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.65fr)', gap: '1rem', alignItems: 'start' }}>
+        <div className="public-mamul-internal-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.65fr)', gap: '1rem', alignItems: 'start' }}>
 
           {/* Sol */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -509,8 +520,14 @@ const PublicMamulPage = ({ mode = 'public' }) => {
 
       {/* â”€â”€ Atmosfer â”€â”€ */}
       <div aria-hidden="true" style={{ position: isInternal ? 'absolute' : 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-        <FabricAtmosphere P={P} dark={dark} />
-        <motion.div style={{ position: 'absolute', inset: 0, background: `linear-gradient(${P.grad}, transparent 0%, ${P.bg}14 48%, ${P.bgDeep}36 100%)`, y: orbY1 }} />
+        {isMobileViewport ? (
+          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, ${P.bgDeep}, ${P.bg} 48%, ${P.bgDeep})` }} />
+        ) : (
+          <>
+            <FabricAtmosphere P={P} dark={dark} />
+            <motion.div style={{ position: 'absolute', inset: 0, background: `linear-gradient(${P.grad}, transparent 0%, ${P.bg}14 48%, ${P.bgDeep}36 100%)`, y: orbY1 }} />
+          </>
+        )}
         <div style={{ position: 'absolute', inset: 0, opacity: dark ? 0.06 : 0.035,
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
           backgroundSize: '180px' }} />

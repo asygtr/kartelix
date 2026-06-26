@@ -3669,16 +3669,19 @@ a, button, [role="button"] {
     left: 50% !important;
     right: auto !important;
     bottom: max(0.8rem, env(safe-area-inset-bottom, 0px)) !important;
-    width: min(calc(100vw - 1.1rem), 29rem) !important;
-    max-width: calc(100vw - 1.1rem) !important;
+    width: min(calc(100vw - 0.9rem), 29rem) !important;
+    max-width: calc(100vw - 0.9rem) !important;
     translate: -50% 0 !important;
+    box-sizing: border-box;
   }
 
   .app-mobile-nav-item {
     align-items: center;
     justify-content: center;
-    padding-top: 0.35rem;
-    padding-bottom: 0.3rem;
+    padding: 0.32rem 0.04rem 0.28rem;
+    min-height: 3.36rem;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .app-mobile-nav-item:hover {
@@ -3687,15 +3690,22 @@ a, button, [role="button"] {
   }
 
   .app-mobile-nav-icon {
-    min-height: 1.45rem;
+    min-height: 1.32rem;
   }
 
   .app-mobile-nav-label {
     align-items: center;
     justify-content: center;
-    min-height: 1.25rem;
+    min-height: 1.14rem;
     width: 100%;
+    max-width: 100%;
     text-align: center;
+    font-size: clamp(0.48rem, 1.72vw, 0.58rem);
+    line-height: 1.08;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
   }
 
   .app-mobile-search-sheet {
@@ -3746,5 +3756,146 @@ a, button, [role="button"] {
   .app-route-view .app-reveal-delay-3,
   .app-route-view .app-reveal-delay-4 {
     animation-delay: 0ms !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .public-mamul-internal-detail {
+    overflow: visible !important;
+  }
+
+  .public-mamul-internal-topbar {
+    align-items: stretch !important;
+  }
+
+  .public-mamul-internal-actions {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .public-mamul-internal-actions a {
+    width: 100%;
+    justify-content: center;
+    min-width: 0;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .public-mamul-internal-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .app-shell.is-mamul-page .app-page {
+    touch-action: pan-y;
+    overscroll-behavior-y: auto;
+  }
+
+  .app-shell.is-mamul-page .app-route-stage {
+    overflow: visible;
+    contain: none;
+  }
+
+  .app-shell.is-mamul-page .app-panel {
+    padding: 0.58rem;
+  }
+
+  .app-shell.is-mamul-page .app-mamul-card {
+    padding: 0.52rem 0.58rem;
+    gap: 0.34rem;
+  }
+
+  .app-shell.is-mamul-page .app-mamul-card .app-mamul-primary {
+    font-size: 0.8rem;
+    line-height: 1.18;
+    -webkit-line-clamp: 2;
+    overflow-wrap: anywhere;
+  }
+
+  .app-shell.is-mamul-page .app-mamul-mobile-summary {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.42rem;
+  }
+
+  .app-shell.is-mamul-page .app-mamul-mobile-summary-meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 0.28rem;
+  }
+
+  .app-shell.is-mamul-page .app-mamul-mobile-summary-item {
+    justify-items: start;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .app-shell.is-mamul-page .app-mamul-mobile-summary-value {
+    max-width: 100%;
+    font-size: 0.7rem;
+  }
+
+  .app-shell.is-mamul-page .app-mamul-card .app-mamul-actions,
+  .app-shell.is-mamul-page .app-mamul-detail-actions {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .app-shell.is-mamul-page .app-mamul-detail-actions {
+    display: grid;
+  }
+
+  .app-shell.is-mamul-page .app-mamul-actions .app-btn-secondary,
+  .app-shell.is-mamul-page .app-mamul-detail-actions .app-btn-secondary,
+  .app-shell.is-mamul-page .app-mamul-detail-actions .app-mamul-link-button {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    white-space: normal;
+    line-height: 1.15;
+  }
+
+  .app-shell.is-label-page .app-page {
+    touch-action: pan-y;
+    overscroll-behavior-y: auto;
+  }
+
+  .app-shell.is-label-page .app-panel h2 {
+    font-size: 0.95rem;
+    line-height: 1.18;
+  }
+
+  .app-label-mobile-meta {
+    gap: 0.2rem 0.5rem;
+    font-size: 0.68rem;
+    line-height: 1.24;
+  }
+
+  .app-label-mobile-meta span {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 380px) {
+  .app-mobile-bottom-nav {
+    width: min(calc(100vw - 0.55rem), 28rem) !important;
+    max-width: calc(100vw - 0.55rem) !important;
+    padding: 0.26rem;
+    gap: 0.08rem;
+  }
+
+  .app-mobile-nav-item {
+    min-height: 3.18rem;
+  }
+
+  .app-mobile-nav-icon .app-nav-icon-svg {
+    width: 1.24rem;
+    height: 1.24rem;
+  }
+
+  .app-mobile-nav-label {
+    font-size: 0.46rem;
   }
 }
