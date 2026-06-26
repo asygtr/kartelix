@@ -599,9 +599,9 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
               transition={{ duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}
               className="app-panel p-6"
             >
-              <div className="flex items-center justify-between gap-4">
-                <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Mamül detayı</h2>
-                <div className="flex gap-2">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="text-xl font-semibold text-[color:var(--app-text)] break-words">Mamül detayı</h2>
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   {isAdmin ? (
                     <button type="button" onClick={() => {
                     setSelectedMamulId(selectedMamulDetail.id);
@@ -642,9 +642,9 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                       })) : [{ ...emptyProcess }]
                     });
                     setShowEditor(true);
-                  }} className="app-btn-secondary">Düzenle</button>
+                  }} className="app-btn-secondary whitespace-nowrap">Düzenle</button>
                   ) : null}
-                  <button type="button" onClick={() => setSelectedMamulDetail(null)} className="app-btn-secondary">Listeye geri dön</button>
+                  <button type="button" onClick={() => setSelectedMamulDetail(null)} className="app-btn-secondary whitespace-nowrap">Listeye geri dön</button>
                 </div>
               </div>
 
