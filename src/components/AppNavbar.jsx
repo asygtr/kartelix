@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useTheme } from '../theme/ThemeProvider';
 import { useGenelAyarlar } from '../theme/ThemeProvider';
 import { getSession, authHeaders } from '../utils/auth';
@@ -8,8 +9,11 @@ import { isMobileCameraDevice } from '../utils/qr';
 import { normalizeGenelAyarlar, resolveDisplayPrice } from '../utils/generalSettings';
 import { formatArticleLabel } from '../utils/labelTemplate';
 import { Home, Search, ClipboardList, Tag, Layers, BarChart2, Settings, LogOut, X, QrCode, Menu } from './icons.jsx';
+import { bottomSheetVariants, chromeSpring, navTapMotion, sheetBackdropVariants, sheetTransition, tapMotion } from '../utils/motion';
 
-const navSets = {
+const MotionLink = motion.create(Link);
+
+export const navSets = {
   admin: [
     { to: '/admin', label: 'Yönetim' },
     { to: '/admin/mamuller', label: 'Mamül Kartı' },
@@ -46,7 +50,7 @@ export const useNavItems = (role, onSearchOpen) => useMemo(() => {
   return items.filter((item) => item.to || item.action);
 }, [role, onSearchOpen]);
 
-const AppNavbar = ({ title, action, onLogout, searchOpen, setSearchOpen }) => {
+const AppNavbar = ({ title, action, onLogout, searchOpen, setSearchOpen, compact = false }) => {
   const { appLogo } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
@@ -108,7 +112,16 @@ const AppNavbar = ({ title, action, onLogout, searchOpen, setSearchOpen }) => {
   return (
     <>
     {!searchOpen ? (
-    <header className="app-nav-shell">
+    <motion.header
+      className={`app-nav-shell${compact ? ' is-compact' : ''}`}
+      initial={false}
+      animate={{
+        y: compact ? -3 : 0,
+        scaleY: compact ? 0.965 : 1,
+      }}
+      transition={chromeSpring}
+      style={{ transformOrigin: '50% 0%' }}
+    >
       <div className="app-nav-top">
         <div className="app-nav-brand">
           <Link to="/" className="app-nav-logo" aria-label="Kartelix ana sayfa">
@@ -138,56 +151,80 @@ const AppNavbar = ({ title, action, onLogout, searchOpen, setSearchOpen }) => {
 
         <div className="app-nav-actions">
           {showSettingsMenu ? (
-            <button
+            <motion.button
               type="button"
               onClick={() => window.dispatchEvent(new CustomEvent('settings-menu:open'))}
               className="app-nav-icon-button"
               aria-label="Ayar bölümlerini aç"
               title="Ayar bölümlerini aç"
+              whileTap={navTapMotion}
             >
               <Menu className="app-nav-icon-svg" />
-            </button>
+            </motion.button>
           ) : null}
           {showSettings ? (
-            <Link
+            <MotionLink
               to="/admin/settings"
               className="app-nav-icon-button"
               aria-label="Ayarlar"
               title="Ayarlar"
-              onClick={() => setTimeout(() => window.dispatchEvent(new CustomEvent('settings-menu:open')), 80)}
+              whileTap={navTapMotion}
             >
               <Settings className="app-nav-icon-svg" />
-            </Link>
+            </MotionLink>
           ) : null}
           {onLogout ? (
-            <button type="button" onClick={onLogout} className="app-nav-icon-button" aria-label="Çıkış yap" title="Çıkış yap">
+            <motion.button type="button" onClick={onLogout} className="app-nav-icon-button" aria-label="Çıkış yap" title="Çıkış yap" whileTap={navTapMotion}>
               <LogOut className="app-nav-icon-svg" />
-            </button>
+            </motion.button>
           ) : null}
           {action ? <div className="app-nav-utility">{action}</div> : null}
         </div>
       </div>
-    </header>
+    </motion.header>
     ) : null}
 
+    <AnimatePresence>
     {searchOpen ? (
-      <div className="app-mobile-search-sheet" onClick={(event) => {
-        if (event.target === event.currentTarget) {
-          setSearchOpen(false);
-        }
-      }}>
-        <div className="app-mobile-search-panel">
+      <motion.div
+        className="app-mobile-search-sheet"
+        variants={sheetBackdropVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) {
+            setSearchOpen(false);
+          }
+        }}
+      >
+        <motion.div
+          className="app-mobile-search-panel"
+          variants={bottomSheetVariants}
+          transition={sheetTransition}
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={{ top: 0, bottom: 0.18 }}
+          onDragEnd={(_, info) => {
+            if (info.offset.y > 86 || info.velocity.y > 680) {
+              setSearchOpen(false);
+            }
+          }}
+        >
+          <div className="app-mobile-search-grabber" aria-hidden="true" />
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Ürünü aç</h2>
-            <button
+            <motion.button
               type="button"
               className="app-nav-icon-button"
               onClick={() => setSearchOpen(false)}
               aria-label="Aramayı kapat"
               title="Aramayı kapat"
+              whileTap={tapMotion}
             >
               <X className="app-nav-icon-svg" />
-            </button>
+            </motion.button>
           </div>
 
           <form
@@ -205,19 +242,20 @@ const AppNavbar = ({ title, action, onLogout, searchOpen, setSearchOpen }) => {
                 className="app-input app-searchbar-input"
               />
               <div className="app-searchbar-actions">
-                <button type="submit" className="app-searchbar-submit" aria-label="Ara" title="Ara">
+                <motion.button type="submit" className="app-searchbar-submit" aria-label="Ara" title="Ara" whileTap={tapMotion}>
                   <Search className="app-nav-icon-svg" />
-                </button>
+                </motion.button>
                 {canUseMobileQr ? (
-                  <button
+                  <motion.button
                     type="button"
                     onClick={() => setScannerOpen(true)}
                     className="app-searchbar-qr"
                     aria-label="QR okut"
                     title="QR okut"
+                    whileTap={tapMotion}
                   >
                     <QrCode className="app-nav-icon-svg" />
-                  </button>
+                  </motion.button>
                 ) : null}
               </div>
             </div>
@@ -309,9 +347,10 @@ const AppNavbar = ({ title, action, onLogout, searchOpen, setSearchOpen }) => {
               </div>
             </div>
           ) : null}
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     ) : null}
+    </AnimatePresence>
 
     {scannerOpen && canUseMobileQr ? (
       <QrCameraModal

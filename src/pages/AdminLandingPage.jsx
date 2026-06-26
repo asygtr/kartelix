@@ -55,9 +55,7 @@ const MiniBar = ({ value, max, color }) => {
 /* ─── Stat kart ──────────────────────────────────────────────────────────── */
 const StatCard = ({ label, value, icon, color, delay = 0, sub }) => (
   <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.5, delay, ease: EASE }}
+    initial={false}
     className="app-stat"
     style={{ position: 'relative', overflow: 'hidden' }}
   >
@@ -78,9 +76,7 @@ const StatCard = ({ label, value, icon, color, delay = 0, sub }) => (
 /* ─── Nav kart ───────────────────────────────────────────────────────────── */
 const NavCard = ({ to, icon, title, desc, color, delay }) => (
   <motion.div
-    initial={{ opacity: 0, y: 14 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.32, delay, ease: [0.32, 0.72, 0, 1] }}
+    initial={false}
     whileHover={{ y: -2, transition: { duration: 0.14 } }}
     whileTap={{ scale: 0.96, transition: { type: 'spring', stiffness: 400, damping: 17 } }}
   >
@@ -119,9 +115,7 @@ const AdminLandingPage = () => {
 
       {/* Karşılama */}
       <motion.div
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: EASE }}
+        initial={false}
         className="app-panel"
         style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}
       >
@@ -151,8 +145,7 @@ const AdminLandingPage = () => {
       {/* En çok okutulanlar — masaüstünde görünür, mobilde gizli */}
       {report?.enCokOkutulanlar?.length > 0 && (
         <motion.section
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.48, delay: 0.25, ease: EASE }}
+          initial={false}
           className="app-panel hidden md:block"
           style={{ padding: '1.1rem 1.25rem' }}
         >
@@ -176,8 +169,7 @@ const AdminLandingPage = () => {
       {/* En çok siparişe girenler — masaüstünde görünür, mobilde gizli */}
       {report?.enCokSipariseGirenler?.length > 0 && (
         <motion.section
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.48, delay: 0.3, ease: EASE }}
+          initial={false}
           className="app-panel hidden md:block"
           style={{ padding: '1.1rem 1.25rem' }}
         >
@@ -200,8 +192,7 @@ const AdminLandingPage = () => {
 
       {/* Hızlı erişim başlığı — masaüstünde görünür, mobilde gizli */}
       <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-        transition={{ delay: 0.35, duration: 0.4 }}
+        initial={false}
         className="hidden md:block"
         style={{ fontSize: '0.62rem', fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--app-text-muted)', paddingLeft: '0.25rem' }}
       >

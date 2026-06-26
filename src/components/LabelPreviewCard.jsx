@@ -136,6 +136,11 @@ const LabelPreviewCard = ({ record, template: templateInput, lang = 'tr', classN
               border: frame.border
             }}
           >
+            <div className="app-label-preview-watermark" aria-hidden="true">
+              <span className="is-large">Önizleme</span>
+              <span className="is-small is-top">Önizleme</span>
+              <span className="is-small is-bottom">Önizleme</span>
+            </div>
             {frame.showInnerFrame ? (
               <div className="app-label-preview-frame" style={frame.innerFrameStyle} />
             ) : null}

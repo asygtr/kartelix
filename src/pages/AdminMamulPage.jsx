@@ -15,6 +15,31 @@ const emptyProcess = { proses_tanim_id: '', proses_adi: '', proses_tipi: '', bir
 const normalizeSearchValue = (value) => String(value || '').trim().toLowerCase();
 
 const CURRENCIES = ['TRY', 'USD', 'EUR', 'GBP'];
+const CURRENCY_SYMBOLS = {
+  TRY: '₺',
+  USD: '$',
+  EUR: '€',
+  GBP: '£'
+};
+
+const currencySymbol = (currency) => CURRENCY_SYMBOLS[String(currency || 'TRY').toUpperCase()] || currency || '₺';
+
+const formatMoney = (value, currency) => {
+  const amount = Number(value || 0).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+  return `${amount}${currencySymbol(currency)}`;
+};
+const EMPTY_LABEL = 'Bilgi girilmemiş';
+const displayText = (value) => {
+  const text = String(value ?? '').trim();
+  return text && text !== '-' ? text : EMPTY_LABEL;
+};
+
+const formatProfitPercent = (cost, price) => {
+  const costValue = Number(cost || 0);
+  const priceValue = Number(price || 0);
+  if (costValue <= 0 || priceValue <= 0 || priceValue === costValue) return null;
+  return (((priceValue - costValue) / costValue) * 100).toFixed(1);
+};
 
 const createEmptyForm = () => ({
   mamulAdi: '',
@@ -57,6 +82,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showEditor, setShowEditor] = useState(false);
   const [expandedMobileMamulId, setExpandedMobileMamulId] = useState(null);
+  const [expandedDesktopMamulId, setExpandedDesktopMamulId] = useState(null);
   const [form, setForm] = useState(createEmptyForm);
   const [gorselUploading, setGorselUploading] = useState(false);
   const gorselInputRef = useRef(null);
@@ -338,7 +364,6 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
   }, [mamulList, searchTerm]);
 
   return (
-    <PullToRefresh onRefresh={fetchInitial}>
     <>
       {message ? (
         <div className="app-panel px-4 py-3 text-sm text-[color:var(--app-text)]">
@@ -347,6 +372,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
       ) : null}
 
       <PageSearchBar
+          className="app-searchbar-floating app-page-searchbar"
           value={searchTerm}
           onChange={setSearchTerm}
           placeholder="Kayıtlı mamül ara"
@@ -380,11 +406,12 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
             showMamulDetail(item.id);
           }}
           getResultPrimary={(item) => item.mamul_adi}
-          getResultSecondary={(item) => `${item.article_code} / ${item.article_no}${item.renk ? ` / ${item.renk}` : ''}`}
+          getResultSecondary={(item) => `${formatArticleLabel(item.article_code, item.article_no)}${item.renk ? ` / ${item.renk}` : ''}`}
           emptyResultsText="Bu aramaya uygun mamül bulunamadı."
         />
 
-<div className="space-y-6">
+      <PullToRefresh onRefresh={fetchInitial}>
+        <div className="space-y-6">
             {showEditor ? (
            <form onSubmit={submitForm} className="app-collapse-panel space-y-6">
             <section className="app-panel p-6">
@@ -626,9 +653,9 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
               ) : (
                 <div className="mt-5 space-y-4">
                   <div className="app-soft-panel p-4">
-                    <div className="text-xs uppercase tracking-[0.3em] text-[color:var(--app-text-muted)]">{selectedMamulDetail.mamul_turu_adi}</div>
+                    <div className="text-xs uppercase tracking-[0.3em] text-[color:var(--app-text-muted)]">{displayText(selectedMamulDetail.mamul_turu_adi)}</div>
                     <div className="mt-2 text-xl font-semibold text-[color:var(--app-text)]">{selectedMamulDetail.mamul_adi}</div>
-                    <div className="mt-2 text-sm text-[color:var(--app-text-muted)]">{selectedMamulDetail.article_code} / {selectedMamulDetail.article_no}</div>
+                    <div className="mt-2 text-sm text-[color:var(--app-text-muted)]">{formatArticleLabel(selectedMamulDetail.article_code, selectedMamulDetail.article_no) || EMPTY_LABEL}</div>
                   </div>
 
                   {/* Görsel yükleme */}
@@ -682,34 +709,52 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                   </div>
 
 <div className="app-data-table">
-                     <div className="app-data-row"><div className="app-data-key">Renk</div><div className="app-data-value">{extractColorName(selectedMamulDetail.renk) || '-'}<span style={resolveColorHex(selectedMamulDetail) ? { display: 'inline-block', width: '12px', height: '12px', backgroundColor: resolveColorHex(selectedMamulDetail), border: '1px solid #999', borderRadius: '2px', marginLeft: '6px', verticalAlign: 'middle' } : {}} /></div></div>
-                     <div className="app-data-row"><div className="app-data-key">Koleksiyon</div><div className="app-data-value">{selectedMamulDetail.koleksiyon_adi || '-'}</div></div>
-                    <div className="app-data-row"><div className="app-data-key">Kompozisyon</div><div className="app-data-value">{selectedMamulDetail.kompozisyon_ozeti || '-'}</div></div>
-                    <div className="app-data-row"><div className="app-data-key">Ölçü</div><div className="app-data-value">{selectedMamulDetail.en || '-'} EN / {selectedMamulDetail.gramaj || '-'} GR</div></div>
-                    <div className="app-data-row"><div className="app-data-key">1 kg maliyet</div><div className="app-data-value">{Number(selectedMamulDetail.bir_kg_maliyet || 0).toFixed(2)} {selectedMamulDetail.para_birimi || 'TRY'}</div></div>
-                    <div className="app-data-row"><div className="app-data-key">1 kg satış</div><div className="app-data-value">{resolveDisplayPrice(selectedMamulDetail.bir_kg_maliyet, selectedMamulDetail.bir_kg_satis_fiyati, normalizedGenelAyarlar).toFixed(2)} {selectedMamulDetail.para_birimi || 'TRY'}{Number(selectedMamulDetail.bir_kg_maliyet || 0) > 0 && Number(selectedMamulDetail.bir_kg_satis_fiyati || 0) > 0 && Number(selectedMamulDetail.bir_kg_satis_fiyati) !== Number(selectedMamulDetail.bir_kg_maliyet) ? <span className={`ml-2 text-xs font-semibold ${Number(selectedMamulDetail.bir_kg_satis_fiyati) >= Number(selectedMamulDetail.bir_kg_maliyet) ? 'text-[color:var(--app-success)]' : 'text-red-500'}`}>%{(((Number(selectedMamulDetail.bir_kg_satis_fiyati) - Number(selectedMamulDetail.bir_kg_maliyet)) / Number(selectedMamulDetail.bir_kg_maliyet)) * 100).toFixed(1)} kâr</span> : null}</div></div>
-                    <div className="app-data-row"><div className="app-data-key">Durum</div><div className="app-data-value">{selectedMamulDetail.yayin_durumu || '-'}</div></div>
+                     <div className="app-data-row"><div className="app-data-key">Renk</div><div className="app-data-value"><span className="app-color-chip"><span className="app-color-chip-swatch" style={{ background: resolveColorHex(selectedMamulDetail) || 'linear-gradient(135deg, var(--app-surface-soft), var(--app-border))' }} /><span>{displayText(extractColorName(selectedMamulDetail.renk))}</span></span></div></div>
+                    <div className="app-data-row"><div className="app-data-key">Kompozisyon</div><div className="app-data-value">{displayText(selectedMamulDetail.kompozisyon_ozeti)}</div></div>
+                    <div className="app-data-row"><div className="app-data-key">Ölçü</div><div className="app-data-value">{selectedMamulDetail.en || selectedMamulDetail.gramaj ? `${selectedMamulDetail.en || EMPTY_LABEL} EN / ${selectedMamulDetail.gramaj || EMPTY_LABEL} GR` : EMPTY_LABEL}</div></div>
+                    <div className="app-data-row"><div className="app-data-key">1 kg maliyet</div><div className="app-data-value">{formatMoney(selectedMamulDetail.bir_kg_maliyet, selectedMamulDetail.para_birimi)}</div></div>
+                    <div className="app-data-row"><div className="app-data-key">1 kg satış</div><div className="app-data-value">{(() => {
+                      const detailDisplayPrice = resolveDisplayPrice(selectedMamulDetail.bir_kg_maliyet, selectedMamulDetail.bir_kg_satis_fiyati, normalizedGenelAyarlar);
+                      const detailProfitPercent = formatProfitPercent(selectedMamulDetail.bir_kg_maliyet, detailDisplayPrice);
+                      return (
+                        <>
+                          {formatMoney(detailDisplayPrice, selectedMamulDetail.para_birimi)}
+                          {detailProfitPercent !== null ? <span className={`ml-2 text-xs font-semibold ${Number(detailProfitPercent) >= 0 ? 'text-[color:var(--app-success)]' : 'text-red-500'}`}>%{detailProfitPercent} kâr</span> : null}
+                        </>
+                      );
+                    })()}</div></div>
                   </div>
 
-                  <div className="app-soft-panel p-4">
-                    <div className="text-sm font-semibold text-[color:var(--app-text)]">İplik reçetesi</div>
-                    <div className="mt-3 space-y-2">
+                  <div className="app-soft-panel p-4 app-recipe-panel">
+                    <div className="app-recipe-title">İplik reçetesi</div>
+                    <div className="app-recipe-grid">
                       {selectedMamulDetail.iplikler?.length ? selectedMamulDetail.iplikler.map((item) => (
-                        <div key={item.id} className="text-sm text-[color:var(--app-text-muted)]">
-                          {item.iplik_adi} / %{Number(item.oran_yuzde || 0).toFixed(2)} / {Number(item.birim_fiyat || 0).toFixed(2)}
+                        <div key={item.id} className="app-recipe-card app-recipe-card-yarn" style={{ '--recipe-pct': `${Math.max(0, Math.min(Number(item.oran_yuzde || 0), 100))}%` }}>
+                          <div className="app-recipe-card-top">
+                            <span className="app-recipe-badge">İ</span>
+                            <div className="app-recipe-card-name">{displayText(item.iplik_adi)}</div>
+                          </div>
+                          <div className="app-recipe-meter" aria-hidden="true"><span /></div>
+                          <div className="app-recipe-card-meta">
+                            <span>Oran %{Number(item.oran_yuzde || 0).toFixed(2)}</span>
+                            <span>Birim {formatMoney(item.birim_fiyat, selectedMamulDetail.para_birimi)}</span>
+                          </div>
                         </div>
-                      )) : <div className="text-sm text-[color:var(--app-text-muted)]">-</div>}
+                      )) : <div className="text-sm text-[color:var(--app-text-muted)]">{EMPTY_LABEL}</div>}
                     </div>
                   </div>
 
-                  <div className="app-soft-panel p-4">
-                    <div className="text-sm font-semibold text-[color:var(--app-text)]">Prosesler</div>
-                    <div className="mt-3 space-y-2">
+                  <div className="app-soft-panel p-4 app-recipe-panel">
+                    <div className="app-recipe-title">Prosesler</div>
+                    <div className="app-process-grid">
                       {selectedMamulDetail.prosesler?.length ? selectedMamulDetail.prosesler.map((item) => (
-                        <div key={item.id} className="text-sm text-[color:var(--app-text-muted)]">
-                          {item.proses_adi}{item.proses_tipi && item.proses_tipi !== 'Excel' ? ` / ${item.proses_tipi}` : ''} / {Number(item.birim_maliyet || 0).toFixed(2)}
+                        <div key={item.id} className="app-process-card">
+                          <div className="app-process-inline">
+                            <div className="app-recipe-card-name">{displayText(item.proses_adi)}</div>
+                            <span>Maliyet {formatMoney(item.birim_maliyet, selectedMamulDetail.para_birimi)}</span>
+                          </div>
                         </div>
-                      )) : <div className="text-sm text-[color:var(--app-text-muted)]">-</div>}
+                      )) : <div className="text-sm text-[color:var(--app-text-muted)]">{EMPTY_LABEL}</div>}
                     </div>
                   </div>
                 </div>
@@ -724,32 +769,105 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                 <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Kayıtlı mamüller</h2>
                 <span className="text-sm text-[color:var(--app-text-muted)]">{mamulList.length} kayıt</span>
               </div>
-              <div className="mt-5 app-mamul-list-shell">
+              <div className={`mt-5 app-mamul-list-shell${expandedDesktopMamulId ? ' is-desktop-expanded' : ''}`}>
                 <div className="app-table-head app-mamul-table hidden md:grid">
                   <div>Mamül</div>
                   <div>Kayıt No</div>
                   <div>Tür / Renk</div>
                   <div>1 kg satış</div>
-                  <div>İşlem</div>
                 </div>
-                {filteredMamulList.map((item) => (
-                  <motion.div
-                    key={item.id}
-                    className="app-table-row app-mamul-table hidden md:grid"
-                    whileHover={{ x: 3 }}
-                    transition={{ duration: 0.18 }}
-                  >
-                    <div className="font-semibold text-[color:var(--app-text)]">{item.mamul_adi}</div>
-                    <div className="text-sm text-[color:var(--app-text-muted)]">{formatArticleLabel(item.article_code, item.article_no)}</div>
-                    <div className="text-sm text-[color:var(--app-text-muted)]">{item.mamul_turu_adi}{extractColorName(item.renk) ? ` · ${extractColorName(item.renk)}` : ''}<span style={resolveColorHex(item) ? { display: 'inline-block', width: '10px', height: '10px', backgroundColor: resolveColorHex(item), border: '1px solid #999', borderRadius: '2px', marginLeft: '4px', verticalAlign: 'middle' } : {}} /></div>
-                    <div className="text-sm font-semibold text-[color:var(--app-success)]">{resolveDisplayPrice(item.bir_kg_maliyet, item.bir_kg_satis_fiyati, normalizedGenelAyarlar).toFixed(2)}</div>
-                    <div className="app-mamul-actions-pc" style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', minWidth: 0 }}>
-                      <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary" style={{ whiteSpace: 'nowrap', fontSize: '0.75rem', padding: '0.3rem 0.65rem', lineHeight: 1.4 }}>Detay</button>
-                      <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary" style={{ whiteSpace: 'nowrap', fontSize: '0.75rem', padding: '0.3rem 0.65rem', lineHeight: 1.4, textDecoration: 'none', display: 'inline-block' }}>Görüntüle</a>
-                    </div>
-                  </motion.div>
-                ))}
-                {filteredMamulList.map((item) => (
+                {filteredMamulList.map((item) => {
+                  const isExpanded = expandedDesktopMamulId === item.id;
+                  const displayListPrice = resolveDisplayPrice(item.bir_kg_maliyet, item.bir_kg_satis_fiyati, normalizedGenelAyarlar);
+                  const itemCurrency = item.para_birimi || 'TRY';
+
+                  return (
+                    <React.Fragment key={item.id}>
+                      <AnimatePresence initial={false}>
+                      {!isExpanded ? (
+                        <motion.button
+                          key="desktop-row"
+                          type="button"
+                          className="app-table-row app-mamul-table app-mamul-desktop-row hidden md:grid"
+                          aria-expanded={false}
+                          onClick={() => setExpandedDesktopMamulId(item.id)}
+                          initial={{ opacity: 0.92 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.14 }}
+                        >
+                          <div className="app-mamul-desktop-name">{item.mamul_adi}</div>
+                          <div className="app-mamul-desktop-muted">{formatArticleLabel(item.article_code, item.article_no)}</div>
+                          <div className="app-mamul-desktop-muted">
+                            {displayText(item.mamul_turu_adi)}{extractColorName(item.renk) ? ` · ${extractColorName(item.renk)}` : ''}
+                            {resolveColorHex(item) ? <span className="app-color-chip-swatch app-color-chip-swatch-mini" style={{ background: resolveColorHex(item) }} /> : null}
+                          </div>
+                          <div className="app-mamul-price">{formatMoney(displayListPrice, itemCurrency)}</div>
+                        </motion.button>
+                      ) : (
+                        <motion.div
+                          key="desktop-expanded"
+                          className="app-mamul-desktop-expanded hidden md:block"
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+                        >
+                          <div className="app-mamul-expanded-card">
+                            <button
+                              type="button"
+                              className="app-mamul-expanded-main"
+                              aria-expanded={true}
+                              onClick={() => setExpandedDesktopMamulId(null)}
+                            >
+                              <div className="app-mamul-expanded-title-block">
+                                <div className="app-mamul-expanded-title">{item.mamul_adi}</div>
+                                <div className="app-mamul-expanded-subtitle">
+                                  {displayText(item.mamul_turu_adi)}{extractColorName(item.renk) ? ` · ${extractColorName(item.renk)}` : ''}
+                                  {resolveColorHex(item) ? <span className="app-color-chip-swatch app-color-chip-swatch-mini" style={{ background: resolveColorHex(item) }} /> : null}
+                                </div>
+                              </div>
+                            </button>
+                            <div className="app-mamul-detail-grid">
+                              <div>
+                                <div className="app-mamul-secondary-label">Kayıt No</div>
+                                <div className="app-mamul-detail-value">{formatArticleLabel(item.article_code, item.article_no)}</div>
+                              </div>
+                              <div>
+                                <div className="app-mamul-secondary-label">Kompozisyon</div>
+                                <div className="app-mamul-detail-value">{displayText(item.kompozisyon_ozeti)}</div>
+                              </div>
+                              <div>
+                                <div className="app-mamul-secondary-label">Ölçü</div>
+                                <div className="app-mamul-detail-value">{item.en || item.gramaj ? `${item.en || EMPTY_LABEL} EN / ${item.gramaj || EMPTY_LABEL} GR` : EMPTY_LABEL}</div>
+                              </div>
+                              <div>
+                                <div className="app-mamul-secondary-label">Maliyet</div>
+                                <div className="app-mamul-detail-value">{formatMoney(item.bir_kg_maliyet, itemCurrency)}</div>
+                              </div>
+                              <div>
+                                <div className="app-mamul-secondary-label">Satış</div>
+                                <div className="app-mamul-detail-value app-mamul-detail-price">{formatMoney(displayListPrice, itemCurrency)}</div>
+                              </div>
+                            </div>
+                            <div className="app-mamul-detail-actions" onClick={(event) => event.stopPropagation()}>
+                              <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary">Tam detay</button>
+                              <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary app-mamul-link-button">Görüntüle</a>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                      </AnimatePresence>
+                    </React.Fragment>
+                  );
+                })}
+                {filteredMamulList.map((item) => {
+                  const mobileDisplayPrice = resolveDisplayPrice(item.bir_kg_maliyet, item.bir_kg_satis_fiyati, normalizedGenelAyarlar);
+                  const mobileColorHex = resolveColorHex(item);
+                  const mobileColorName = extractColorName(item.renk);
+                  const mobileArticleNo = item.article_no || item.article_code || EMPTY_LABEL;
+
+                  return (
                   <div
                     key={`mobile-${item.id}`}
                     className={`app-mamul-card md:hidden ${expandedMobileMamulId === item.id ? 'is-expanded' : ''}`}
@@ -761,32 +879,54 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                       onClick={() => setExpandedMobileMamulId((currentId) => (currentId === item.id ? null : item.id))}
                     >
                       <div className="app-mamul-primary">{item.mamul_adi}</div>
-                      <div className="app-mamul-mobile-summary-meta">
-                        <span>{formatArticleLabel(item.article_code, item.article_no)}</span>
-                        <strong>{resolveDisplayPrice(item.bir_kg_maliyet, item.bir_kg_satis_fiyati, normalizedGenelAyarlar).toFixed(2)}</strong>
+                      <div className="app-mamul-mobile-summary-meta" aria-hidden={expandedMobileMamulId === item.id}>
+                        <span className="app-mamul-mobile-summary-item">
+                          <span className="app-mamul-mobile-summary-label">ARTICLE NO</span>
+                          <span className="app-mamul-mobile-summary-value">{mobileArticleNo}</span>
+                        </span>
+                        <span className="app-mamul-mobile-summary-item">
+                          <span className="app-mamul-mobile-summary-label">FİYAT</span>
+                          <strong className="app-mamul-mobile-summary-value">{formatMoney(mobileDisplayPrice, item.para_birimi)}</strong>
+                        </span>
+                        <span className="app-mamul-mobile-summary-item app-mamul-mobile-summary-color">
+                          <span className="app-mamul-mobile-summary-label">RENK</span>
+                          <span
+                            className="app-color-chip-swatch app-color-chip-swatch-mini"
+                            title={displayText(mobileColorName)}
+                            style={{ background: mobileColorHex || 'linear-gradient(135deg, var(--app-surface-soft), var(--app-border))' }}
+                          />
+                        </span>
                       </div>
                     </button>
 
+                    <AnimatePresence initial={false}>
                     {expandedMobileMamulId === item.id ? (
-                      <>
+                      <motion.div
+                        key="mobile-details"
+                        className="app-mamul-mobile-expand"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }}
+                      >
                         <div className="app-mamul-mobile-grid">
                           <div className="app-mamul-mobile-field">
-                            <div className="app-mamul-secondary-label">Kayıt No</div>
-                            <div className="app-mamul-mobile-value">{formatArticleLabel(item.article_code, item.article_no)}</div>
+                            <div className="app-mamul-secondary-label">ARTICLE NO</div>
+                            <div className="app-mamul-mobile-value">{mobileArticleNo}</div>
                           </div>
                           <div className="app-mamul-mobile-field">
                             <div className="app-mamul-secondary-label">Satış</div>
-                            <div className="app-mamul-mobile-value app-mamul-mobile-value-success">{resolveDisplayPrice(item.bir_kg_maliyet, item.bir_kg_satis_fiyati, normalizedGenelAyarlar).toFixed(2)}</div>
+                            <div className="app-mamul-mobile-value app-mamul-mobile-value-success">{formatMoney(mobileDisplayPrice, item.para_birimi)}</div>
                           </div>
                           <div className="app-mamul-mobile-field">
                             <div className="app-mamul-secondary-label">Tür</div>
-                            <div className="app-mamul-mobile-value app-mamul-mobile-value-muted">{item.mamul_turu_adi}</div>
+                            <div className="app-mamul-mobile-value app-mamul-mobile-value-muted">{displayText(item.mamul_turu_adi)}</div>
                           </div>
                           <div className="app-mamul-mobile-field">
                             <div className="app-mamul-secondary-label">Renk</div>
                             <div className="app-mamul-mobile-value app-mamul-mobile-value-muted">
-                              <span>{item.renk || '-'}</span>
-                              <span style={resolveColorHex(item) ? { display: 'inline-block', width: '10px', height: '10px', backgroundColor: resolveColorHex(item), border: '1px solid #999', borderRadius: '2px', marginLeft: '4px', verticalAlign: 'middle' } : {}} />
+                              <span>{displayText(mobileColorName)}</span>
+                              {mobileColorHex ? <span className="app-color-chip-swatch app-color-chip-swatch-mini" style={{ background: mobileColorHex }} /> : null}
                             </div>
                           </div>
                         </div>
@@ -794,10 +934,12 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                           <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary">Detay</button>
                           <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary app-mamul-link-button">Görüntüle</a>
                         </div>
-                      </>
+                      </motion.div>
                     ) : null}
+                    </AnimatePresence>
                   </div>
-                ))}
+                  );
+                })}
                 {listLoading ? <SkeletonList count={4} /> : null}
                 {!listLoading && filteredMamulList.length === 0 ? (
                   <div className="app-soft-panel m-3 px-4 py-4 text-sm text-[color:var(--app-text-muted)]">Henüz mamül kaydı yok.</div>
@@ -805,9 +947,9 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
               </div>
             </section>
             ) : null}
-    </div>
+        </div>
+      </PullToRefresh>
     </>
-    </PullToRefresh>
   );
 };
 

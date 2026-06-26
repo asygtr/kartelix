@@ -78,8 +78,7 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
   }, [onClose]);
 
   if (!mamul) return null;
-
-  const publicUrl = `${window.location.origin}/u/${mamul.qr_slug}`;
+  const articleNo = mamul.article_no || mamul.article_code || '-';
 
   return createPortal(
     <div
@@ -94,8 +93,7 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
       <div className="w-full max-w-2xl mx-auto my-auto rounded-[1rem] sm:rounded-[1.5rem] bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-4 sm:px-6 py-3 sm:py-4">
           <div>
-            <p className="text-[0.65rem] sm:text-xs uppercase tracking-[0.24em] text-emerald-700">Kartelix / Etiket</p>
-            <h2 className="mt-1 text-base sm:text-xl font-semibold text-slate-900">{mamul.article_code}</h2>
+            <h2 className="text-base sm:text-xl font-semibold text-slate-900">ARTICLE NO {articleNo}</h2>
             <p className="mt-0.5 text-xs sm:text-sm text-slate-500">{mamul.mamul_adi || '-'}</p>
           </div>
           <button
@@ -115,32 +113,29 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
           </div>
 
           <div className="space-y-4">
+            <div className="block rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium leading-relaxed text-amber-800 md:hidden">
+              Mobil görünümdesiniz. Yazdırma işlemi hatalı olabilir.
+            </div>
             {templates.length > 0 && (
-              <select
-                className="app-select w-full"
-                value={activeTemplateId}
-                onChange={(e) => handleTemplateChange(e.target.value)}
-              >
-                {templates.map((t) => (
-                  <option key={t.template_id || t.id} value={t.template_id || t.id}>{t.name}</option>
-                ))}
-              </select>
+              <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                <span className="shrink-0">Şablon</span>
+                <select
+                  className="app-select w-40 sm:w-44"
+                  value={activeTemplateId}
+                  onChange={(e) => handleTemplateChange(e.target.value)}
+                >
+                  {templates.map((t) => (
+                    <option key={t.template_id || t.id} value={t.template_id || t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </label>
             )}
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3">
               <button type="button" onClick={() => printLabels([mamul], template, 'en')} className="app-btn-primary inline-flex items-center justify-center gap-2">
                 <PrintIcon />
-                <span>Print (EN)</span>
+                <span>Yazdır</span>
               </button>
             </div>
-
-            <a
-              href={publicUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="app-btn-secondary block text-center"
-            >
-              Müşteri görünümü
-            </a>
           </div>
         </div>
       </div>

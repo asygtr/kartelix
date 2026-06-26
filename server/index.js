@@ -2506,6 +2506,10 @@ if (fs.existsSync(buildDir)) {
   app.use(express.static(buildDir));
 
   app.get(/^\/(?!api).*/, (req, res) => {
+    // Prevent aggressive caching of index.html so clients pick up new hashed assets
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     res.sendFile(path.join(buildDir, 'index.html'));
   });
 }

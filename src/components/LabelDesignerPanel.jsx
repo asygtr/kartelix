@@ -62,6 +62,23 @@ const previewRecord = {
   qr_slug: 'preview-soft-suprem-indigo'
 };
 
+const useIsMobileViewport = () => {
+  const [isMobile, setIsMobile] = useState(() => (
+    typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false
+  ));
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const media = window.matchMedia('(max-width: 767px)');
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  return isMobile;
+};
+
 const LabelDesignerPanel = () => {
   const [templates, setTemplates] = useState([]);
   const [activeId, setActiveId] = useState('');
@@ -71,6 +88,7 @@ const LabelDesignerPanel = () => {
   const [status, setStatus] = useState('');
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef(null);
+  const isMobileViewport = useIsMobileViewport();
 
   // İlk yüklemede şablon listesini ve aktifi getir
   useEffect(() => {
@@ -215,6 +233,22 @@ const LabelDesignerPanel = () => {
   };
 
   const visibleCount = template.fieldOrder.filter(f => !template.hiddenFields.includes(f)).length;
+
+  if (isMobileViewport) {
+    return (
+      <div className="app-label-designer">
+        <section className="app-panel p-5">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium leading-relaxed text-amber-800">
+            Mobil görünümde etiket düzenleme yapılamıyor.
+          </div>
+          <div className="mt-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--app-text-muted)]">Önizleme</div>
+            <LabelPreviewCard record={previewRecord} template={template} lang={previewLang} className="mt-4" />
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="app-label-designer">

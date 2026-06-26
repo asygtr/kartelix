@@ -90,9 +90,17 @@ export const extractColorName = (value) => {
   if (!value) return '';
   const str = String(value).trim();
   const parts = str.split(/\s+/);
-  const codePart = parts.find(p => /^\d+[A-Z]*$/i.test(p) || /^[A-Z]{2}\d+$/i.test(p));
-  if (codePart && parts.length > 1) {
-    return parts.filter(p => p !== codePart).join(' ');
+  const isCodeLike = (part) => {
+    const normalized = String(part || '').replace(/[-_/]/g, '');
+    return (
+      /^\d+[A-Z]*$/i.test(normalized)
+      || /^[A-Z]{2}\d+$/i.test(normalized)
+      || (/^(?=.*\d)(?=.*[A-Z])[A-Z0-9]{6,}$/i.test(normalized))
+    );
+  };
+  if (parts.length > 1) {
+    const nameParts = parts.filter((part) => !isCodeLike(part));
+    if (nameParts.length) return nameParts.join(' ');
   }
   return str;
 };
@@ -101,36 +109,61 @@ export const formatArticleLabel = (articleCode, articleNo) => {
   const code = String(articleCode || '').trim();
   const no = String(articleNo || '').trim();
   if (!code && !no) return '';
-  if (code && no && code === no) return code;
-  return [code, no].filter(Boolean).join(' / ');
+  if (code && no && code === no) return `ARTICLE NO ${no}`;
+  if (no) return `ARTICLE NO ${no}${code ? ` / ${code}` : ''}`;
+  return `ARTICLE NO ${code}`;
 };
 
 const colorNameToHex = (colorName) => {
   if (!colorName) return null;
-  const normalized = extractColorName(colorName).toLowerCase();
+  const normalized = extractColorName(colorName)
+    .toLowerCase()
+    .replace(/ı/g, 'i')
+    .replace(/İ/g, 'i')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
   const colorMap = {
-    'red': '#ef4444', 'kirmizi': '#ef4444',
-    'blue': '#3b82f6', 'mavi': '#3b82f6',
+    'red': '#ef4444', 'kirmizi': '#ef4444', 'kırmızı': '#ef4444',
+    'blue': '#3b82f6', 'mavi': '#3b82f6', 'royal blue': '#2563eb',
     'navy': '#1e3a8a', 'lacivert': '#1e3a8a',
-    'green': '#22c55e', 'yesil': '#22c55e',
+    'green': '#22c55e', 'yesil': '#22c55e', 'zeytin': '#708238',
     'black': '#000000', 'siyah': '#000000',
     'white': '#ffffff', 'beyaz': '#ffffff',
-    'gray': '#6b7280', 'grey': '#6b7280', 'gri': '#6b7280',
-    'indigo': '#6366f1', 'teal': '#14b8a6',
+    'gray': '#6b7280', 'grey': '#6b7280', 'gri': '#6b7280', 'antrasit': '#374151', 'melanj': '#9ca3af',
+    'indigo': '#6366f1', 'teal': '#14b8a6', 'petrol': '#0f766e',
     'orange': '#f97316', 'turuncu': '#f97316',
-    'purple': '#a855f7', 'mor': '#a855f7',
-    'pink': '#ec4899', 'pembe': '#ec4899',
-    'brown': '#a3a3a3', 'bege': '#d6d3d1', 'beige': '#d6d3d1',
-    'yellow': '#eab308', 'sari': '#eab308'
+    'purple': '#a855f7', 'mor': '#a855f7', 'lila': '#c084fc',
+    'pink': '#ec4899', 'pembe': '#ec4899', 'pudra': '#f3c4cf', 'powder': '#f3c4cf',
+    'rose': '#e11d48', 'dusty rose': '#c9828c', 'gul kurusu': '#b76e79', 'gül kurusu': '#b76e79',
+    'brown': '#8b5e3c', 'kahve': '#8b5e3c', 'camel': '#c19a6b', 'taba': '#b45309',
+    'bege': '#d6d3d1', 'bej': '#d6d3d1', 'beige': '#d6d3d1', 'ekru': '#eee4d2', 'ecru': '#eee4d2',
+    'yellow': '#eab308', 'sari': '#eab308',
+    'bordo': '#7f1d1d', 'burgundy': '#7f1d1d', 'haki': '#6b6f3a', 'khaki': '#6b6f3a',
+    'mint': '#98d8c8', 'krem': '#fff7d6', 'cream': '#fff7d6', 'hardal': '#ca8a04'
   };
-  return colorMap[normalized] || null;
+  if (colorMap[normalized]) return colorMap[normalized];
+
+  const phraseMatch = Object.keys(colorMap)
+    .sort((first, second) => second.length - first.length)
+    .find((key) => normalized.includes(key));
+  if (phraseMatch) return colorMap[phraseMatch];
+
+  if (!normalized) return null;
+  if (/\d/.test(normalized) && !/\s/.test(normalized)) return null;
+  const hue = [...normalized].reduce((total, char) => total + char.charCodeAt(0), 0) % 360;
+  return `hsl(${hue} 42% 58%)`;
 };
 
 export const resolveColorHex = (record) => {
-  const val = record?.renk_kodu || record?.renk || '';
-  if (!val) return null;
-  if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(val)) return val;
-  return colorNameToHex(val);
+  const values = [record?.renk, record?.renk_kodu].filter(Boolean);
+  for (const val of values) {
+    if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(String(val).trim())) return String(val).trim();
+    const resolved = colorNameToHex(val);
+    if (resolved) return resolved;
+  }
+  return null;
 };
 
 export const normalizeLabelText = (value, lang = 'tr') => {

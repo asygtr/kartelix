@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useTheme, useGenelAyarlar } from '../theme/ThemeProvider';
 import { authHeaders, getSession } from '../utils/auth';
 import { palettes } from '../theme/palettes';
 import LabelDesignerPanel from '../components/LabelDesignerPanel';
 import { X } from '../components/icons.jsx';
+import { iosEase, sheetTransition, tapMotion } from '../utils/motion';
 
 const tabs = [
   { id: 'genel', label: 'Genel Ayarlar' },
@@ -78,7 +81,6 @@ const SettingsPage = () => {
   const { genelAyarlar: ctxGenelAyarlar, saveGenelAyarlar: ctxSaveGenelAyarlar } = useGenelAyarlar();
   const [genelAyarlar, setGenelAyarlar] = useState({ publicProsesGoster: false, publicFiyatGoster: false, publicHikayeGoster: true, publicHammaddeGoster: true, karYuzdesi: 0 });
   const [genelAyarlarStatus, setGenelAyarlarStatus] = useState('');
-  const [drawerVisible, setDrawerVisible] = useState(false);
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
   const [pwStatus, setPwStatus] = useState('');
   const [pwLoading, setPwLoading] = useState(false);
@@ -205,20 +207,23 @@ const SettingsPage = () => {
   }, [appLogo, appBackground]);
 
   useEffect(() => {
-    if (drawerOpen) {
-      setDrawerVisible(true);
-      return undefined;
-    }
-
-    const timeout = setTimeout(() => setDrawerVisible(false), 260);
-    return () => clearTimeout(timeout);
-  }, [drawerOpen]);
-
-  useEffect(() => {
     const openDrawer = () => setDrawerOpen(true);
     window.addEventListener('settings-menu:open', openDrawer);
     return () => window.removeEventListener('settings-menu:open', openDrawer);
   }, []);
+
+  useEffect(() => {
+    if (!drawerOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const page = document.querySelector('.app-page');
+    const previousPageOverflow = page?.style.overflow;
+    document.body.style.overflow = 'hidden';
+    if (page) page.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      if (page) page.style.overflow = previousPageOverflow || '';
+    };
+  }, [drawerOpen]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search || '');
@@ -1161,6 +1166,67 @@ const SettingsPage = () => {
     }
   })[activeTab];
 
+  const drawer = (
+    <AnimatePresence>
+      {drawerOpen ? (
+        <motion.div
+          className="app-drawer-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: iosEase }}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setDrawerOpen(false);
+            }
+          }}
+        >
+          <motion.div
+            className="app-drawer-panel"
+            initial={{ x: '100%', opacity: 1 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 1 }}
+            transition={sheetTransition}
+          >
+            <div className="app-drawer-header">
+              <motion.button
+                type="button"
+                onClick={() => setDrawerOpen(false)}
+                className="app-nav-icon-button"
+                aria-label="Menüyü kapat"
+                title="Menüyü kapat"
+                whileTap={tapMotion}
+              >
+                <CloseIcon />
+              </motion.button>
+            </div>
+
+            <div className="app-drawer-list">
+              {tabs.map((tab, index) => (
+                <motion.button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setDrawerOpen(false);
+                  }}
+                  className={`app-drawer-link ${activeTab === tab.id ? 'is-active' : ''}`}
+                  initial={{ opacity: 0, x: 18 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 12 }}
+                  transition={{ duration: 0.2, delay: 0.04 + (index * 0.025), ease: iosEase }}
+                  whileTap={tapMotion}
+                >
+                  {tab.label}
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  );
+
   return (
     <div>
 
@@ -1189,50 +1255,9 @@ const SettingsPage = () => {
           </section>
         )}
 
-      {drawerVisible ? (
-        <div
-          className={`app-drawer-overlay ${drawerOpen ? 'is-open' : 'is-closing'}`}
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              setDrawerOpen(false);
-            }
-          }}
-        >
-          <div className={`app-drawer-panel ${drawerOpen ? 'is-open' : 'is-closing'}`}>
-            <div className="app-drawer-header">
-              <button
-                type="button"
-                onClick={() => setDrawerOpen(false)}
-                className="app-nav-icon-button"
-                aria-label="Menüyü kapat"
-                title="Menüyü kapat"
-              >
-                <CloseIcon />
-              </button>
-            </div>
-
-            <div className="app-drawer-list">
-              {tabs.map((tab, index) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => {
-                    setActiveTab(tab.id);
-                    setDrawerOpen(false);
-                  }}
-                  className={`app-drawer-link ${activeTab === tab.id ? 'is-active' : ''} ${drawerOpen ? 'is-open' : 'is-closing'}`}
-                  style={{ animationDelay: `${80 + (index * 55)}ms` }}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {typeof document !== 'undefined' ? createPortal(drawer, document.body) : null}
     </div>
   );
 };
 
 export default SettingsPage;
-

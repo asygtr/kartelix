@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { motion } from 'framer-motion';
 import QrCameraModal from './QrCameraModal';
 import { isMobileCameraDevice } from '../utils/qr';
 import { Search, QrCode } from './icons.jsx';
+import { chromeSpring, tapMotion } from '../utils/motion';
 
 const PageSearchBar = ({
   value,
@@ -17,12 +19,14 @@ const PageSearchBar = ({
   getResultKey,
   getResultPrimary,
   getResultSecondary,
-  emptyResultsText = 'Sonuç bulunamadı.'
+  emptyResultsText = 'Sonuç bulunamadı.',
+  className = ''
 }) => {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [canUseQr] = useState(() => isMobileCameraDevice());
   const [dropdownRect, setDropdownRect] = useState(null);
+  const [focused, setFocused] = useState(false);
   const fieldRef = useRef(null);
 
   useEffect(() => {
@@ -42,14 +46,24 @@ const PageSearchBar = ({
 
   return (
     <>
-      <form
-        className="app-searchbar"
+      <motion.form
+        className={`app-searchbar${className ? ` ${className}` : ''}`}
+        initial={false}
+        animate={{ scale: focused ? 1.018 : 1 }}
+        transition={chromeSpring}
         onSubmit={(event) => {
           event.preventDefault();
           if (onSearch) onSearch(value);
         }}
       >
-        <div className="app-searchbar-field" ref={fieldRef}>
+        <div
+          className="app-searchbar-field"
+          ref={fieldRef}
+          onFocusCapture={() => setFocused(true)}
+          onBlurCapture={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
+          }}
+        >
           <input
             value={value}
             onChange={(event) => onChange(event.target.value)}
@@ -73,23 +87,34 @@ const PageSearchBar = ({
             }}
           />
           <div className="app-searchbar-actions">
-            <button type="submit" className="app-searchbar-submit" aria-label="Ara" title="Ara">
+            <motion.button
+              type="submit"
+              className="app-searchbar-submit"
+              aria-label="Ara"
+              title="Ara"
+              whileTap={tapMotion}
+              initial={false}
+              animate={{ scaleX: focused ? 1.14 : 1, y: focused ? -2 : 0 }}
+              transition={chromeSpring}
+              style={{ transformOrigin: '50% 50%' }}
+            >
               <Search className="app-nav-icon-svg" />
-            </button>
+            </motion.button>
             {canUseQr ? (
-              <button
+              <motion.button
                 type="button"
                 onClick={() => setScannerOpen(true)}
                 className="app-searchbar-qr"
                 aria-label={qrLabel}
                 title={qrLabel}
+                whileTap={tapMotion}
               >
                 <QrCode className="app-nav-icon-svg" />
-              </button>
+              </motion.button>
             ) : null}
           </div>
         </div>
-      </form>
+      </motion.form>
 
       {showResults && dropdownRect ? createPortal(
         <div

@@ -9,6 +9,22 @@ import { useGenelAyarlar } from '../theme/ThemeProvider';
 const v = (val) => String(val || '').trim() || null;
 const EASE = [0.16, 1, 0.3, 1];
 
+const prettifyText = (value) => String(value || '')
+  .trim()
+  .replace(/_/g, ' ')
+  .replace(/\s+/g, ' ')
+  .replace(/\bBaskili\b/gi, 'Baskılı')
+  .replace(/\bSuprem\b/gi, 'Süprem')
+  .replace(/\b\w/g, (char) => char.toLocaleUpperCase('tr-TR'));
+
+const formatTypeLabel = (value) => {
+  const text = prettifyText(value);
+  return text ? `${text} Kumaş` : 'Kumaş';
+};
+
+const swatchGradient = (palette, deg = 135) =>
+  `linear-gradient(${deg}deg, ${palette.swatch || palette.accent}, ${palette.swatchDeep || palette.accentDeep})`;
+
 /* â”€â”€â”€ Çeviriler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const T = {
   TR: {
@@ -104,9 +120,102 @@ const WeavePattern = ({ P, dark }) => (
         <line x1="6" y1="0" x2="6" y2="12" stroke={P.accent} strokeWidth="0.4" opacity="0.2" />
       </pattern>
     </defs>
-    <rect width="100%" height="100%" fill={`url(#weave)`} />
+    <motion.rect
+      width="110%"
+      height="110%"
+      x="-5%"
+      y="-5%"
+      fill={`url(#weave)`}
+      animate={{ x: ['-5%', '-12%'], y: ['-5%', '0%'] }}
+      transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+    />
     <rect width="100%" height="100%" fill={`linear-gradient(180deg, ${P.accent}22, ${P.accentDeep}44)`} />
   </svg>
+);
+
+const FabricAtmosphere = ({ P, dark }) => (
+  <motion.svg
+    aria-hidden="true"
+    viewBox="0 0 900 1400"
+    preserveAspectRatio="xMidYMid slice"
+    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: dark ? 0.5 : 0.42 }}
+  >
+    <defs>
+      <linearGradient id="fabricBase" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor={P.bgDeep} />
+        <stop offset="50%" stopColor={P.bg} />
+        <stop offset="100%" stopColor={P.bgDeep} />
+      </linearGradient>
+      <linearGradient id="fabricFoldLight" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stopColor="white" stopOpacity="0" />
+        <stop offset="50%" stopColor="white" stopOpacity={dark ? 0.11 : 0.18} />
+        <stop offset="100%" stopColor="white" stopOpacity="0" />
+      </linearGradient>
+      <linearGradient id="fabricFoldShadow" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stopColor="black" stopOpacity="0" />
+        <stop offset="50%" stopColor="black" stopOpacity={dark ? 0.24 : 0.13} />
+        <stop offset="100%" stopColor="black" stopOpacity="0" />
+      </linearGradient>
+      <pattern id="fabricThreads" width="18" height="18" patternUnits="userSpaceOnUse">
+        <path d="M0 6 H18 M0 12 H18" stroke={P.accent} strokeWidth="0.55" opacity={dark ? 0.18 : 0.13} />
+        <path d="M6 0 V18 M12 0 V18" stroke={P.accentDeep} strokeWidth="0.5" opacity={dark ? 0.16 : 0.11} />
+      </pattern>
+      <filter id="fabricGrain">
+        <feTurbulence type="fractalNoise" baseFrequency="0.7 0.9" numOctaves="2" seed="9" />
+        <feColorMatrix type="saturate" values="0" />
+        <feComponentTransfer>
+          <feFuncA type="table" tableValues="0 0.08" />
+        </feComponentTransfer>
+      </filter>
+      <filter id="softFabricBlur" x="-15%" y="-15%" width="130%" height="130%">
+        <feGaussianBlur stdDeviation="14" />
+      </filter>
+    </defs>
+
+    <rect width="900" height="1400" fill="url(#fabricBase)" />
+    <motion.g
+      animate={{ y: [0, -8, 0], opacity: [0.72, 0.86, 0.72] }}
+      transition={{ duration: 24, repeat: Infinity, ease: EASE }}
+    >
+      <path
+        d="M-180 230 C90 95 240 360 455 245 C650 140 760 120 1080 210"
+        fill="none"
+        stroke="url(#fabricFoldLight)"
+        strokeWidth="130"
+        strokeLinecap="round"
+        opacity={dark ? 0.48 : 0.62}
+        filter="url(#softFabricBlur)"
+      />
+      <path
+        d="M-180 580 C80 430 250 735 490 590 C675 480 780 465 1080 560"
+        fill="none"
+        stroke="url(#fabricFoldShadow)"
+        strokeWidth="150"
+        strokeLinecap="round"
+        opacity={dark ? 0.5 : 0.42}
+        filter="url(#softFabricBlur)"
+      />
+      <path
+        d="M-180 1010 C110 850 270 1155 540 995 C720 888 840 890 1080 970"
+        fill="none"
+        stroke="url(#fabricFoldLight)"
+        strokeWidth="128"
+        strokeLinecap="round"
+        opacity={dark ? 0.36 : 0.48}
+        filter="url(#softFabricBlur)"
+      />
+    </motion.g>
+    <motion.rect
+      x="-40"
+      y="-40"
+      width="980"
+      height="1480"
+      fill="url(#fabricThreads)"
+      animate={{ x: [-40, -46, -40], y: [-40, -34, -40] }}
+      transition={{ duration: 28, repeat: Infinity, ease: EASE }}
+    />
+    <rect width="900" height="1400" filter="url(#fabricGrain)" opacity={dark ? 0.7 : 0.55} />
+  </motion.svg>
 );
 
 /* â”€â”€â”€ Scroll reveal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -161,8 +270,6 @@ const PublicMamulPage = ({ mode = 'public' }) => {
   const heroOpacity = useTransform(scrollY, [0, 350], [1, 0]);
   const heroScale   = useTransform(scrollY, [0, 350], [1, 0.95]);
   const orbY1       = useTransform(scrollY, [0, 800], [0, -130]);
-  const orbY2       = useTransform(scrollY, [0, 800], [0, -60]);
-  const orbY3       = useTransform(scrollY, [0, 800], [0, -180]);
 
   useEffect(() => {
     const mamulRequest = isInternal
@@ -238,10 +345,12 @@ const PublicMamulPage = ({ mode = 'public' }) => {
 
   if (isInternal) {
     const maliyet = Number(mamul.bir_kg_maliyet || 0);
-    const satis = Number(mamul.bir_kg_satis_fiyati || 0);
+    const satis = Number(satisFiyati || 0);
     const pb = mamul.para_birimi || 'TRY';
     const kar = maliyet > 0 && satis > 0 && satis !== maliyet
       ? (((satis - maliyet) / maliyet) * 100).toFixed(1) : null;
+    const colorLabel = v(mamul.renk) || '-';
+    const typeLabel = formatTypeLabel(mamul.mamul_turu_adi);
     return (
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
         style={{ fontFamily: 'Manrope, Inter, sans-serif', color: 'var(--app-text)', minHeight: '100%', overflowY: 'auto', paddingBottom: '2rem' }}>
@@ -265,27 +374,30 @@ const PublicMamulPage = ({ mode = 'public' }) => {
           {/* Sol */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {/* Görsel */}
-            <div style={{ borderRadius: '1.1rem', overflow: 'hidden', background: `linear-gradient(135deg,${P.accent}22,${P.accentDeep}44)`, aspectRatio: '4/5', position: 'relative', border: '1px solid var(--app-border)' }}>
+            <div style={{ borderRadius: '1.1rem', overflow: 'hidden', background: `linear-gradient(135deg,${P.bg},${P.bgDeep})`, aspectRatio: '4/5', position: 'relative', border: `1px solid ${P.border}`, boxShadow: `0 14px 34px ${P.glow}` }}>
               {gorselUrl
                 ? <img src={gorselUrl} alt={mamul.mamul_adi} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                : <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: '4rem', height: '4rem', borderRadius: '50%', background: `linear-gradient(135deg,${P.accent},${P.accentDeep})`, opacity: 0.6 }} />
-                    <div style={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: P.accent, opacity: 0.55 }}>Görsel yok</div>
+                : <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.65rem', padding: '1.2rem' }}>
+                    <div style={{ position: 'absolute', inset: 0, opacity: 0.78 }}>
+                      <WeavePattern P={P} dark={dark} />
+                    </div>
+                    <div style={{ position: 'relative', width: '5.4rem', height: '5.4rem', borderRadius: '1.25rem', background: swatchGradient(P), border: `1px solid ${P.border}`, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.72), 0 12px 28px ${P.glow}` }} />
+                    <div style={{ position: 'relative', fontSize: '0.62rem', fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase', color: P.textMuted, opacity: 0.72 }}>Kumaş numunesi</div>
                   </div>
               }
-              <div style={{ position: 'absolute', bottom: '0.75rem', left: '0.75rem', right: '0.75rem', background: 'rgba(0,0,0,0.52)', backdropFilter: 'blur(6px)', borderRadius: '0.6rem', padding: '0.45rem 0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: P.accent, flexShrink: 0, border: '1.5px solid rgba(255,255,255,0.35)' }} />
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.9)', letterSpacing: '0.06em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mamul.renk || '-'}</span>
+              <div style={{ position: 'absolute', bottom: '0.75rem', left: '0.75rem', right: '0.75rem', background: dark ? 'rgba(0,0,0,0.46)' : 'rgba(255,255,255,0.74)', backdropFilter: 'blur(10px)', borderRadius: '0.7rem', padding: '0.45rem 0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: `1px solid ${P.border}` }}>
+                <div style={{ width: '12px', height: '12px', borderRadius: '0.25rem', background: swatchGradient(P), flexShrink: 0, border: '1px solid rgba(17,23,25,0.16)' }} />
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: dark ? 'rgba(255,255,255,0.9)' : P.text, letterSpacing: '0.06em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{colorLabel}</span>
               </div>
             </div>
 
             {/* Kimlik */}
             <div style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: '1rem', padding: '1rem' }}>
-              <div style={{ fontSize: '0.57rem', fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--app-text-muted)', marginBottom: '0.3rem' }}>{mamul.mamul_turu_adi}</div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.66rem', fontWeight: 800, letterSpacing: '0.02em', color: P.text, background: `${P.accent}18`, border: `1px solid ${P.accent}30`, borderRadius: '999px', padding: '0.26rem 0.6rem', marginBottom: '0.55rem' }}>{typeLabel}</div>
               <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--app-text)', lineHeight: 1.2 }}>{mamul.mamul_adi}</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--app-text-muted)', marginTop: '0.3rem', fontWeight: 600 }}>
-                <span style={{ fontSize: '0.54rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', marginRight: '0.3rem', opacity: 0.6 }}>ARTICLE NO</span>
-                {mamul.article_code}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem', fontSize: '0.7rem', color: 'var(--app-text-muted)', marginTop: '0.4rem', fontWeight: 700 }}>
+                <span style={{ fontSize: '0.54rem', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.6 }}>ARTICLE NO</span>
+                <span>{mamul.article_no || mamul.article_code}</span>
               </div>
               {mamul.koleksiyon_adi && !String(mamul.koleksiyon_adi).startsWith('Excel') && <div style={{ marginTop: '0.5rem', display: 'inline-block', fontSize: '0.64rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: '999px', background: `${P.accent}18`, color: P.accent, border: `1px solid ${P.accent}30` }}>{mamul.koleksiyon_adi}</div>}
             </div>
@@ -397,10 +509,8 @@ const PublicMamulPage = ({ mode = 'public' }) => {
 
       {/* â”€â”€ Atmosfer â”€â”€ */}
       <div aria-hidden="true" style={{ position: isInternal ? 'absolute' : 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(${P.grad}, ${P.bgDeep} 0%, ${P.bg} 55%, ${P.bgDeep} 100%)` }} />
-        <motion.div style={{ position: 'absolute', top: '-8%', left: '-4%', width: '60vw', height: '60vw', maxWidth: 560, maxHeight: 560, borderRadius: '50%', background: P.glow, filter: 'blur(70px)', opacity: 0.65, y: orbY1 }} />
-        <motion.div style={{ position: 'absolute', top: '18%', right: '-8%', width: '45vw', height: '45vw', maxWidth: 440, maxHeight: 440, borderRadius: '50%', background: P.glow, filter: 'blur(90px)', opacity: 0.4, y: orbY2 }} />
-        <motion.div style={{ position: 'absolute', bottom: '8%', left: '18%', width: '38vw', height: '38vw', maxWidth: 360, maxHeight: 360, borderRadius: '50%', background: P.glow, filter: 'blur(80px)', opacity: 0.3, y: orbY3 }} />
+        <FabricAtmosphere P={P} dark={dark} />
+        <motion.div style={{ position: 'absolute', inset: 0, background: `linear-gradient(${P.grad}, transparent 0%, ${P.bg}14 48%, ${P.bgDeep}36 100%)`, y: orbY1 }} />
         <div style={{ position: 'absolute', inset: 0, opacity: dark ? 0.06 : 0.035,
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
           backgroundSize: '180px' }} />
@@ -487,7 +597,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
                 transition={{ duration: 0.8, ease: EASE }}
                 style={{
                   width: '5rem', height: '6.5rem', borderRadius: '1.15rem',
-                  background: `linear-gradient(140deg, ${P.accent}, ${P.accentDeep})`,
+                  background: swatchGradient(P, 140),
                   boxShadow: `0 18px 44px ${P.glow}, 0 1px 0 rgba(255,255,255,0.16) inset`,
                   position: 'relative', overflow: 'hidden',
                 }}
@@ -545,6 +655,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
                 {v(mamul.gramaj)  && <Pill P={P} dark={dark}>{mamul.gramaj} gr/m²</Pill>}
                 {composition      && <Pill P={P} dark={dark} accent>{composition}</Pill>}
               </motion.div>
+
             </div>
           </div>
 

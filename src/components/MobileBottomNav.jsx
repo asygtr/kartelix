@@ -1,5 +1,9 @@
-import React from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { chromeSpring, navIndicatorTransition, navTapMotion } from '../utils/motion';
+
+const MotionLink = motion.create(Link);
 
 const isActiveLink = (pathname, target) => {
   if (target === '/') return pathname === '/';
@@ -14,12 +18,65 @@ const isMobileNavActive = (pathname, item, searchOpen) => {
   return isActiveLink(pathname, item.to);
 };
 
-const MobileBottomNav = ({ items = [], location, searchOpen, onSearchClick }) => {
+const MobileBottomNav = ({ items = [], location, searchOpen, onSearchClick, compact = false }) => {
+  const navRef = useRef(null);
+  const itemRefs = useRef([]);
+  const [indicator, setIndicator] = useState(null);
+
+  const activeIndex = items.findIndex((item) => isMobileNavActive(location.pathname, item, searchOpen));
+
+  useLayoutEffect(() => {
+    const updateIndicator = () => {
+      const activeItem = itemRefs.current[activeIndex];
+      if (!activeItem) return;
+
+      const inset = 4;
+      setIndicator({
+        x: activeItem.offsetLeft + inset,
+        y: activeItem.offsetTop + inset,
+        width: Math.max(0, activeItem.offsetWidth - inset * 2),
+        height: Math.max(0, activeItem.offsetHeight - inset * 2),
+      });
+    };
+
+    updateIndicator();
+    const frame = window.requestAnimationFrame(updateIndicator);
+    const timeout = window.setTimeout(updateIndicator, 280);
+    window.addEventListener('resize', updateIndicator);
+    window.addEventListener('orientationchange', updateIndicator);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
+      window.removeEventListener('resize', updateIndicator);
+      window.removeEventListener('orientationchange', updateIndicator);
+    };
+  }, [activeIndex, compact, items.length, location.pathname]);
+
   if (searchOpen) return null;
 
   return (
-    <nav className="app-mobile-bottom-nav" aria-label="Mobil alt gezinme">
-      {items.map((item) => {
+    <motion.nav
+      ref={navRef}
+      className={`app-mobile-bottom-nav${compact ? ' is-compact' : ''}`}
+      aria-label="Mobil alt gezinme"
+      initial={false}
+      animate={{
+        scale: compact ? 0.91 : 1,
+        y: compact ? 5 : 0,
+        opacity: compact ? 0.92 : 1,
+      }}
+      transition={chromeSpring}
+    >
+      {indicator ? (
+        <motion.span
+          className="app-mobile-nav-active-pill"
+          initial={false}
+          animate={indicator}
+          transition={navIndicatorTransition}
+        />
+      ) : null}
+
+      {items.map((item, index) => {
         const isDisabled = !item.to && !item.action;
         const isActive = isMobileNavActive(location.pathname, item, searchOpen);
         const cls = `app-mobile-nav-item${isActive ? ' is-active' : ''}`;
@@ -33,32 +90,48 @@ const MobileBottomNav = ({ items = [], location, searchOpen, onSearchClick }) =>
 
         if (item.action) {
           return (
-            <button
+            <motion.button
               key={item.key}
               type="button"
               className={cls}
               onClick={() => onSearchClick?.(item)}
+              whileTap={navTapMotion}
+              ref={(node) => { itemRefs.current[index] = node; }}
             >
               {inner}
-            </button>
+            </motion.button>
           );
         }
 
         if (isDisabled) {
           return (
-            <button key={item.key} type="button" className="app-mobile-nav-item is-disabled" disabled>
-              {inner}
-            </button>
+            <motion.button
+              key={item.key}
+              type="button"
+              className="app-mobile-nav-item is-disabled"
+              disabled
+              ref={(node) => { itemRefs.current[index] = node; }}
+            >
+              <motion.span className="app-mobile-nav-pop" whileTap={navTapMotion}>
+                {inner}
+              </motion.span>
+            </motion.button>
           );
         }
 
         return (
-          <Link key={item.key} to={item.to} className={cls}>
+          <MotionLink
+            key={item.key}
+            to={item.to}
+            className={cls}
+            whileTap={navTapMotion}
+            ref={(node) => { itemRefs.current[index] = node; }}
+          >
             {inner}
-          </Link>
+          </MotionLink>
         );
       })}
-    </nav>
+    </motion.nav>
   );
 };
 

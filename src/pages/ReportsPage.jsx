@@ -10,7 +10,6 @@ import { Bar, Doughnut } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend, DoughnutController);
 
-const EASE = [0.2, 0.8, 0.2, 1];
 const PRIMARY   = '#0f4c4f';
 const ACCENT    = '#b9793a';
 const PURPLE    = '#7c3aed';
@@ -40,8 +39,7 @@ const Counter = ({ to, suffix = '' }) => {
 /* ─── Stat kart ──────────────────────────────────────────────────────────── */
 const StatCard = ({ label, value, icon, color, delay, suffix = '' }) => (
   <motion.div
-    initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.5, delay, ease: EASE }}
+    initial={false}
     className="app-stat"
     style={{ position: 'relative', overflow: 'hidden' }}
   >
@@ -173,8 +171,7 @@ const ReportsPage = () => {
       {/* Aktif/Pasif doughnut */}
       {report.toplamMamul > 0 && (
         <motion.section
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.22, ease: EASE }}
+          initial={false}
           className="app-panel" style={{ padding: '1.25rem' }}
         >
           <SectionTitle>Ürün Durumu</SectionTitle>
@@ -194,8 +191,7 @@ const ReportsPage = () => {
       {/* QR Okutulma bar chart */}
       {okutulanData.length > 0 && (
         <motion.section
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.28, ease: EASE }}
+          initial={false}
           className="app-panel" style={{ padding: '1.25rem' }}
         >
           <SectionTitle>QR Okutulma Sıralaması</SectionTitle>
@@ -221,8 +217,7 @@ const ReportsPage = () => {
       {/* Sipariş kg bar chart */}
       {siparisData.length > 0 && (
         <motion.section
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.34, ease: EASE }}
+          initial={false}
           className="app-panel" style={{ padding: '1.25rem' }}
         >
           <SectionTitle>Sipariş Sıralaması (kg)</SectionTitle>
@@ -250,8 +245,7 @@ const ReportsPage = () => {
 
         {report.enCokOkutulanlar?.length > 0 && (
           <motion.section
-            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: 0.4, ease: EASE }}
+            initial={false}
             className="app-panel" style={{ padding: '1.1rem 1.25rem' }}
           >
             <SectionTitle>QR Detay</SectionTitle>
@@ -276,8 +270,7 @@ const ReportsPage = () => {
 
         {report.enCokSipariseGirenler?.length > 0 && (
           <motion.section
-            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: 0.45, ease: EASE }}
+            initial={false}
             className="app-panel" style={{ padding: '1.1rem 1.25rem' }}
           >
             <SectionTitle>Sipariş Detay</SectionTitle>

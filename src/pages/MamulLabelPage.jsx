@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import MamulEtiketModal from '../components/MamulEtiketModal';
 import PageSearchBar from '../components/PageSearchBar';
 import { defaultLabelTemplate, formatArticleLabel, mergeLabelTemplate, printLabels } from '../utils/labelTemplate';
 import { authHeaders } from '../utils/auth';
+import { chromeSpring } from '../utils/motion';
 
 const normalizeSearchValue = (value) => String(value || '').trim().toLowerCase();
 
@@ -18,6 +20,8 @@ const MamulLabelPage = () => {
   const [templates, setTemplates] = useState([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [trayImpact, setTrayImpact] = useState(0);
+  const printTrayRef = useRef(null);
 
   // Load mamul from URL parameter if present
   useEffect(() => {
@@ -32,7 +36,7 @@ const MamulLabelPage = () => {
             setSelectedRecord(result.data);
             setSelectedIds([result.data.id]);
             setSelectedRecordsMap({ [result.data.id]: result.data });
-            setSearchTerm(result.data.article_code || result.data.mamul_adi);
+            setSearchTerm('');
           }
         } catch (error) {
           console.error('Failed to fetch mamul for pre-selection:', error);
@@ -102,6 +106,9 @@ const MamulLabelPage = () => {
   }, [searchTerm]);
 
   const toggleSelected = (id, item) => {
+    const willSelect = !selectedIds.includes(id);
+    if (willSelect) setTrayImpact((value) => value + 1);
+
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
@@ -131,17 +138,24 @@ const MamulLabelPage = () => {
   return (
     <>
       <PageSearchBar
+        className="app-searchbar-floating app-page-searchbar"
         value={searchTerm}
         onChange={setSearchTerm}
         placeholder="Article no, article code, mamül adı veya renk ara"
         onSearch={(term) => {
           const match = resolveRecordMatch(term);
-          if (match) setSelectedRecord(match);
+          if (match) {
+            setSelectedRecord(match);
+            setSearchTerm('');
+          }
           loadRecords(term);
         }}
         onQrDetected={(detectedValue) => {
           const match = resolveRecordMatch(detectedValue);
-          if (match) setSelectedRecord(match);
+          if (match) {
+            setSelectedRecord(match);
+            setSearchTerm('');
+          }
         }}
         showResults={Boolean(normalizeSearchValue(searchTerm)) && !selectedRecord}
         results={records.slice(0, 6)}
@@ -163,11 +177,6 @@ const MamulLabelPage = () => {
                 <option key={item.template_id || item.id} value={item.template_id || item.id}>{item.name}</option>
               ))}
             </select>
-            {selectedIds.length > 0 ? (
-              <button type="button" onClick={printSelected} className="app-btn-primary">
-                Toplu yazdır ({selectedIds.length})
-              </button>
-            ) : null}
             {loading ? <span className="text-xs text-[color:var(--app-text-muted)]">Yükleniyor...</span> : null}
           </div>
         </div>
@@ -194,7 +203,8 @@ const MamulLabelPage = () => {
               {records.map((item) => (
                 <div
                   key={item.id}
-                  className="hidden md:grid cursor-pointer grid-cols-[56px_110px_minmax(200px,1.4fr)_120px_100px_90px_80px] gap-2 border-b border-slate-100 px-3 py-2.5 text-sm text-slate-700 transition hover:bg-emerald-50"
+                  data-label-row="true"
+                  className={`hidden md:grid cursor-pointer grid-cols-[56px_110px_minmax(200px,1.4fr)_120px_100px_90px_80px] gap-2 border-b border-slate-100 px-3 py-2.5 text-sm text-slate-700 transition hover:bg-emerald-50 ${selectedIds.includes(item.id) ? 'is-selected' : ''}`}
                   onClick={() => setSelectedRecord(item)}
                 >
                   <div className="flex items-center" onClick={(event) => event.stopPropagation()}>
@@ -218,13 +228,14 @@ const MamulLabelPage = () => {
               {records.map((item) => (
                 <div
                   key={`mobile-${item.id}`}
-                  className="md:hidden border-b border-slate-100 px-3 py-3"
+                  data-label-row="true"
+                  className={`md:hidden border-b border-slate-100 px-3 py-3 ${selectedIds.includes(item.id) ? 'is-selected' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1 cursor-pointer" onClick={() => setSelectedRecord(item)}>
                       <div className="truncate text-sm font-semibold text-slate-900">{item.mamul_adi}</div>
                       <div className="mt-0.5 text-xs text-slate-500">{formatArticleLabel(item.article_code, item.article_no)}</div>
-                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500">
+                      <div className="app-label-mobile-meta mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500">
                         <span>{item.mamul_turu_adi || '-'}</span>
                         <span>{item.renk || '-'}</span>
                         <span>{item.en || '-'} EN</span>
@@ -246,6 +257,41 @@ const MamulLabelPage = () => {
           </div>
         ) : null}
       </section>
+
+      <AnimatePresence>
+        {selectedIds.length > 0 ? (
+          <motion.div
+            ref={printTrayRef}
+            className="app-label-print-tray"
+            initial={{ opacity: 0, y: 32, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 22, scale: 0.94 }}
+            transition={chromeSpring}
+          >
+            <motion.button
+              type="button"
+              onClick={printSelected}
+              className="app-label-print-button"
+              layout
+              whileTap={{ scale: 0.96 }}
+              animate={{
+                scale: trayImpact ? [1, 1.09, 0.98, 1.03, 1] : 1,
+                y: trayImpact ? [0, -8, 2, -3, 0] : 0,
+              }}
+              transition={{ duration: 0.42, ease: [0.32, 0.72, 0, 1] }}
+            >
+              Yazdır ({selectedIds.length})
+            </motion.button>
+            <motion.span
+              key={trayImpact}
+              className="app-label-print-ripple"
+              initial={{ opacity: 0, scale: 0.58 }}
+              animate={{ opacity: trayImpact ? [0, 0.46, 0] : 0, scale: trayImpact ? [0.58, 1.2, 1.62] : 0.58 }}
+              transition={{ duration: 0.52, ease: [0.32, 0.72, 0, 1] }}
+            />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <MamulEtiketModal mamul={selectedRecord} templateId={selectedTemplateId} onClose={() => setSelectedRecord(null)} />
     </>

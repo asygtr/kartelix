@@ -59,6 +59,7 @@ const PullToRefresh = ({ onRefresh, children, disabled = false }) => {
 
   return (
     <div
+      className="app-pull-shell"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
