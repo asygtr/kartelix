@@ -371,48 +371,48 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
         </div>
       ) : null}
 
-      <PageSearchBar
-          className="app-searchbar-floating app-page-searchbar"
-          value={searchTerm}
-          onChange={setSearchTerm}
-          placeholder="Kayıtlı mamül ara"
-          onSearch={(term) => {
-            const match = resolveMamulMatch(term);
-            if (match) {
-              setSearchTerm('');
-              setMessage('');
-              showMamulDetail(match.id);
-              return;
-            }
-            if (normalizeSearchValue(term)) {
-              setMessage('Aramayla eşleşen mamül bulunamadı.');
-            }
-          }}
-          onQrDetected={(detectedValue) => {
-            const match = resolveMamulMatch(detectedValue);
-            if (match) {
-              setSearchTerm('');
-              setMessage('');
-              showMamulDetail(match.id);
-            } else {
-              setMessage('QR ile eşleşen mamül bulunamadı.');
-            }
-          }}
-          showResults={Boolean(normalizeSearchValue(searchTerm))}
-          results={filteredMamulList.slice(0, 6)}
-          onResultSelect={(item) => {
-            setSearchTerm('');
-            setMessage('');
-            showMamulDetail(item.id);
-          }}
-          getResultPrimary={(item) => item.mamul_adi}
-          getResultSecondary={(item) => `${formatArticleLabel(item.article_code, item.article_no)}${item.renk ? ` / ${item.renk}` : ''}`}
-          emptyResultsText="Bu aramaya uygun mamül bulunamadı."
-        />
-
       <PullToRefresh onRefresh={fetchInitial}>
         <div className="space-y-6">
-            {showEditor ? (
+          <PageSearchBar
+            className="app-searchbar-floating app-page-searchbar"
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Kayıtlı mamül ara"
+            onSearch={(term) => {
+              const match = resolveMamulMatch(term);
+              if (match) {
+                setSearchTerm('');
+                setMessage('');
+                showMamulDetail(match.id);
+                return;
+              }
+              if (normalizeSearchValue(term)) {
+                setMessage('Aramayla eşleşen mamül bulunamadı.');
+              }
+            }}
+            onQrDetected={(detectedValue) => {
+              const match = resolveMamulMatch(detectedValue);
+              if (match) {
+                setSearchTerm('');
+                setMessage('');
+                showMamulDetail(match.id);
+              } else {
+                setMessage('QR ile eşleşen mamül bulunamadı.');
+              }
+            }}
+            showResults={Boolean(normalizeSearchValue(searchTerm))}
+            results={filteredMamulList.slice(0, 6)}
+            onResultSelect={(item) => {
+              setSearchTerm('');
+              setMessage('');
+              showMamulDetail(item.id);
+            }}
+            getResultPrimary={(item) => item.mamul_adi}
+            getResultSecondary={(item) => `${formatArticleLabel(item.article_code, item.article_no)}${item.renk ? ` / ${item.renk}` : ''}`}
+            emptyResultsText="Bu aramaya uygun mamül bulunamadı."
+          />
+
+          {showEditor ? (
            <form onSubmit={submitForm} className="app-collapse-panel space-y-6">
             <section className="app-panel p-6">
               <div className="flex flex-wrap items-center justify-between gap-4">

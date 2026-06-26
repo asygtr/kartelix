@@ -3789,11 +3789,24 @@ a, button, [role="button"] {
   .app-shell.is-mamul-page .app-page {
     touch-action: pan-y;
     overscroll-behavior-y: auto;
+    overscroll-behavior-x: none;
+    -webkit-overflow-scrolling: touch;
   }
 
   .app-shell.is-mamul-page .app-route-stage {
     overflow: visible;
     contain: none;
+  }
+
+  .app-shell.is-mamul-page .app-pull-shell {
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+  }
+
+  .app-shell.is-mamul-page .app-page-searchbar,
+  .app-shell.is-mamul-page .app-panel,
+  .app-shell.is-mamul-page .app-soft-panel {
+    will-change: transform;
   }
 
   .app-shell.is-mamul-page .app-panel {

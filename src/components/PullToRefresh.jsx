@@ -8,6 +8,7 @@ const PullToRefresh = ({ onRefresh, children, disabled = false }) => {
   const [pullY, setPullY]       = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const startY   = useRef(null);
+  const startX   = useRef(null);
   const pulling  = useRef(false);
   const fired    = useRef(false);
   const haptic   = useHaptic();
@@ -16,7 +17,11 @@ const PullToRefresh = ({ onRefresh, children, disabled = false }) => {
     if (disabled || refreshing) return;
     const scrollEl = e.currentTarget.querySelector('.app-page') || e.currentTarget;
     if (scrollEl.scrollTop > 0) return;
+    const target = e.target;
+    const isInteractive = target instanceof HTMLElement && (target.closest('input, textarea, select, button, a, [role="button"]') || target.dataset?.ptrIgnore === 'true');
+    if (isInteractive) return;
     startY.current = e.touches[0].clientY;
+    startX.current = e.touches[0].clientX;
     pulling.current = true;
     fired.current   = false;
   }, [disabled, refreshing]);
@@ -24,7 +29,8 @@ const PullToRefresh = ({ onRefresh, children, disabled = false }) => {
   const onTouchMove = useCallback((e) => {
     if (!pulling.current || startY.current === null) return;
     const dy = e.touches[0].clientY - startY.current;
-    if (dy <= 0) { pulling.current = false; return; }
+    const dx = e.touches[0].clientX - startX.current;
+    if (dy <= 0 || Math.abs(dx) > 18) { pulling.current = false; return; }
     const clamped = Math.min(dy * 0.45, MAX_PULL);
     setPullY(clamped);
     if (clamped >= THRESHOLD && !fired.current) {
@@ -48,6 +54,7 @@ const PullToRefresh = ({ onRefresh, children, disabled = false }) => {
       setPullY(0);
     }
     startY.current = null;
+    startX.current = null;
   }, [pullY, onRefresh, haptic]);
 
   useEffect(() => {
