@@ -1789,19 +1789,29 @@ code {
   }
 }
 
-.app-mamul-list-shell {
-  border: 1px solid color-mix(in srgb, var(--app-border) 72%, white 28%);
-  border-radius: 0.8rem;
-  overflow-y: auto;
-  overflow-x: hidden;
-  max-height: min(62dvh, 46rem);
-  background: color-mix(in srgb, var(--app-surface) 84%, white 16%);
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+.app-mamul-list-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--app-primary) 32%, transparent 68%) transparent;
+  -ms-overflow-style: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
-.app-mamul-list-shell .app-mamul-table.app-table-head {
+.app-mamul-list-scroll::-webkit-scrollbar {
+  width: 7px;
+}
+
+.app-mamul-list-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--app-primary) 28%, transparent 72%);
+  border-radius: 999px;
+}
+
+.app-mamul-list-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-mamul-list-stack .app-mamul-table.app-table-head {
   position: sticky;
   top: 0;
   z-index: 3;
@@ -1810,14 +1820,14 @@ code {
   box-shadow: 0 10px 20px rgba(17, 23, 25, 0.06);
 }
 
-.app-mamul-list-shell .app-mamul-table.app-table-head > div {
+.app-mamul-list-stack .app-mamul-table.app-table-head > div {
   color: var(--app-primary-strong);
   letter-spacing: 0.1em;
   white-space: nowrap;
 }
 
 @media (min-width: 768px) {
-  .app-mamul-list-shell.is-desktop-expanded .app-mamul-table.app-table-head {
+  .app-mamul-list-stack.is-desktop-expanded .app-mamul-table.app-table-head {
     display: none !important;
   }
 }
@@ -1869,6 +1879,7 @@ code {
   overflow: hidden;
   border-bottom: 1px solid color-mix(in srgb, var(--app-border) 50%, white 50%);
   background: rgba(255, 253, 248, 0.74);
+  scroll-margin-bottom: 6rem;
 }
 
 .app-mamul-expanded-card {
@@ -2083,7 +2094,7 @@ code {
   font-weight: 800;
 }
 
-.app-mamul-list-shell::-webkit-scrollbar {
+.app-mamul-list-stack::-webkit-scrollbar {
   display: none;
   width: 0;
   height: 0;
@@ -2093,6 +2104,7 @@ code {
   display: grid;
   gap: 0.65rem;
   padding: 0.95rem;
+  scroll-margin-bottom: 6rem;
   border: 1px solid color-mix(in srgb, var(--app-border) 60%, white 40%);
   border-radius: 0.8rem;
   background: color-mix(in srgb, var(--app-surface) 90%, white 10%);
@@ -2176,6 +2188,12 @@ code {
     background-attachment: scroll;
   }
 
+  .app-mamul-list-shell {
+    height: min(78dvh, 58rem);
+    max-height: calc(100dvh - 8.2rem);
+    min-height: 15rem;
+  }
+
   .app-panel,
   .app-soft-panel,
   .app-stat,
@@ -2191,10 +2209,10 @@ code {
   }
 
   .app-data-table,
-  .app-mamul-list-shell {
-    border: 1px solid color-mix(in srgb, var(--app-border) 72%, white 28%);
-    border-radius: 0.8rem;
-    overflow: hidden;
+  .app-mamul-list-stack {
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
   }
 }
 
@@ -2525,15 +2543,12 @@ code {
 }
 
 @media (max-width: 767px) {
-  .app-mamul-list-shell {
-    display: grid;
-    gap: 0.35rem;
-    padding: 0.35rem;
-    border: 0;
-    background: transparent;
-    max-height: min(58dvh, 34rem);
-    overflow-y: auto;
-    overflow-x: hidden;
+  .app-shell.is-mamul-page .app-page {
+    padding-bottom: 0;
+  }
+
+  .app-mamul-list-scroll {
+    padding-bottom: 4.8rem;
   }
 
   .app-mamul-card {
@@ -2762,6 +2777,14 @@ code {
   }
 
   .app-shell.is-label-page.is-chrome-compact .app-page {
+    padding-bottom: calc(3.05rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .app-shell.is-mamul-page .app-page {
+    padding-bottom: calc(3.35rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .app-shell.is-mamul-page.is-chrome-compact .app-page {
     padding-bottom: calc(3.05rem + env(safe-area-inset-bottom, 0px));
   }
 
@@ -3788,9 +3811,16 @@ a, button, [role="button"] {
 
   .app-shell.is-mamul-page .app-page {
     touch-action: pan-y;
-    overscroll-behavior-y: auto;
+    overscroll-behavior-y: contain;
     overscroll-behavior-x: none;
     -webkit-overflow-scrolling: touch;
+    scroll-behavior: auto;
+    padding-bottom: calc(3.35rem + env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: 3.4rem;
+  }
+
+  .app-shell.is-mamul-page .app-container {
+    padding-bottom: 0.15rem;
   }
 
   .app-shell.is-mamul-page .app-route-stage {
@@ -3810,24 +3840,32 @@ a, button, [role="button"] {
   }
 
   .app-shell.is-mamul-page .app-panel {
-    padding: 0.58rem;
+    padding: 0.62rem;
+    border-radius: 0.95rem;
+    background: color-mix(in srgb, var(--app-surface) 82%, transparent 18%);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
   }
 
   .app-shell.is-mamul-page .app-mamul-card {
-    padding: 0.52rem 0.58rem;
-    gap: 0.34rem;
+    padding: 0.54rem 0.58rem;
+    gap: 0.3rem;
+    border-radius: 0.9rem;
+    background: color-mix(in srgb, var(--app-surface) 80%, transparent 20%);
+    border: 1px solid color-mix(in srgb, var(--app-border) 58%, white 42%);
   }
 
   .app-shell.is-mamul-page .app-mamul-card .app-mamul-primary {
-    font-size: 0.8rem;
-    line-height: 1.18;
+    font-size: 0.79rem;
+    line-height: 1.16;
     -webkit-line-clamp: 2;
     overflow-wrap: anywhere;
+    color: var(--app-primary-strong);
   }
 
   .app-shell.is-mamul-page .app-mamul-mobile-summary {
     grid-template-columns: minmax(0, 1fr);
-    gap: 0.42rem;
+    gap: 0.38rem;
+    align-items: start;
   }
 
   .app-shell.is-mamul-page .app-mamul-mobile-summary-meta {

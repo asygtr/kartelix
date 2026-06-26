@@ -5,7 +5,6 @@ import PageSearchBar from '../components/PageSearchBar';
 import { extractColorName, formatArticleLabel, resolveColorHex } from '../utils/labelTemplate';
 import { Upload, Trash2 } from '../components/icons.jsx';
 import { useHaptic } from '../utils/useHaptic';
-import PullToRefresh from '../components/PullToRefresh';
 import { SkeletonList } from '../components/Skeleton';
 import { normalizeGenelAyarlar, resolveDisplayPrice } from '../utils/generalSettings';
 import { useGenelAyarlar } from '../theme/ThemeProvider';
@@ -13,6 +12,20 @@ import { useGenelAyarlar } from '../theme/ThemeProvider';
 const emptyYarn = { iplik_tanim_id: '', iplik_adi: '', oran_yuzde: '', birim_fiyat: '' };
 const emptyProcess = { proses_tanim_id: '', proses_adi: '', proses_tipi: '', birim_maliyet: '', renk_bazli: false, aciklama: '' };
 const normalizeSearchValue = (value) => String(value || '').trim().toLowerCase();
+
+const scrollExpandedItemIntoView = (element) => {
+  if (!element || typeof window === 'undefined') return;
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.requestAnimationFrame(() => {
+    window.setTimeout(() => {
+      element.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        block: 'nearest',
+        inline: 'nearest'
+      });
+    }, 70);
+  });
+};
 
 const CURRENCIES = ['TRY', 'USD', 'EUR', 'GBP'];
 const CURRENCY_SYMBOLS = {
@@ -371,8 +384,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
         </div>
       ) : null}
 
-      <PullToRefresh onRefresh={fetchInitial}>
-        <div className="space-y-6">
+      <div className="space-y-6">
           <PageSearchBar
             className="app-searchbar-floating app-page-searchbar"
             value={searchTerm}
@@ -593,11 +605,11 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
             {selectedMamulDetail ? (
             <motion.section
               key={selectedMamulDetail.id}
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.97 }}
-              transition={{ duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}
-              className="app-panel p-6"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="app-panel p-4 sm:p-6"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className="text-xl font-semibold text-[color:var(--app-text)] break-words">Mamül detayı</h2>
@@ -764,191 +776,203 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
             </AnimatePresence>
 
             {!selectedMamulDetail ? (
-            <section className="app-panel p-6">
-              <div className="flex items-center justify-between gap-4">
-                <h2 className="text-xl font-semibold text-[color:var(--app-text)]">Kayıtlı mamüller</h2>
+            <section className="app-panel p-4 sm:p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-lg font-semibold text-[color:var(--app-text)]">Kayıtlı mamüller</h2>
                 <span className="text-sm text-[color:var(--app-text-muted)]">{mamulList.length} kayıt</span>
               </div>
-              <div className={`mt-5 app-mamul-list-shell${expandedDesktopMamulId ? ' is-desktop-expanded' : ''}`}>
-                <div className="app-table-head app-mamul-table hidden md:grid">
+
+              <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                <div className="hidden md:grid grid-cols-[minmax(0,1.6fr)_140px_minmax(0,1.1fr)_120px] gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2.5 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-slate-500">
                   <div>Mamül</div>
                   <div>Kayıt No</div>
                   <div>Tür / Renk</div>
                   <div>1 kg satış</div>
                 </div>
-                {filteredMamulList.map((item) => {
-                  const isExpanded = expandedDesktopMamulId === item.id;
-                  const displayListPrice = resolveDisplayPrice(item.bir_kg_maliyet, item.bir_kg_satis_fiyati, normalizedGenelAyarlar);
-                  const itemCurrency = item.para_birimi || 'TRY';
 
-                  return (
-                    <React.Fragment key={item.id}>
-                      <AnimatePresence initial={false}>
-                      {!isExpanded ? (
-                        <motion.button
-                          key="desktop-row"
-                          type="button"
-                          className="app-table-row app-mamul-table app-mamul-desktop-row hidden md:grid"
-                          aria-expanded={false}
-                          onClick={() => setExpandedDesktopMamulId(item.id)}
-                          initial={{ opacity: 0.92 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 0.14 }}
-                        >
-                          <div className="app-mamul-desktop-name">{item.mamul_adi}</div>
-                          <div className="app-mamul-desktop-muted">{formatArticleLabel(item.article_code, item.article_no)}</div>
-                          <div className="app-mamul-desktop-muted">
-                            {displayText(item.mamul_turu_adi)}{extractColorName(item.renk) ? ` · ${extractColorName(item.renk)}` : ''}
-                            {resolveColorHex(item) ? <span className="app-color-chip-swatch app-color-chip-swatch-mini" style={{ background: resolveColorHex(item) }} /> : null}
-                          </div>
-                          <div className="app-mamul-price">{formatMoney(displayListPrice, itemCurrency)}</div>
-                        </motion.button>
-                      ) : (
-                        <motion.div
-                          key="desktop-expanded"
-                          className="app-mamul-desktop-expanded hidden md:block"
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
-                        >
-                          <div className="app-mamul-expanded-card">
-                            <button
-                              type="button"
-                              className="app-mamul-expanded-main"
-                              aria-expanded={true}
-                              onClick={() => setExpandedDesktopMamulId(null)}
-                            >
-                              <div className="app-mamul-expanded-title-block">
-                                <div className="app-mamul-expanded-title">{item.mamul_adi}</div>
-                                <div className="app-mamul-expanded-subtitle">
-                                  {displayText(item.mamul_turu_adi)}{extractColorName(item.renk) ? ` · ${extractColorName(item.renk)}` : ''}
-                                  {resolveColorHex(item) ? <span className="app-color-chip-swatch app-color-chip-swatch-mini" style={{ background: resolveColorHex(item) }} /> : null}
+                <div className="max-h-[58vh] overflow-y-auto overscroll-contain md:max-h-[62vh] app-mamul-list-scroll">
+                  {filteredMamulList.map((item) => {
+                    const isExpanded = expandedDesktopMamulId === item.id;
+                    const displayListPrice = resolveDisplayPrice(item.bir_kg_maliyet, item.bir_kg_satis_fiyati, normalizedGenelAyarlar);
+                    const itemCurrency = item.para_birimi || 'TRY';
+
+                    return (
+                      <React.Fragment key={item.id}>
+                        <AnimatePresence initial={false}>
+                        {!isExpanded ? (
+                          <motion.button
+                            key="desktop-row"
+                            type="button"
+                            className="app-table-row app-mamul-table app-mamul-desktop-row hidden md:grid"
+                            aria-expanded={false}
+                            onClick={(event) => {
+                              setExpandedDesktopMamulId(item.id);
+                              scrollExpandedItemIntoView(event.currentTarget);
+                            }}
+                            initial={{ opacity: 0.96 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.12 }}
+                          >
+                            <div className="app-mamul-desktop-name">{item.mamul_adi}</div>
+                            <div className="app-mamul-desktop-muted">{formatArticleLabel(item.article_code, item.article_no)}</div>
+                            <div className="app-mamul-desktop-muted">
+                              {displayText(item.mamul_turu_adi)}{extractColorName(item.renk) ? ` · ${extractColorName(item.renk)}` : ''}
+                              {resolveColorHex(item) ? <span className="app-color-chip-swatch app-color-chip-swatch-mini" style={{ background: resolveColorHex(item) }} /> : null}
+                            </div>
+                            <div className="app-mamul-price">{formatMoney(displayListPrice, itemCurrency)}</div>
+                          </motion.button>
+                        ) : (
+                          <motion.div
+                            key="desktop-expanded"
+                            className="app-mamul-desktop-expanded hidden md:block"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.16, ease: 'easeOut' }}
+                          >
+                            <div className="app-mamul-expanded-card">
+                              <button
+                                type="button"
+                                className="app-mamul-expanded-main"
+                                aria-expanded={true}
+                                onClick={() => setExpandedDesktopMamulId(null)}
+                              >
+                                <div className="app-mamul-expanded-title-block">
+                                  <div className="app-mamul-expanded-title">{item.mamul_adi}</div>
+                                  <div className="app-mamul-expanded-subtitle">
+                                    {displayText(item.mamul_turu_adi)}{extractColorName(item.renk) ? ` · ${extractColorName(item.renk)}` : ''}
+                                    {resolveColorHex(item) ? <span className="app-color-chip-swatch app-color-chip-swatch-mini" style={{ background: resolveColorHex(item) }} /> : null}
+                                  </div>
+                                </div>
+                              </button>
+                              <div className="app-mamul-detail-grid">
+                                <div>
+                                  <div className="app-mamul-secondary-label">Kayıt No</div>
+                                  <div className="app-mamul-detail-value">{formatArticleLabel(item.article_code, item.article_no)}</div>
+                                </div>
+                                <div>
+                                  <div className="app-mamul-secondary-label">Kompozisyon</div>
+                                  <div className="app-mamul-detail-value">{displayText(item.kompozisyon_ozeti)}</div>
+                                </div>
+                                <div>
+                                  <div className="app-mamul-secondary-label">Ölçü</div>
+                                  <div className="app-mamul-detail-value">{item.en || item.gramaj ? `${item.en || EMPTY_LABEL} EN / ${item.gramaj || EMPTY_LABEL} GR` : EMPTY_LABEL}</div>
+                                </div>
+                                <div>
+                                  <div className="app-mamul-secondary-label">Maliyet</div>
+                                  <div className="app-mamul-detail-value">{formatMoney(item.bir_kg_maliyet, itemCurrency)}</div>
+                                </div>
+                                <div>
+                                  <div className="app-mamul-secondary-label">Satış</div>
+                                  <div className="app-mamul-detail-value app-mamul-detail-price">{formatMoney(displayListPrice, itemCurrency)}</div>
                                 </div>
                               </div>
-                            </button>
-                            <div className="app-mamul-detail-grid">
-                              <div>
-                                <div className="app-mamul-secondary-label">Kayıt No</div>
-                                <div className="app-mamul-detail-value">{formatArticleLabel(item.article_code, item.article_no)}</div>
-                              </div>
-                              <div>
-                                <div className="app-mamul-secondary-label">Kompozisyon</div>
-                                <div className="app-mamul-detail-value">{displayText(item.kompozisyon_ozeti)}</div>
-                              </div>
-                              <div>
-                                <div className="app-mamul-secondary-label">Ölçü</div>
-                                <div className="app-mamul-detail-value">{item.en || item.gramaj ? `${item.en || EMPTY_LABEL} EN / ${item.gramaj || EMPTY_LABEL} GR` : EMPTY_LABEL}</div>
-                              </div>
-                              <div>
-                                <div className="app-mamul-secondary-label">Maliyet</div>
-                                <div className="app-mamul-detail-value">{formatMoney(item.bir_kg_maliyet, itemCurrency)}</div>
-                              </div>
-                              <div>
-                                <div className="app-mamul-secondary-label">Satış</div>
-                                <div className="app-mamul-detail-value app-mamul-detail-price">{formatMoney(displayListPrice, itemCurrency)}</div>
+                              <div className="app-mamul-detail-actions" onClick={(event) => event.stopPropagation()}>
+                                <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary">Tam detay</button>
+                                <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary app-mamul-link-button">Görüntüle</a>
                               </div>
                             </div>
-                            <div className="app-mamul-detail-actions" onClick={(event) => event.stopPropagation()}>
-                              <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary">Tam detay</button>
+                          </motion.div>
+                        )}
+                        </AnimatePresence>
+                      </React.Fragment>
+                    );
+                  })}
+                  {filteredMamulList.map((item) => {
+                    const mobileDisplayPrice = resolveDisplayPrice(item.bir_kg_maliyet, item.bir_kg_satis_fiyati, normalizedGenelAyarlar);
+                    const mobileColorHex = resolveColorHex(item);
+                    const mobileColorName = extractColorName(item.renk);
+                    const mobileArticleNo = item.article_no || item.article_code || EMPTY_LABEL;
+
+                    return (
+                      <div
+                        key={`mobile-${item.id}`}
+                        className={`app-mamul-card md:hidden ${expandedMobileMamulId === item.id ? 'is-expanded' : ''}`}
+                      >
+                        <button
+                          type="button"
+                          className="app-mamul-mobile-summary"
+                          aria-expanded={expandedMobileMamulId === item.id}
+                          onClick={(event) => {
+                            const nextExpanded = expandedMobileMamulId !== item.id;
+                            setExpandedMobileMamulId(nextExpanded ? item.id : null);
+                            if (nextExpanded) {
+                              scrollExpandedItemIntoView(event.currentTarget.closest('.app-mamul-card'));
+                            }
+                          }}
+                        >
+                          <div className="app-mamul-primary">{item.mamul_adi}</div>
+                          <div className="app-mamul-mobile-summary-meta" aria-hidden={expandedMobileMamulId === item.id}>
+                            <span className="app-mamul-mobile-summary-item">
+                              <span className="app-mamul-mobile-summary-label">ARTICLE NO</span>
+                              <span className="app-mamul-mobile-summary-value">{mobileArticleNo}</span>
+                            </span>
+                            <span className="app-mamul-mobile-summary-item">
+                              <span className="app-mamul-mobile-summary-label">FİYAT</span>
+                              <strong className="app-mamul-mobile-summary-value">{formatMoney(mobileDisplayPrice, item.para_birimi)}</strong>
+                            </span>
+                            <span className="app-mamul-mobile-summary-item app-mamul-mobile-summary-color">
+                              <span className="app-mamul-mobile-summary-label">RENK</span>
+                              <span
+                                className="app-color-chip-swatch app-color-chip-swatch-mini"
+                                title={displayText(mobileColorName)}
+                                style={{ background: mobileColorHex || 'linear-gradient(135deg, var(--app-surface-soft), var(--app-border))' }}
+                              />
+                            </span>
+                          </div>
+                        </button>
+
+                        <AnimatePresence initial={false}>
+                        {expandedMobileMamulId === item.id ? (
+                          <motion.div
+                            key="mobile-details"
+                            className="app-mamul-mobile-expand"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.16, ease: 'easeOut' }}
+                          >
+                            <div className="app-mamul-mobile-grid">
+                              <div className="app-mamul-mobile-field">
+                                <div className="app-mamul-secondary-label">ARTICLE NO</div>
+                                <div className="app-mamul-mobile-value">{mobileArticleNo}</div>
+                              </div>
+                              <div className="app-mamul-mobile-field">
+                                <div className="app-mamul-secondary-label">Satış</div>
+                                <div className="app-mamul-mobile-value app-mamul-mobile-value-success">{formatMoney(mobileDisplayPrice, item.para_birimi)}</div>
+                              </div>
+                              <div className="app-mamul-mobile-field">
+                                <div className="app-mamul-secondary-label">Tür</div>
+                                <div className="app-mamul-mobile-value app-mamul-mobile-value-muted">{displayText(item.mamul_turu_adi)}</div>
+                              </div>
+                              <div className="app-mamul-mobile-field">
+                                <div className="app-mamul-secondary-label">Renk</div>
+                                <div className="app-mamul-mobile-value app-mamul-mobile-value-muted">
+                                  <span>{displayText(mobileColorName)}</span>
+                                  {mobileColorHex ? <span className="app-color-chip-swatch app-color-chip-swatch-mini" style={{ background: mobileColorHex }} /> : null}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="app-mamul-actions" onClick={(event) => event.stopPropagation()}>
+                              <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary">Detay</button>
                               <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary app-mamul-link-button">Görüntüle</a>
                             </div>
-                          </div>
-                        </motion.div>
-                      )}
-                      </AnimatePresence>
-                    </React.Fragment>
-                  );
-                })}
-                {filteredMamulList.map((item) => {
-                  const mobileDisplayPrice = resolveDisplayPrice(item.bir_kg_maliyet, item.bir_kg_satis_fiyati, normalizedGenelAyarlar);
-                  const mobileColorHex = resolveColorHex(item);
-                  const mobileColorName = extractColorName(item.renk);
-                  const mobileArticleNo = item.article_no || item.article_code || EMPTY_LABEL;
-
-                  return (
-                  <div
-                    key={`mobile-${item.id}`}
-                    className={`app-mamul-card md:hidden ${expandedMobileMamulId === item.id ? 'is-expanded' : ''}`}
-                  >
-                    <button
-                      type="button"
-                      className="app-mamul-mobile-summary"
-                      aria-expanded={expandedMobileMamulId === item.id}
-                      onClick={() => setExpandedMobileMamulId((currentId) => (currentId === item.id ? null : item.id))}
-                    >
-                      <div className="app-mamul-primary">{item.mamul_adi}</div>
-                      <div className="app-mamul-mobile-summary-meta" aria-hidden={expandedMobileMamulId === item.id}>
-                        <span className="app-mamul-mobile-summary-item">
-                          <span className="app-mamul-mobile-summary-label">ARTICLE NO</span>
-                          <span className="app-mamul-mobile-summary-value">{mobileArticleNo}</span>
-                        </span>
-                        <span className="app-mamul-mobile-summary-item">
-                          <span className="app-mamul-mobile-summary-label">FİYAT</span>
-                          <strong className="app-mamul-mobile-summary-value">{formatMoney(mobileDisplayPrice, item.para_birimi)}</strong>
-                        </span>
-                        <span className="app-mamul-mobile-summary-item app-mamul-mobile-summary-color">
-                          <span className="app-mamul-mobile-summary-label">RENK</span>
-                          <span
-                            className="app-color-chip-swatch app-color-chip-swatch-mini"
-                            title={displayText(mobileColorName)}
-                            style={{ background: mobileColorHex || 'linear-gradient(135deg, var(--app-surface-soft), var(--app-border))' }}
-                          />
-                        </span>
+                          </motion.div>
+                        ) : null}
+                        </AnimatePresence>
                       </div>
-                    </button>
-
-                    <AnimatePresence initial={false}>
-                    {expandedMobileMamulId === item.id ? (
-                      <motion.div
-                        key="mobile-details"
-                        className="app-mamul-mobile-expand"
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }}
-                      >
-                        <div className="app-mamul-mobile-grid">
-                          <div className="app-mamul-mobile-field">
-                            <div className="app-mamul-secondary-label">ARTICLE NO</div>
-                            <div className="app-mamul-mobile-value">{mobileArticleNo}</div>
-                          </div>
-                          <div className="app-mamul-mobile-field">
-                            <div className="app-mamul-secondary-label">Satış</div>
-                            <div className="app-mamul-mobile-value app-mamul-mobile-value-success">{formatMoney(mobileDisplayPrice, item.para_birimi)}</div>
-                          </div>
-                          <div className="app-mamul-mobile-field">
-                            <div className="app-mamul-secondary-label">Tür</div>
-                            <div className="app-mamul-mobile-value app-mamul-mobile-value-muted">{displayText(item.mamul_turu_adi)}</div>
-                          </div>
-                          <div className="app-mamul-mobile-field">
-                            <div className="app-mamul-secondary-label">Renk</div>
-                            <div className="app-mamul-mobile-value app-mamul-mobile-value-muted">
-                              <span>{displayText(mobileColorName)}</span>
-                              {mobileColorHex ? <span className="app-color-chip-swatch app-color-chip-swatch-mini" style={{ background: mobileColorHex }} /> : null}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="app-mamul-actions" onClick={(event) => event.stopPropagation()}>
-                          <button type="button" onClick={() => showMamulDetail(item.id)} className="app-btn-secondary">Detay</button>
-                          <a href={`/u/${item.qr_slug}`} target="_blank" rel="noreferrer" className="app-btn-secondary app-mamul-link-button">Görüntüle</a>
-                        </div>
-                      </motion.div>
-                    ) : null}
-                    </AnimatePresence>
-                  </div>
-                  );
-                })}
-                {listLoading ? <SkeletonList count={4} /> : null}
-                {!listLoading && filteredMamulList.length === 0 ? (
-                  <div className="app-soft-panel m-3 px-4 py-4 text-sm text-[color:var(--app-text-muted)]">Henüz mamül kaydı yok.</div>
-                ) : null}
+                    );
+                  })}
+                  {listLoading ? <SkeletonList count={4} /> : null}
+                  {!listLoading && filteredMamulList.length === 0 ? (
+                    <div className="app-soft-panel m-3 px-4 py-4 text-sm text-[color:var(--app-text-muted)]">Henüz mamül kaydı yok.</div>
+                  ) : null}
+                </div>
               </div>
             </section>
             ) : null}
         </div>
-      </PullToRefresh>
     </>
   );
 };
