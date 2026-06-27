@@ -150,6 +150,9 @@ const PublicMamulPage = ({ mode = 'public' }) => {
   const [lang, setLang] = useState('TR');
   const [genelAyarlar, setGenelAyarlar] = useState(null);
   const [shareMsg, setShareMsg] = useState('');
+  const [isMobileViewport, setIsMobileViewport] = useState(() => (
+    typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
+  ));
   const pageRef = useRef(null);
   const t = T[lang];
 
@@ -178,6 +181,14 @@ const PublicMamulPage = ({ mode = 'public' }) => {
     }).catch(err => setError(err.message))
       .finally(() => setLoading(false));
   }, [slug, isInternal]);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 768px)');
+    const updateViewport = () => setIsMobileViewport(media.matches);
+    updateViewport();
+    media.addEventListener('change', updateViewport);
+    return () => media.removeEventListener('change', updateViewport);
+  }, []);
 
   const P    = useMemo(() => resolveColorPalette(mamul?.renk), [mamul?.renk]);
   const dark = isDarkPalette(P);
@@ -412,10 +423,10 @@ const PublicMamulPage = ({ mode = 'public' }) => {
       </div>
 
       {/* â”€â”€ İçerik â”€â”€ */}
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: '36rem', margin: '0 auto', padding: '0 1rem 5rem' }}>
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: isMobileViewport ? '100%' : '36rem', margin: '0 auto', padding: isMobileViewport ? '0 0 5rem' : '0 1rem 5rem' }}>
 
         {/* ╔╔ HERO ╔╔ */}
-        <motion.section style={{ y: heroY, opacity: heroOpacity, scale: heroScale, paddingTop: '1.5rem', paddingBottom: '1.5rem', willChange: 'transform' }}>
+        <motion.section style={{ y: heroY, opacity: heroOpacity, scale: heroScale, paddingTop: '1.5rem', paddingBottom: '1.5rem', willChange: 'transform', paddingLeft: isMobileViewport ? '1rem' : 'auto', paddingRight: isMobileViewport ? '1rem' : 'auto' }}>
 
           {/* Ust bar: geri / marka + dil toggle + paylas */}
           <motion.div
@@ -575,6 +586,34 @@ const PublicMamulPage = ({ mode = 'public' }) => {
           )}
         </motion.section>
 
+        {/* ╔╔ HİKAYE ╔╔ */}
+        {story && (
+          <Reveal delay={0.04}>
+            <div style={{
+              ...cardStyle(P, dark),
+              marginBottom: '0.85rem',
+              ...(isMobileViewport ? {
+                width: '100vw',
+                marginLeft: 'calc(-50vw + 50%)',
+                marginRight: 'calc(-50vw + 50%)',
+                paddingLeft: '1.5rem',
+                paddingRight: '1.5rem',
+                borderRadius: '0',
+                borderTopLeftRadius: '0',
+                borderTopRightRadius: '0',
+                borderBottomLeftRadius: '1.1rem',
+                borderBottomRightRadius: '1.1rem',
+              } : {}),
+            }}>
+              <SectionLabel P={P}>{t.fabric}</SectionLabel>
+              <p style={{ margin: '0.7rem 0 0', fontSize: '0.9rem', lineHeight: 1.82, color: P.textMuted }}>{story}</p>
+            </div>
+          </Reveal>
+        )}
+
+        {/* Mobil içerik wrapper */}
+        <div style={{ ...(isMobileViewport ? { paddingLeft: '1rem', paddingRight: '1rem' } : {}) }}>
+
         {/* ╔╔ GÖRSEL (büyük – varsa) ╔╔ */}
         {gorselUrl && (
           <Reveal delay={0.03}>
@@ -584,16 +623,6 @@ const PublicMamulPage = ({ mode = 'public' }) => {
                 alt={mamul.mamul_adi}
                 style={{ width: '100%', display: 'block', maxHeight: '22rem', objectFit: 'cover' }}
               />
-            </div>
-          </Reveal>
-        )}
-
-        {/* ╔╔ HİKAYE ╔╔ */}
-        {story && (
-          <Reveal delay={0.04}>
-            <div style={{ ...cardStyle(P, dark), marginBottom: '0.85rem' }}>
-              <SectionLabel P={P}>{t.fabric}</SectionLabel>
-              <p style={{ margin: '0.7rem 0 0', fontSize: '0.9rem', lineHeight: 1.82, color: P.textMuted }}>{story}</p>
             </div>
           </Reveal>
         )}
@@ -717,6 +746,8 @@ const PublicMamulPage = ({ mode = 'public' }) => {
             <div style={{ fontSize: '0.58rem', color: P.textMuted, marginTop: '0.25rem', letterSpacing: '0.06em' }}>Tekstil Showroom</div>
           </motion.div>
         )}
+
+        </div>
 
       </div>
     </div>

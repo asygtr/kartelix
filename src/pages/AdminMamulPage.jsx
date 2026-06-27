@@ -790,7 +790,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                   <div>1 kg satış</div>
                 </div>
 
-                <div className="max-h-[58vh] overflow-y-auto md:max-h-[62vh] app-mamul-list-scroll">
+                <div className="max-h-[58vh] overflow-y-auto md:max-h-[62vh] app-mamul-list-scroll" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
                   {filteredMamulList.map((item) => {
                     const isExpanded = expandedDesktopMamulId === item.id;
                     const displayListPrice = resolveDisplayPrice(item.bir_kg_maliyet, item.bir_kg_satis_fiyati, normalizedGenelAyarlar);
