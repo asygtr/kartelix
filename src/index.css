@@ -2657,6 +2657,12 @@ code {
   .app-mamul-card .app-mamul-actions {
     margin-top: 0.15rem;
   }
+
+  .app-mamul-list-scroll {
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+  }
 }
 
 @media (max-width: 1024px) {
