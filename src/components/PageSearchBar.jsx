@@ -27,11 +27,21 @@ const PageSearchBar = ({
   const [canUseQr] = useState(() => isMobileCameraDevice());
   const [dropdownRect, setDropdownRect] = useState(null);
   const [focused, setFocused] = useState(false);
+  const [isMobileScreen, setIsMobileScreen] = useState(false);
   const fieldRef = useRef(null);
 
   useEffect(() => {
     setHighlightedIndex(results.length > 0 ? 0 : -1);
   }, [results, value]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(max-width: 767px)');
+    const update = () => setIsMobileScreen(media.matches);
+    update();
+    media.addEventListener?.('change', update);
+    return () => media.removeEventListener?.('change', update);
+  }, []);
 
   useEffect(() => {
     if (showResults && fieldRef.current) {
@@ -67,7 +77,7 @@ const PageSearchBar = ({
           <input
             value={value}
             onChange={(event) => onChange(event.target.value)}
-            placeholder={placeholder}
+            placeholder={isMobileScreen ? '' : placeholder}
             className="app-input app-searchbar-input"
             onKeyDown={(event) => {
               if (!showResults || results.length === 0) return;

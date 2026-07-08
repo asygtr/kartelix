@@ -260,7 +260,7 @@ const ReportsPage = () => {
                     <div style={{ fontSize: '0.65rem', color: 'var(--app-text-muted)' }}>{item.article_code}</div>
                   </div>
                   <div style={{ fontSize: '0.88rem', fontWeight: 900, color: COLORS[i % COLORS.length], flexShrink: 0 }}>
-                    {item.okutulma}×
+                    {item.okutulma}
                   </div>
                 </div>
               ))}

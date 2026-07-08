@@ -65,6 +65,16 @@ const AppNavbar = ({ title, action, onLogout, searchOpen, setSearchOpen, compact
   const [searchResult, setSearchResult] = useState(null);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [canUseMobileQr] = useState(() => isMobileCameraDevice());
+  const [isMobileScreen, setIsMobileScreen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(max-width: 767px)');
+    const update = () => setIsMobileScreen(media.matches);
+    update();
+    media.addEventListener?.('change', update);
+    return () => media.removeEventListener?.('change', update);
+  }, []);
 
   useEffect(() => {
     if (searchOpen) {
@@ -238,7 +248,7 @@ const AppNavbar = ({ title, action, onLogout, searchOpen, setSearchOpen, compact
               <input
                 value={searchValue}
                 onChange={(event) => setSearchValue(event.target.value)}
-                placeholder="Article code, article no veya QR değeri"
+                placeholder={isMobileScreen ? '' : 'Article code, article no veya QR değeri'}
                 className="app-input app-searchbar-input"
               />
               <div className="app-searchbar-actions">
