@@ -64,9 +64,9 @@ const MobileBottomNav = ({ items = [], location, searchOpen, onSearchClick, comp
       aria-label="Mobil alt gezinme"
       initial={false}
       animate={{
-        scale: compact ? 0.91 : 1,
-        y: compact ? 5 : 0,
-        opacity: compact ? 0.92 : 1,
+        scale: compact ? 0.945 : 1,
+        y: compact ? 10 : 0,
+        opacity: compact ? 0.88 : 1,
       }}
       transition={chromeSpring}
     >

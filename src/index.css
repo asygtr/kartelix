@@ -70,6 +70,7 @@ code {
   -webkit-overflow-scrolling: touch;
   word-break: break-word;
   width: 100%;
+  transition: padding-top 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .app-shell.is-chrome-compact .app-page {
@@ -191,12 +192,14 @@ code {
   z-index: 1000;
   transform-origin: 50% 0%;
   will-change: transform, padding, box-shadow;
+  transition: box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1), padding 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .app-nav-shell.is-compact {
   padding-top: 0.42rem;
   padding-bottom: 0.34rem;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  opacity: 0.98;
 }
 
 .app-nav-top {
@@ -711,6 +714,7 @@ code {
   contain: layout paint;
   transform-origin: 50% 100%;
   will-change: transform, opacity;
+  transition: box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .app-mobile-bottom-nav.is-compact {

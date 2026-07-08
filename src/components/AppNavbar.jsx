@@ -126,8 +126,9 @@ const AppNavbar = ({ title, action, onLogout, searchOpen, setSearchOpen, compact
       className={`app-nav-shell${compact ? ' is-compact' : ''}`}
       initial={false}
       animate={{
-        y: compact ? -3 : 0,
-        scaleY: compact ? 0.965 : 1,
+        y: compact ? -6 : 0,
+        scaleY: compact ? 0.978 : 1,
+        opacity: compact ? 0.92 : 1,
       }}
       transition={chromeSpring}
       style={{ transformOrigin: '50% 0%' }}

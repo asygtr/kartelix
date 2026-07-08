@@ -47,9 +47,11 @@ export const navTapMotion = {
 
 export const chromeSpring = {
   type: 'spring',
-  stiffness: 460,
-  damping: 42,
-  mass: 0.82,
+  stiffness: 480,
+  damping: 32,
+  mass: 0.72,
+  restDelta: 0.4,
+  restSpeed: 0.6,
 };
 
 export const routeVariants = {
