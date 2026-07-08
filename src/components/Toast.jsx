@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { defaultEase } from '../utils/motion';
 import { CheckCircle, XCircle, Info } from './icons.jsx';
 
 const ToastContext = createContext(null);

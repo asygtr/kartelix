@@ -9,7 +9,6 @@ import { SkeletonList } from '../components/Skeleton';
 import { normalizeGenelAyarlar, resolveDisplayPrice } from '../utils/generalSettings';
 import { useGenelAyarlar } from '../theme/ThemeProvider';
 import { defaultEase } from '../utils/motion';
-import { defaultEase } from '../utils/motion';
 
 const emptyYarn = { iplik_tanim_id: '', iplik_adi: '', oran_yuzde: '', birim_fiyat: '' };
 const emptyProcess = { proses_tanim_id: '', proses_adi: '', proses_tipi: '', birim_maliyet: '', renk_bazli: false, aciklama: '' };

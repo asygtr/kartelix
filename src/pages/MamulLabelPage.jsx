@@ -5,7 +5,7 @@ import MamulEtiketModal from '../components/MamulEtiketModal';
 import PageSearchBar from '../components/PageSearchBar';
 import { defaultLabelTemplate, formatArticleLabel, mergeLabelTemplate, printLabels } from '../utils/labelTemplate';
 import { authHeaders } from '../utils/auth';
-import { chromeSpring } from '../utils/motion';
+import { chromeSpring, defaultEase } from '../utils/motion';
 
 const normalizeSearchValue = (value) => String(value || '').trim().toLowerCase();
 
