@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { motion, useScroll, useTransform, useSpring, useInView } from 'framer-motion';
 import { resolveColorPalette, isDarkPalette } from '../utils/colorPalette';
 import { authHeaders } from '../utils/auth';
+import { useTheme } from '../theme/ThemeProvider';
 
 const v = (val) => String(val || '').trim() || null;
 const EASE = [0.16, 1, 0.3, 1];
@@ -154,6 +155,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
     typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
   ));
   const pageRef = useRef(null);
+  const { appLogo } = useTheme();
   const t = T[lang];
 
   const { scrollY } = useScroll({ container: pageRef });
@@ -177,7 +179,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
     ]).then(([mamulRes, ayarRes]) => {
       if (!mamulRes.success) throw new Error(mamulRes.error || 'Bulunamadı');
       setMamul(mamulRes.data);
-      setGenelAyarlar(ayarRes.success ? ayarRes.data : { publicProsesGoster: false, publicFiyatGoster: false, publicHikayeGoster: true, karYuzdesi: 0 });
+      setGenelAyarlar(ayarRes.success ? ayarRes.data : { publicProsesGoster: false, publicFiyatGoster: false, publicHikayeGoster: true, publicHammaddeGoster: true, karYuzdesi: 0 });
     }).catch(err => setError(err.message))
       .finally(() => setLoading(false));
   }, [slug, isInternal]);
@@ -228,14 +230,17 @@ const PublicMamulPage = ({ mode = 'public' }) => {
 
   if (loading || genelAyarlar === null) return (
     <div style={{ minHeight: isInternal ? '60vh' : '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isInternal ? 'transparent' : '#f3efe7' }}>
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
-        {[0,1,2].map(i => (
-          <motion.div key={i}
-            style={{ width: 8, height: 8, borderRadius: '50%', background: '#b9793a' }}
-            animate={{ y: [0, -10, 0] }}
-            transition={{ duration: 0.8, delay: i * 0.15, repeat: Infinity }}
-          />
-        ))}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+        <img src={appLogo} alt='Kartelix' style={{ width: 72, height: 'auto', objectFit: 'contain', borderRadius: 14, background: 'white', padding: 8 }} />
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {[0,1,2].map(i => (
+            <motion.div key={i}
+              style={{ width: 8, height: 8, borderRadius: '50%', background: '#b9793a' }}
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 0.8, delay: i * 0.15, repeat: Infinity }}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -455,7 +460,17 @@ const PublicMamulPage = ({ mode = 'public' }) => {
                 <span>Geri</span>
               </button>
             ) : (
-              <span style={{ fontSize: '0.6rem', fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase', color: P.accent, opacity: 0.75 }}>KARTELIX</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <img
+                  src={appLogo}
+                  alt='Kartelix'
+                  style={{ width: 34, height: 34, objectFit: 'contain', borderRadius: 10, background: dark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.9)', padding: 4 }}
+                />
+                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: P.accent, opacity: 0.85 }}>KARBOY - NEVRES</span>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: P.accent, opacity: 0.9 }}>KARTELIX</span>
+                </div>
+              </div>
             )}
 
             {!isInternal ? (

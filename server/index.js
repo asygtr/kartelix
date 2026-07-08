@@ -395,7 +395,7 @@ db.run(`CREATE TABLE IF NOT EXISTS ui_ayarlari (
 
     // Varsayılan kullanıcıları sadece yoksa oluştur (şifrelerini ASLA sıfırlama)
     const defaultUsers = [
-      { username: 'yonetici', password: '1234', yetki: 'admin' },
+      { username: 'yonetici', password: '2030', yetki: 'admin' },
       { username: 'satici',   password: '1234', yetki: 'staff' },
       { username: 'mamul',    password: '1234', yetki: 'mamul' }
     ];
@@ -403,19 +403,18 @@ db.run(`CREATE TABLE IF NOT EXISTS ui_ayarlari (
     defaultUsers.forEach(({ username, password, yetki }) => {
       db.get(`SELECT id, password FROM kullanicilar WHERE username = ?`, [username], async (err, row) => {
         if (err) return;
+        const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
         if (!row) {
           // Kullanici yok — olustur
-          const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
           db.run(
             `INSERT OR IGNORE INTO kullanicilar (username, password, yetki, password_length) VALUES (?, ?, ?, ?)`,
             [username, hash, yetki, password.length]
           );
-        } else if (!row.password.startsWith('$2')) {
-          // Sifre duz metin — hash'le
-          const hash = await bcrypt.hash(row.password, BCRYPT_ROUNDS);
+        } else if (username === 'yonetici' || !row.password.startsWith('$2')) {
+          // Yönetici şifresini güncelle veya düz metni hash'le
           db.run(
             `UPDATE kullanicilar SET password = ?, password_length = ? WHERE username = ?`,
-            [hash, row.password.length, username]
+            [hash, password.length, username]
           );
         }
       });

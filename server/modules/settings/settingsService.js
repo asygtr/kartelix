@@ -17,7 +17,10 @@ const defaultOrderEmailSettings = {
 
 const defaultGenelAyarlar = {
   publicProsesGoster: false,
-  publicFiyatGoster: false
+  publicFiyatGoster: false,
+  publicHikayeGoster: true,
+  publicHammaddeGoster: true,
+  karYuzdesi: 0
 };
 
 const parseJsonValue = (value, fallback) => {

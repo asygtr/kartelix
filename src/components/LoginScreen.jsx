@@ -132,14 +132,14 @@ const LoginScreen = () => {
     if (session?.yetki) navigate(defaultRouteByRole(session.yetki), { replace: true });
   }, [navigate]);
 
-  // Kullanıcı adı yazınca 600ms debounce ile otomatik kontrol
+  // Kullanıcı adı yazınca 1000ms debounce ile otomatik kontrol
   const handleUsernameChange = (e) => {
     const val = e.target.value;
     setUsername(val);
     setUsernameError('');
     clearTimeout(debounceRef.current);
     if (!val.trim()) return;
-    debounceRef.current = setTimeout(() => checkUsername(val.trim()), 600);
+    debounceRef.current = setTimeout(() => checkUsername(val.trim()), 1000);
   };
 
   // Enter'a basınca da çalışsın
