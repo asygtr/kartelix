@@ -755,7 +755,7 @@ const SettingsPage = () => {
       form: (
         <div className="space-y-4">
           <div className="app-soft-panel p-4">
-            <label className="flex items-center justify-between gap-4">
+            <label className="app-toggle-row">
               <span className="text-sm font-semibold text-[color:var(--app-text)]">Otomatik sipariş e-postası</span>
               <ToggleSwitch
                 id="switch-email-enabled"
@@ -852,7 +852,7 @@ const SettingsPage = () => {
               <div className="mt-1 text-xs text-slate-500">Sipariş tamamlandığında bu adreslere kurumsal onay bildirimi gönderilir.</div>
             </label>
             <div className="app-soft-panel p-4">
-              <label className="flex items-center justify-between gap-4">
+              <label className="app-toggle-row">
                 <div>
                   <div className="text-sm font-semibold text-[color:var(--app-text)]">Onay mailinde fiyatları göster</div>
                   <div className="mt-0.5 text-xs text-slate-500">Kapalıysa tutar ve birim fiyat sütunları onay mailinde yer almaz.</div>
@@ -1073,7 +1073,7 @@ const SettingsPage = () => {
                 value={genelAyarlar.karYuzdesi ?? 0}
                 onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, karYuzdesi: Number(e.target.value) || 0 })} />
             </label>
-            <label className="flex items-center justify-between gap-4">
+            <label className="app-toggle-row">
               <div>
                 <div className="text-sm font-medium text-[color:var(--app-text)]">Kumaş Hikayesini göster</div>
                 <div className="mt-0.5 text-xs text-slate-500">Müşteri QR/link sayfasında Kumaş Hikayesi bölümü görünsün.</div>
@@ -1084,7 +1084,7 @@ const SettingsPage = () => {
                 onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicHikayeGoster: e.target.checked })}
               />
             </label>
-            <label className="flex items-center justify-between gap-4">
+            <label className="app-toggle-row">
               <div>
                 <div className="text-sm font-medium text-[color:var(--app-text)]">Hammadde bilgisini göster</div>
                 <div className="mt-0.5 text-xs text-slate-500">Müşteri QR/link sayfasında iplik reçetesi görünsün.</div>
@@ -1095,7 +1095,7 @@ const SettingsPage = () => {
                 onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicHammaddeGoster: e.target.checked })}
               />
             </label>
-            <label className="flex items-center justify-between gap-4">
+            <label className="app-toggle-row">
               <div>
                 <div className="text-sm font-medium text-[color:var(--app-text)]">Proses bilgisini göster</div>
                 <div className="mt-0.5 text-xs text-slate-500">Müşteri QR/link sayfasında üretim prosesleri görünsün.</div>
@@ -1106,7 +1106,7 @@ const SettingsPage = () => {
                 onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicProsesGoster: e.target.checked })}
               />
             </label>
-            <label className="flex items-center justify-between gap-4">
+            <label className="app-toggle-row">
               <div>
                 <div className="text-sm font-medium text-[color:var(--app-text)]">1 kg satış fiyatını göster</div>
                 <div className="mt-0.5 text-xs text-slate-500">Müşteri QR/link sayfasında ve arama sonucunda satış fiyatı görünsün.</div>
