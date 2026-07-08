@@ -1365,6 +1365,7 @@ code {
   display: inline-flex;
   width: 100%;
   height: 100%;
+  padding: 0.12rem;
   border-radius: 999px;
   background: #f2f4f7;
   border: 1px solid rgba(148, 163, 184, 0.4);
@@ -1374,10 +1375,10 @@ code {
 
 .app-toggle-switch-thumb {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 1.25rem;
-  height: 1.25rem;
+  top: 0.12rem;
+  left: 0.12rem;
+  width: calc(1.75rem - 0.24rem);
+  height: calc(1.75rem - 0.24rem);
   border-radius: 999px;
   background: white;
   box-shadow: 0 4px 10px rgba(15, 23, 42, 0.14);
@@ -1393,7 +1394,7 @@ code {
 }
 
 .app-toggle-switch-input:checked + .app-toggle-switch-track .app-toggle-switch-thumb {
-  transform: translateX(calc(100% - 1.25rem - 4px));
+  transform: translateX(calc(100% - 1.75rem));
 }
 
 .app-toggle-switch-input:focus-visible + .app-toggle-switch-track {
