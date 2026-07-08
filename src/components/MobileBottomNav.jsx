@@ -1,7 +1,8 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { chromeSpring, navIndicatorTransition, navTapMotion } from '../utils/motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { chromeSpring, navIndicatorTransition, navTapMotion, iosEase } from '../utils/motion';
+import { useHaptic } from '../utils/useHaptic';
 
 const MotionLink = motion.create(Link);
 
@@ -22,6 +23,8 @@ const MobileBottomNav = ({ items = [], location, searchOpen, onSearchClick, comp
   const navRef = useRef(null);
   const itemRefs = useRef([]);
   const [indicator, setIndicator] = useState(null);
+  const haptic = useHaptic();
+  const prevActiveIndex = useRef(-1);
 
   const activeIndex = items.findIndex((item) => isMobileNavActive(location.pathname, item, searchOpen));
 
@@ -97,11 +100,16 @@ const MobileBottomNav = ({ items = [], location, searchOpen, onSearchClick, comp
               key={item.key}
               type="button"
               className={cls}
-              onClick={() => onSearchClick?.(item)}
+              onClick={() => { haptic.light(); onSearchClick?.(item); }}
               whileTap={navTapMotion}
               ref={(node) => { itemRefs.current[index] = node; }}
             >
-              {inner}
+              <motion.span
+                className="app-mobile-nav-icon"
+                animate={isActive ? { y: -3, scale: 1.18 } : { y: 0, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+              >{item.icon}</motion.span>
+              <span className="app-mobile-nav-label">{item.label}</span>
             </motion.button>
           );
         }
@@ -128,9 +136,15 @@ const MobileBottomNav = ({ items = [], location, searchOpen, onSearchClick, comp
             to={item.to}
             className={cls}
             whileTap={navTapMotion}
+            onClick={() => haptic.light()}
             ref={(node) => { itemRefs.current[index] = node; }}
           >
-            {inner}
+            <motion.span
+              className="app-mobile-nav-icon"
+              animate={isActive ? { y: -3, scale: 1.18 } : { y: 0, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+            >{item.icon}</motion.span>
+            <span className="app-mobile-nav-label">{item.label}</span>
           </MotionLink>
         );
       })}

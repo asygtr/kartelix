@@ -80,7 +80,7 @@ const createEmptyForm = () => ({
   gorselUrl: '',
   vurguEtiketi: '',
   birKgSatisFiyati: '',
-  paraBirimi: 'TRY',
+  paraBirimi: 'USD',
   aktif: true,
   iplikler: [{ ...emptyYarn }],
   prosesler: [{ ...emptyProcess }]

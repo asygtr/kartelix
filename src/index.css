@@ -71,6 +71,12 @@ code {
   word-break: break-word;
   width: 100%;
   transition: padding-top 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+}
+
+.app-route-wrapper {
+  width: 100%;
+  min-height: 100%;
 }
 
 .app-shell.is-chrome-compact .app-page {
@@ -109,18 +115,15 @@ code {
 .app-route-stage {
   position: relative;
   isolation: isolate;
-  display: grid;
-  overflow: hidden;
-  contain: layout paint;
+  overflow: visible;
+  contain: none;
 }
 
 .app-route-view {
-  grid-area: 1 / 1;
   width: 100%;
   min-width: 0;
   transform: translateZ(0);
   backface-visibility: hidden;
-  transform-style: preserve-3d;
   will-change: transform;
 }
 
@@ -3719,6 +3722,18 @@ html, body {
 a, button, [role="button"] {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+}
+
+/* ─── Keyboard avoiding ─── */
+.app-shell.is-keyboard-open .app-mobile-bottom-nav {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(120%);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.app-shell.is-keyboard-open .app-page {
+  padding-bottom: 1rem;
 }
 
 /* ─── Pull-to-refresh ─── */

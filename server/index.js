@@ -525,7 +525,7 @@ db.run(`CREATE TABLE IF NOT EXISTS ui_ayarlari (
     ensureColumnExists('mamul_kartlari', 'koleksiyon_adi', `TEXT`);
     ensureColumnExists('mamul_kartlari', 'yayin_durumu', `TEXT DEFAULT 'taslak'`);
     ensureColumnExists('mamul_kartlari', 'bakim_talimatlari', `TEXT`);
-    ensureColumnExists('mamul_kartlari', 'para_birimi', `TEXT DEFAULT 'TRY'`);
+    ensureColumnExists('mamul_kartlari', 'para_birimi', `TEXT DEFAULT 'USD'`);
 
     ensureColumnExists('kullanicilar', 'password_length', 'INTEGER DEFAULT 4');
   });
@@ -1406,7 +1406,7 @@ app.post('/api/admin/mamuller', requireAuth(['admin']), (req, res, next) => {
     vurguEtiketi,
     bakimTalimatlari,
     birKgSatisFiyati,
-    paraBirimi = 'TRY',
+    paraBirimi = 'USD',
     aktif = true,
     iplikler = [],
     prosesler = []
@@ -1565,7 +1565,7 @@ app.put('/api/admin/mamuller/:id', requireAuth(['admin']), (req, res, next) => {
     vurguEtiketi,
     bakimTalimatlari,
     birKgSatisFiyati,
-    paraBirimi = 'TRY',
+    paraBirimi = 'USD',
     aktif = true,
     iplikler = [],
     prosesler = []

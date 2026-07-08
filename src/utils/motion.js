@@ -16,8 +16,9 @@ export const defaultSpring = {
 };
 
 export const pageTransition = {
-  duration: 0.18,
-  ease: defaultEase,
+  type: 'tween',
+  duration: 0.32,
+  ease: iosEase,
 };
 
 export const sheetTransition = {
@@ -28,8 +29,10 @@ export const sheetTransition = {
 };
 
 export const navIndicatorTransition = {
-  duration: 0.22,
-  ease: iosEase,
+  type: 'spring',
+  stiffness: 500,
+  damping: 36,
+  mass: 0.7,
 };
 
 export const tapMotion = {
@@ -54,41 +57,30 @@ export const chromeSpring = {
   restSpeed: 0.6,
 };
 
-export const routeVariants = {
-  enter: ({ direction = 1, travel = 1, isDesktop = false } = {}) => {
-    if (isDesktop) {
-      return {
-        x: direction > 0 ? 18 : -18,
-        opacity: 0,
-        filter: 'blur(0.8px)',
-      };
-    }
+// stagger config for list items
+export const listContainerVariants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.05, delayChildren: 0.04 } },
+};
 
-    return {
-      x: direction > 0 ? 10 : -10,
-      opacity: 0,
-      filter: 'blur(0px)',
-    };
+export const listItemVariants = {
+  hidden: { opacity: 0, y: 14 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.32, ease: iosEase } },
+};
+
+export const routeVariants = {
+  enter: ({ direction = 1, isDesktop = false } = {}) => {
+    if (isDesktop) return { x: direction > 0 ? 22 : -22, opacity: 0, filter: 'blur(0.6px)' };
+    return { x: direction > 0 ? '100%' : '-100%', opacity: 1 };
   },
   center: {
     x: 0,
     opacity: 1,
     filter: 'blur(0px)',
   },
-  exit: ({ direction = 1, travel = 1, isDesktop = false } = {}) => {
-    if (isDesktop) {
-      return {
-        x: direction > 0 ? -14 : 14,
-        opacity: 0,
-        filter: 'blur(0.6px)',
-      };
-    }
-
-    return {
-      x: direction > 0 ? -8 : 8,
-      opacity: 0,
-      filter: 'blur(0px)',
-    };
+  exit: ({ direction = 1, isDesktop = false } = {}) => {
+    if (isDesktop) return { x: direction > 0 ? -16 : 16, opacity: 0, filter: 'blur(0.5px)' };
+    return { x: direction > 0 ? '-30%' : '30%', opacity: 1 };
   },
 };
 

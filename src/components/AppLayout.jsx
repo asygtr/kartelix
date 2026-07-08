@@ -5,6 +5,7 @@ import { clearSession, getSession } from '../utils/auth';
 import AppNavbar, { navSets, useNavItems } from './AppNavbar';
 import MobileBottomNav from './MobileBottomNav';
 import { pageTransition, routeVariants } from '../utils/motion';
+import { useHaptic } from '../utils/useHaptic';
 
 const pageTitles = {
   '/admin': 'Yönetim',
@@ -58,15 +59,15 @@ const routeIndex = (pathname, order) => {
   return 0;
 };
 
-const SWIPE_START_ZONE = 28; // px — sol kenardan bu kadar içeri dokunuş
-const SWIPE_THRESHOLD  = 80; // px — bu kadar sağa çekince geri gider
+const SWIPE_START_ZONE = 28;
+const SWIPE_THRESHOLD = 80;
 
 const AppLayout = ({ navAction }) => {
   const location = useLocation();
-  const navigate  = useNavigate();
+  const navigate = useNavigate();
   const pageRef = useRef(null);
-  const prevPath  = useRef(location.pathname);
-  const title     = pageTitles[location.pathname] || '';
+  const prevPath = useRef(location.pathname);
+  const title = pageTitles[location.pathname] || '';
   const session = getSession();
   const role = session?.yetki || 'guest';
   const [searchOpen, setSearchOpen] = useState(false);
@@ -74,7 +75,20 @@ const AppLayout = ({ navAction }) => {
   const [isDesktopNav, setIsDesktopNav] = useState(() => (
     typeof window !== 'undefined' ? window.matchMedia('(min-width: 992px)').matches : false
   ));
-  const openSearch = useCallback(() => setSearchOpen(true), []);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const haptic = useHaptic();
+  const openSearch = useCallback(() => { haptic.light(); setSearchOpen(true); }, [haptic]);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const onResize = () => {
+      setKeyboardOpen(vv.height < window.innerHeight * 0.8);
+    };
+    vv.addEventListener('resize', onResize);
+    return () => vv.removeEventListener('resize', onResize);
+  }, []);
+
   const mobileNavItems = useNavItems(role, openSearch);
   const lastScrollTop = useRef(0);
   const nestedScrollTops = useRef(new WeakMap());
@@ -104,7 +118,6 @@ const AppLayout = ({ navAction }) => {
 
   const resetPageScroll = useCallback(() => {
     if (!pageRef.current) return;
-
     pageRef.current.scrollTop = 0;
     pageRef.current.scrollLeft = 0;
     lastScrollTop.current = 0;
@@ -137,7 +150,6 @@ const AppLayout = ({ navAction }) => {
 
   const handleExitComplete = useCallback(() => {
     if (!pendingRouteScrollReset.current) return;
-
     pendingRouteScrollReset.current = false;
     resetPageScroll();
   }, [resetPageScroll]);
@@ -196,10 +208,9 @@ const AppLayout = ({ navAction }) => {
     };
   }, []);
 
-  // Swipe-to-back refs
-  const swipeStartX  = useRef(null);
-  const swipeStartY  = useRef(null);
-  const swipeActive  = useRef(false);
+  const swipeStartX = useRef(null);
+  const swipeStartY = useRef(null);
+  const swipeActive = useRef(false);
 
   const handleTouchStart = (e) => {
     const x = e.touches[0].clientX;
@@ -211,12 +222,15 @@ const AppLayout = ({ navAction }) => {
     }
   };
 
+  const handleTouchMove = () => {};
+
   const handleTouchEnd = (e) => {
     if (!swipeActive.current) return;
     const dx = e.changedTouches[0].clientX - swipeStartX.current;
     const dy = Math.abs(e.changedTouches[0].clientY - swipeStartY.current);
     swipeActive.current = false;
     if (dx > SWIPE_THRESHOLD && dy < 60) {
+      haptic.light();
       navigate(-1);
     }
   };
@@ -228,8 +242,9 @@ const AppLayout = ({ navAction }) => {
 
   return (
     <div
-      className={`app-shell${pageClass}${chromeCompact ? ' is-chrome-compact' : ''}`}
+      className={`app-shell${pageClass}${chromeCompact ? ' is-chrome-compact' : ''}${keyboardOpen ? ' is-keyboard-open' : ''}`}
       onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       style={{ minHeight: '100dvh' }}
     >
@@ -249,23 +264,23 @@ const AppLayout = ({ navAction }) => {
         compact={chromeCompact}
       />
       <div ref={pageRef} className="app-page">
-        <div className={`app-container space-y-6 app-route-stage${hasPageSearch ? ' has-page-search' : ''}`}>
-          <AnimatePresence mode="sync" custom={routeMotion} initial={false} onExitComplete={handleExitComplete}>
-            <motion.div
-              key={location.pathname}
-              className="app-route-view"
-              custom={routeMotion}
-              variants={routeVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={pageTransition}
-              style={{ willChange: 'transform' }}
-            >
+        <AnimatePresence mode="popLayout" custom={routeMotion} initial={false} onExitComplete={handleExitComplete}>
+          <motion.div
+            key={location.pathname}
+            className="app-route-wrapper"
+            custom={routeMotion}
+            variants={routeVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={pageTransition}
+            style={{ willChange: 'transform' }}
+          >
+            <div className={`app-container space-y-6${hasPageSearch ? ' has-page-search' : ''}`}>
               <Outlet />
-            </motion.div>
-          </AnimatePresence>
-        </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );

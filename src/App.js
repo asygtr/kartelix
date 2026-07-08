@@ -33,16 +33,20 @@ function App() {
               <Route path="/admin/orders" element={<StaffOrderPage mode="admin" />} />
               <Route path="/admin/reports" element={<ReportsPage />} />
               <Route path="/admin/settings" element={<SettingsPage />} />
+              <Route path="/staff/orders/new" element={<StaffOrderPage />} />
+              <Route path="/mamul" element={<Navigate to="/mamul/labels" replace />} />
+              <Route path="/mamul/labels" element={<MamulLabelPage />} />
+              <Route path="/mamul/preview/:slug" element={<PublicMamulPage mode="internal" />} />
             </Route>
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['staff', 'admin']} />}>
+          <Route element={<ProtectedRoute allowedRoles={['staff']} />}>
             <Route element={<AppLayout />}>
               <Route path="/staff/orders/new" element={<StaffOrderPage />} />
             </Route>
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['mamul', 'admin']} />}>
+          <Route element={<ProtectedRoute allowedRoles={['mamul']} />}>
             <Route element={<AppLayout />}>
               <Route path="/mamul" element={<Navigate to="/mamul/labels" replace />} />
               <Route path="/mamul/labels" element={<MamulLabelPage />} />

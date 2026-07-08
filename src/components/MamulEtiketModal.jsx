@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import LabelPreviewCard from './LabelPreviewCard';
 import { defaultLabelTemplate, mergeLabelTemplate, printLabels } from '../utils/labelTemplate';
 import { authHeaders } from '../utils/auth';
+import { bottomSheetVariants, sheetBackdropVariants, sheetTransition, defaultEase } from '../utils/motion';
+import { useHaptic } from '../utils/useHaptic';
 
 const CloseIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
@@ -30,6 +33,7 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
   const [template, setTemplate] = useState(null);
   const [templates, setTemplates] = useState([]);
   const [activeTemplateId, setActiveTemplateId] = useState(templateId || '');
+  const haptic = useHaptic();
 
   useEffect(() => {
     fetch('/api/admin/label-templates', { headers: authHeaders() })
@@ -81,16 +85,34 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
   const articleNo = mamul.article_no || mamul.article_code || '-';
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto p-2 sm:p-4"
-      style={{ background: 'rgba(15,23,42,0.6)' }}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
+    <AnimatePresence>
+    <motion.div
+      key="etiket-backdrop"
+      className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ background: 'rgba(15,23,42,0.52)', backdropFilter: 'blur(12px)' }}
+      variants={sheetBackdropVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      transition={{ duration: 0.18, ease: defaultEase }}
+      onClick={(e) => { if (e.target === e.currentTarget) { haptic.light(); onClose(); } }}
     >
-      <div className="w-full max-w-2xl mx-auto my-auto rounded-[1rem] sm:rounded-[1.5rem] bg-white shadow-2xl">
+      <motion.div
+        key="etiket-panel"
+        className="w-full max-w-2xl mx-auto rounded-t-[1.45rem] sm:rounded-[1.45rem] bg-white shadow-2xl"
+        variants={bottomSheetVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        transition={sheetTransition}
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0, bottom: 0.18 }}
+        onDragEnd={(_, info) => { if (info.offset.y > 80 || info.velocity.y > 600) { haptic.light(); onClose(); } }}
+      >
+        <div className="flex justify-center pt-2 pb-1">
+          <div style={{ width: '2.2rem', height: '0.26rem', borderRadius: 999, background: 'rgba(0,0,0,0.18)' }} />
+        </div>
         <div className="flex items-center justify-between border-b border-slate-200 px-4 sm:px-6 py-3 sm:py-4">
           <div>
             <h2 className="text-base sm:text-xl font-semibold text-slate-900">ARTICLE NO {articleNo}</h2>
@@ -98,7 +120,7 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => { haptic.light(); onClose(); }}
             className="rounded-full bg-slate-100 p-1.5 sm:p-2 text-slate-700 hover:bg-slate-200"
             aria-label="Kapat"
             title="Kapat"
@@ -131,15 +153,20 @@ const MamulEtiketModal = ({ mamul, templateId, onClose }) => {
               </label>
             )}
             <div className="grid gap-3">
-              <button type="button" onClick={() => printLabels([mamul], template, 'en')} className="app-btn-primary inline-flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => { haptic.success(); printLabels([mamul], template, 'en'); }}
+                className="app-btn-primary inline-flex items-center justify-center gap-2"
+              >
                 <PrintIcon />
                 <span>Yazdır</span>
               </button>
             </div>
           </div>
         </div>
-      </div>
-    </div>,
+      </motion.div>
+    </motion.div>
+    </AnimatePresence>,
     document.body
   );
 };
