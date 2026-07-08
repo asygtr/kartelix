@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { motion, useScroll, useTransform, useSpring, useInView } from 'framer-motion';
+import { motion, useScroll, useTransform, useSpring, useInView, useMotionValue, animate, useReducedMotion } from 'framer-motion';
 import { resolveColorPalette, isDarkPalette } from '../utils/colorPalette';
 import { authHeaders } from '../utils/auth';
 import { useTheme } from '../theme/ThemeProvider';
@@ -145,7 +145,10 @@ const PublicMamulPage = ({ mode = 'public' }) => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const isInternal = mode === 'internal';
-  const [mamul, setMamul] = useState(null);
+  const [mamulState, setMamul] = useState(null);
+  const mamul = mamulState || {};
+  const MSafe = mamul;
+  const mamulLoaded = mamulState !== null;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lang, setLang] = useState('TR');
@@ -186,7 +189,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
     }).catch(err => setError(err.message))
       .finally(() => {
         const elapsed = Date.now() - loaderStartRef.current;
-        const minDuration = 1400;
+        const minDuration = 1800;
         const remaining = minDuration - elapsed;
         if (remaining > 0) {
           loaderTimeout.current = setTimeout(() => setLoading(false), remaining);
@@ -226,44 +229,97 @@ const PublicMamulPage = ({ mode = 'public' }) => {
     }
   };
 
-  const composition  = v(mamul?.kompozisyon_ozeti);
+  const composition  = v(MSafe.kompozisyon_ozeti);
   const prosesAcik   = isInternal || genelAyarlar?.publicProsesGoster === true;
   const hikayeAcik   = isInternal || genelAyarlar?.publicHikayeGoster !== false;
-  const story        = hikayeAcik ? (v(mamul?.tanitim_hikayesi) || v(mamul?.aciklama) || v(mamul?.materyal_notlari)) : null;
+  const story        = hikayeAcik ? (v(MSafe.tanitim_hikayesi) || v(MSafe.aciklama) || v(MSafe.materyal_notlari)) : null;
   const hasYarn = mamul?.iplikler?.length > 0 && (isInternal || genelAyarlar?.publicHammaddeGoster !== false);
   const hasRelated   = mamul?.benzer_urunler?.length > 0;
   const hasProsesler = prosesAcik && mamul?.prosesler?.length > 0;
   const careItems    = useMemo(() => parseCare(mamul?.bakim_talimatlari), [mamul?.bakim_talimatlari]);
-  const gorselUrl    = v(mamul?.gorsel_url);
+  const gorselUrl    = v(MSafe.gorsel_url);
   const karYuzdesi   = Number(genelAyarlar?.karYuzdesi || 0);
   const satisFiyati  = useMemo(() => {
-    const maliyet = Number(mamul?.bir_kg_maliyet || 0);
-    const satis   = Number(mamul?.bir_kg_satis_fiyati || 0);
+    const maliyet = Number(MSafe.bir_kg_maliyet || 0);
+    const satis   = Number(MSafe.bir_kg_satis_fiyati || 0);
     if (karYuzdesi > 0 && maliyet > 0) return maliyet * (1 + karYuzdesi / 100);
     return satis > 0 ? satis : maliyet;
-  }, [mamul?.bir_kg_maliyet, mamul?.bir_kg_satis_fiyati, karYuzdesi]);
+  }, [MSafe.bir_kg_maliyet, MSafe.bir_kg_satis_fiyati, karYuzdesi]);
   const hasPrice = isInternal
     ? (Number(mamul?.bir_kg_satis_fiyati || 0) > 0 || Number(mamul?.bir_kg_maliyet || 0) > 0)
     : (genelAyarlar?.publicFiyatGoster === true && satisFiyati > 0);
 
-  if (loading || genelAyarlar === null) return (
-    <div style={{ minHeight: isInternal ? '60vh' : '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isInternal ? 'transparent' : '#f3efe7', padding: '1.2rem' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-        <div style={{ width: 96, height: 96, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 22, background: 'rgba(255,255,255,0.72)', boxShadow: '0 20px 44px rgba(0,0,0,0.08)' }}>
-          <img src={logoSrc} alt='Kartelix' style={{ maxWidth: '72px', maxHeight: '72px', objectFit: 'contain', background: 'transparent' }} />
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {[0,1,2].map(i => (
-            <motion.div key={i}
-              style={{ width: 8, height: 8, borderRadius: '50%', background: '#b9793a' }}
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 0.8, delay: i * 0.15, repeat: Infinity }}
-            />
-          ))}
-        </div>
+  // Timeline:
+  //  0.0 – 0.5s  logo fade-in
+  //  0.5 – 1.2s  gentle slow rotation
+  //  1.2 – 2.0s  rotation accelerates + logo scales up
+  //  2.0 – 2.3s  white flash covers screen, page revealed underneath
+
+  const shouldReduce = useReducedMotion();
+  const [animationDone, setAnimationDone] = useState(false);
+  const [flash, setFlash] = useState(false);
+  const prog = useMotionValue(0);
+
+  useEffect(() => {
+    if (shouldReduce || isInternal) {
+      prog.set(1);
+      setAnimationDone(true);
+      return;
+    }
+
+    setAnimationDone(false);
+    setFlash(false);
+    prog.set(0);
+
+    const controls = animate(prog, 1, { duration: 2.0, ease: [0.4, 0, 0.55, 1] });
+
+    // at ~2.0s trigger the white flash, then unmount overlay
+    const t1 = setTimeout(() => setFlash(true), 1900);
+    const t2 = setTimeout(() => setAnimationDone(true), 2250);
+
+    controls.finished?.catch(() => {});
+    return () => { controls.stop(); clearTimeout(t1); clearTimeout(t2); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInternal]);
+
+  // prog 0→1 over 2s
+  // phase 1: 0.00–0.25  fade in
+  // phase 2: 0.25–0.60  gentle rotation (0→20deg)
+  // phase 3: 0.60–1.00  accelerating spin + scale up
+  const logoOpacity = useTransform(prog, [0, 0.22, 0.88, 1.0], [0, 1, 1, 0]);
+  const rotateDeg   = useTransform(prog, [0, 0.25, 0.60, 1.0], [0, 0, 22, 360]);
+  const logoScale   = useTransform(prog, [0, 0.25, 0.60, 1.0], [0.75, 1.0, 1.02, 2.2]);
+
+  const loaderOverlay = (loading || genelAyarlar === null || !mamulLoaded || !animationDone) ? (
+    <>
+      {/* loader backdrop */}
+      <div aria-hidden style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: '#ffffff',
+        pointerEvents: 'auto',
+      }}>
+        <motion.div style={{
+          width: 100, height: 100,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          borderRadius: 22,
+          opacity: logoOpacity,
+          rotate: rotateDeg,
+          scale: logoScale,
+        }}>
+          <img src={logoSrc} alt='logo' style={{ width: 80, height: 80, objectFit: 'contain', display: 'block' }} />
+        </motion.div>
       </div>
-    </div>
-  );
+      {/* white flash layer */}
+      <div aria-hidden style={{
+        position: 'fixed', inset: 0, zIndex: 10000,
+        background: '#ffffff',
+        pointerEvents: 'none',
+        opacity: flash ? 1 : 0,
+        transition: flash ? 'opacity 0.25s ease-out' : 'none',
+      }} />
+    </>
+  ) : null;
 
   if (error) return (
     <div style={{ minHeight: isInternal ? '60vh' : '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isInternal ? 'transparent' : '#f3efe7', padding: '2rem' }}>
@@ -275,12 +331,13 @@ const PublicMamulPage = ({ mode = 'public' }) => {
     </div>
   );
 
-  if (!mamul) return null;
+  // allow rendering the page shell while data is loading so the loader can
+  // overlay and blur the real UI for a seamless cinematic transition
 
-  if (isInternal) {
-    const maliyet = Number(mamul.bir_kg_maliyet || 0);
-    const satis = Number(mamul.bir_kg_satis_fiyati || 0);
-    const pb = mamul.para_birimi || 'TRY';
+  if (isInternal && mamulLoaded) {
+    const maliyet = Number(MSafe.bir_kg_maliyet || 0);
+    const satis = Number(MSafe.bir_kg_satis_fiyati || 0);
+    const pb = MSafe.para_birimi || 'TRY';
     const kar = maliyet > 0 && satis > 0 && satis !== maliyet
       ? (((satis - maliyet) / maliyet) * 100).toFixed(1) : null;
     return (
@@ -293,7 +350,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
             Geri
           </button>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <a href={`/u/${mamul.qr_slug}`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.8rem', borderRadius: '999px', background: 'var(--app-surface)', border: '1px solid var(--app-border)', color: 'var(--app-text)', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>
+            <a href={`/u/${MSafe.qr_slug || ''}`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.8rem', borderRadius: '999px', background: 'var(--app-surface)', border: '1px solid var(--app-border)', color: 'var(--app-text)', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               Müşteri nasıl görüyor?
             </a>
@@ -428,13 +485,14 @@ const PublicMamulPage = ({ mode = 'public' }) => {
   }
 
   return (
-    <div ref={pageRef} style={{
+    <motion.div ref={pageRef} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.45, ease: defaultEase }} style={{
       fontFamily: 'Manrope, Inter, sans-serif',
       color: P.text,
       background: P.bg,
       ...(isInternal ? { minHeight: '100%' } : { height: '100dvh', overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch' }),
       position: 'relative',
     }}>
+      {loaderOverlay}
 
       {/* â”€â”€ Atmosfer â”€â”€ */}
       <div aria-hidden="true" style={{ position: isInternal ? 'absolute' : 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
@@ -785,7 +843,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
         </div>
 
       </div>
-    </div>
+    </motion.div>
   );
 };
 
