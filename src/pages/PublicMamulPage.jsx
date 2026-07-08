@@ -155,7 +155,10 @@ const PublicMamulPage = ({ mode = 'public' }) => {
     typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
   ));
   const pageRef = useRef(null);
+  const loaderTimeout = useRef(null);
+  const loaderStartRef = useRef(Date.now());
   const { appLogo } = useTheme();
+  const logoSrc = appLogo || '/nevres.png';
   const t = T[lang];
 
   const { scrollY } = useScroll({ container: pageRef });
@@ -181,7 +184,16 @@ const PublicMamulPage = ({ mode = 'public' }) => {
       setMamul(mamulRes.data);
       setGenelAyarlar(ayarRes.success ? ayarRes.data : { publicProsesGoster: false, publicFiyatGoster: false, publicHikayeGoster: true, publicHammaddeGoster: true, karYuzdesi: 0 });
     }).catch(err => setError(err.message))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        const elapsed = Date.now() - loaderStartRef.current;
+        const minDuration = 1400;
+        const remaining = minDuration - elapsed;
+        if (remaining > 0) {
+          loaderTimeout.current = setTimeout(() => setLoading(false), remaining);
+        } else {
+          setLoading(false);
+        }
+      });
   }, [slug, isInternal]);
 
   useEffect(() => {
@@ -190,6 +202,12 @@ const PublicMamulPage = ({ mode = 'public' }) => {
     updateViewport();
     media.addEventListener('change', updateViewport);
     return () => media.removeEventListener('change', updateViewport);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (loaderTimeout.current) clearTimeout(loaderTimeout.current);
+    };
   }, []);
 
   const P    = useMemo(() => resolveColorPalette(mamul?.renk), [mamul?.renk]);
@@ -229,9 +247,11 @@ const PublicMamulPage = ({ mode = 'public' }) => {
     : (genelAyarlar?.publicFiyatGoster === true && satisFiyati > 0);
 
   if (loading || genelAyarlar === null) return (
-    <div style={{ minHeight: isInternal ? '60vh' : '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isInternal ? 'transparent' : '#f3efe7' }}>
+    <div style={{ minHeight: isInternal ? '60vh' : '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isInternal ? 'transparent' : '#f3efe7', padding: '1.2rem' }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-        <img src={appLogo} alt='Kartelix' style={{ width: 72, height: 'auto', objectFit: 'contain', borderRadius: 14, background: 'white', padding: 8 }} />
+        <div style={{ width: 96, height: 96, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 22, background: 'rgba(255,255,255,0.72)', boxShadow: '0 20px 44px rgba(0,0,0,0.08)' }}>
+          <img src={logoSrc} alt='Kartelix' style={{ maxWidth: '72px', maxHeight: '72px', objectFit: 'contain', background: 'transparent' }} />
+        </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           {[0,1,2].map(i => (
             <motion.div key={i}
