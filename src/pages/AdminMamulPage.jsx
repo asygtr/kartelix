@@ -8,6 +8,8 @@ import { useHaptic } from '../utils/useHaptic';
 import { SkeletonList } from '../components/Skeleton';
 import { normalizeGenelAyarlar, resolveDisplayPrice } from '../utils/generalSettings';
 import { useGenelAyarlar } from '../theme/ThemeProvider';
+import { defaultEase } from '../utils/motion';
+import { defaultEase } from '../utils/motion';
 
 const emptyYarn = { iplik_tanim_id: '', iplik_adi: '', oran_yuzde: '', birim_fiyat: '' };
 const emptyProcess = { proses_tanim_id: '', proses_adi: '', proses_tipi: '', birim_maliyet: '', renk_bazli: false, aciklama: '' };
@@ -608,7 +610,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 6 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
+              transition={{ duration: 0.2, ease: defaultEase }}
               className="app-panel p-4 sm:p-6"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -829,7 +831,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.16, ease: 'easeOut' }}
+                            transition={{ duration: 0.16, ease: defaultEase }}
                           >
                             <div className="app-mamul-expanded-card">
                               <button
@@ -931,7 +933,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.16, ease: 'easeOut' }}
+                            transition={{ duration: 0.16, ease: defaultEase }}
                           >
                             <div className="app-mamul-mobile-grid">
                               <div className="app-mamul-mobile-field">

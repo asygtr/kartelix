@@ -9,7 +9,7 @@ import { isMobileCameraDevice } from '../utils/qr';
 import { normalizeGenelAyarlar, resolveDisplayPrice } from '../utils/generalSettings';
 import { formatArticleLabel } from '../utils/labelTemplate';
 import { Home, Search, ClipboardList, Tag, Layers, BarChart2, Settings, LogOut, X, QrCode, Menu } from './icons.jsx';
-import { bottomSheetVariants, chromeSpring, navTapMotion, sheetBackdropVariants, sheetTransition, tapMotion } from '../utils/motion';
+import { bottomSheetVariants, chromeSpring, defaultEase, navTapMotion, sheetBackdropVariants, sheetTransition, tapMotion } from '../utils/motion';
 
 const MotionLink = motion.create(Link);
 
@@ -192,7 +192,7 @@ const AppNavbar = ({ title, action, onLogout, searchOpen, setSearchOpen, compact
         initial="hidden"
         animate="visible"
         exit="exit"
-        transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
+        transition={{ duration: 0.18, ease: defaultEase }}
         onClick={(event) => {
           if (event.target === event.currentTarget) {
             setSearchOpen(false);

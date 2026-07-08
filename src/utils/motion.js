@@ -1,4 +1,5 @@
 export const iosEase = [0.22, 1, 0.36, 1];
+export const defaultEase = iosEase;
 
 export const springSoft = {
   type: 'spring',
@@ -7,9 +8,16 @@ export const springSoft = {
   mass: 0.86,
 };
 
+export const defaultSpring = {
+  type: 'spring',
+  stiffness: 420,
+  damping: 38,
+  mass: 0.86,
+};
+
 export const pageTransition = {
   duration: 0.18,
-  ease: iosEase,
+  ease: defaultEase,
 };
 
 export const sheetTransition = {

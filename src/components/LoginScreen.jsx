@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { defaultRouteByRole, getSession, saveSession } from '../utils/auth';
 import { useTheme } from '../theme/ThemeProvider';
+import { defaultEase } from '../utils/motion';
 
-const EASE = [0.2, 0.8, 0.2, 1];
 
 const AnimatedCheck = () => (
   <svg viewBox="0 0 40 40" fill="none" style={{ width: '2rem', height: '2rem' }}>
@@ -13,7 +13,7 @@ const AnimatedCheck = () => (
       stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none"
       initial={{ pathLength: 0, opacity: 0 }}
       animate={{ pathLength: 1, opacity: 1 }}
-      transition={{ duration: 0.45, delay: 0.08, ease: EASE }}
+      transition={{ duration: 0.45, delay: 0.08, ease: defaultEase }}
     />
   </svg>
 );
@@ -22,10 +22,10 @@ const AnimatedX = () => (
   <svg viewBox="0 0 40 40" fill="none" style={{ width: '1.8rem', height: '1.8rem' }}>
     <motion.line x1="12" y1="12" x2="28" y2="28" stroke="white" strokeWidth="3.5" strokeLinecap="round"
       initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }}
-      transition={{ duration: 0.22, ease: EASE }} />
+      transition={{ duration: 0.22, ease: defaultEase }} />
     <motion.line x1="28" y1="12" x2="12" y2="28" stroke="white" strokeWidth="3.5" strokeLinecap="round"
       initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }}
-      transition={{ duration: 0.22, delay: 0.18, ease: EASE }} />
+      transition={{ duration: 0.22, delay: 0.18, ease: defaultEase }} />
   </svg>
 );
 
@@ -289,14 +289,14 @@ const LoginScreen = () => {
           className="app-panel p-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: EASE }}
+          transition={{ duration: 0.5, ease: defaultEase }}
         >
           <div className="flex flex-col items-center text-center">
             <motion.div
               className="app-login-logo-wrap"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.55, ease: EASE }}
+              transition={{ duration: 0.55, ease: defaultEase }}
             >
               <img src={appLogo} alt="Kartelix" className="app-login-logo" />
             </motion.div>
@@ -304,7 +304,7 @@ const LoginScreen = () => {
               className="mt-5 text-2xl font-bold text-[color:var(--app-text)]"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15, duration: 0.4, ease: EASE }}
+              transition={{ delay: 0.15, duration: 0.4, ease: defaultEase }}
             >
               Kartelix
             </motion.h2>
@@ -317,7 +317,7 @@ const LoginScreen = () => {
                 initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -14 }}
-                transition={{ duration: 0.28, ease: EASE }}
+                transition={{ duration: 0.28, ease: defaultEase }}
               >
                 <p className="mt-6 text-center text-sm text-[color:var(--app-text-muted)]">
                   Kullanıcı adınızı girin
@@ -363,7 +363,7 @@ const LoginScreen = () => {
                 key="pin-step"
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.28, ease: EASE }}
+                transition={{ duration: 0.28, ease: defaultEase }}
               >
                 <p className="mt-6 text-center text-sm text-[color:var(--app-text-muted)]">
                   <span className="font-semibold text-[color:var(--app-text)]">{username}</span> için şifre
@@ -398,7 +398,7 @@ const LoginScreen = () => {
                       <motion.div
                         initial={{ scale: 0, opacity: 0, rotate: -20 }}
                         animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                        transition={{ duration: 0.42, ease: EASE }}
+                        transition={{ duration: 0.42, ease: defaultEase }}
                         style={{
                           position: 'absolute', width: '3.8rem', height: '3.8rem',
                           borderRadius: '1rem',
@@ -418,7 +418,7 @@ const LoginScreen = () => {
                         initial={{ scale: 0, opacity: 0 }}
                         animate={{ scale: [0, 1.15, 1], opacity: 1 }}
                         exit={{ scale: 0, opacity: 0 }}
-                        transition={{ duration: 0.38, ease: EASE }}
+                        transition={{ duration: 0.38, ease: defaultEase }}
                         style={{
                           position: 'absolute', width: '3.8rem', height: '3.8rem',
                           borderRadius: '1rem',

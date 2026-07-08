@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { motion, useInView } from 'framer-motion';
 import { getSession } from '../utils/auth';
 import { authHeaders } from '../utils/auth';
+import { defaultEase } from '../utils/motion';
 
-const EASE = [0.2, 0.8, 0.2, 1];
 
 /* ─── Odometer / slot-machine sayaç ─────────────────────────────────────── */
 const DIGIT_H = 32;
@@ -13,7 +13,7 @@ const Digit = ({ digit }) => (
   <div style={{ height: DIGIT_H, overflow: 'hidden', display: 'inline-block', lineHeight: `${DIGIT_H}px` }}>
     <motion.div
       animate={{ y: -digit * DIGIT_H }}
-      transition={{ duration: 0.55, ease: [0.2, 0.8, 0.2, 1] }}
+      transition={{ duration: 0.55, ease: defaultEase }}
       style={{ display: 'flex', flexDirection: 'column' }}
     >
       {[0,1,2,3,4,5,6,7,8,9].map(n => (
@@ -46,7 +46,7 @@ const MiniBar = ({ value, max, color }) => {
         style={{ height: '100%', borderRadius: 999, background: color }}
         initial={{ width: 0 }}
         animate={inView ? { width: `${pct}%` } : {}}
-        transition={{ duration: 0.9, ease: EASE }}
+        transition={{ duration: 0.9, ease: defaultEase }}
       />
     </div>
   );

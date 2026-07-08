@@ -278,7 +278,7 @@ const MamulLabelPage = () => {
                 scale: trayImpact ? [1, 1.09, 0.98, 1.03, 1] : 1,
                 y: trayImpact ? [0, -8, 2, -3, 0] : 0,
               }}
-              transition={{ duration: 0.42, ease: [0.32, 0.72, 0, 1] }}
+              transition={{ duration: 0.42, ease: defaultEase }}
             >
               Yazdır ({selectedIds.length})
             </motion.button>
@@ -287,7 +287,7 @@ const MamulLabelPage = () => {
               className="app-label-print-ripple"
               initial={{ opacity: 0, scale: 0.58 }}
               animate={{ opacity: trayImpact ? [0, 0.46, 0] : 0, scale: trayImpact ? [0.58, 1.2, 1.62] : 0.58 }}
-              transition={{ duration: 0.52, ease: [0.32, 0.72, 0, 1] }}
+              transition={{ duration: 0.52, ease: defaultEase }}
             />
           </motion.div>
         ) : null}

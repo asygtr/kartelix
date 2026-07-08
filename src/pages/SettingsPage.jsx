@@ -7,7 +7,7 @@ import { authHeaders, getSession } from '../utils/auth';
 import { palettes } from '../theme/palettes';
 import LabelDesignerPanel from '../components/LabelDesignerPanel';
 import { X } from '../components/icons.jsx';
-import { iosEase, sheetTransition, tapMotion } from '../utils/motion';
+import { defaultEase, sheetTransition, tapMotion } from '../utils/motion';
 
 const tabs = [
   { id: 'genel', label: 'Genel Ayarlar' },
@@ -41,6 +41,22 @@ const initialEmailForm = {
 };
 
 const CloseIcon = () => <X className="app-nav-icon-svg" />;
+
+const ToggleSwitch = ({ checked, onChange, id, name }) => (
+  <span className="app-toggle-switch">
+    <input
+      id={id}
+      name={name}
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      className="app-toggle-switch-input"
+    />
+    <span className="app-toggle-switch-track">
+      <span className="app-toggle-switch-thumb" />
+    </span>
+  </span>
+);
 
 const SettingsPage = () => {
   const location = useLocation();
@@ -606,9 +622,13 @@ const SettingsPage = () => {
           <input className="app-input" placeholder="Proses adı" value={processForm.ad} onChange={(e) => setProcessForm((prev) => ({ ...prev, ad: e.target.value }))} />
           <input className="app-input" placeholder="Proses tipi" value={processForm.tip} onChange={(e) => setProcessForm((prev) => ({ ...prev, tip: e.target.value }))} />
           <input className="app-input" placeholder="Birim maliyet" value={processForm.birimMaliyet} onChange={(e) => setProcessForm((prev) => ({ ...prev, birimMaliyet: e.target.value }))} />
-          <label className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3">
-            <input type="checkbox" checked={processForm.renkBazli} onChange={(e) => setProcessForm((prev) => ({ ...prev, renkBazli: e.target.checked }))} />
-            Renk bazlı proses
+          <label className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 px-4 py-3">
+            <span className="text-sm font-medium text-[color:var(--app-text)]">Renk bazlı proses</span>
+            <ToggleSwitch
+              id="switch-process-renk-bazli"
+              checked={processForm.renkBazli}
+              onChange={(e) => setProcessForm((prev) => ({ ...prev, renkBazli: e.target.checked }))}
+            />
           </label>
           <button type="submit" className="app-btn-primary">
             {editingProcessId ? 'Prosesi güncelle' : 'Proses ekle'}
@@ -735,8 +755,8 @@ const SettingsPage = () => {
           <div className="app-soft-panel p-4">
             <label className="flex items-center justify-between gap-4">
               <span className="text-sm font-semibold text-[color:var(--app-text)]">Otomatik sipariş e-postası</span>
-              <input
-                type="checkbox"
+              <ToggleSwitch
+                id="switch-email-enabled"
                 checked={emailForm.enabled}
                 onChange={(event) => setEmailForm((prev) => ({ ...prev, enabled: event.target.checked }))}
               />
@@ -835,8 +855,8 @@ const SettingsPage = () => {
                   <div className="text-sm font-semibold text-[color:var(--app-text)]">Onay mailinde fiyatları göster</div>
                   <div className="mt-0.5 text-xs text-slate-500">Kapalıysa tutar ve birim fiyat sütunları onay mailinde yer almaz.</div>
                 </div>
-                <input
-                  type="checkbox"
+                <ToggleSwitch
+                  id="switch-email-approval-prices"
                   checked={emailForm.approvalShowPrices}
                   onChange={(event) => setEmailForm((prev) => ({ ...prev, approvalShowPrices: event.target.checked }))}
                 />
@@ -1056,32 +1076,44 @@ const SettingsPage = () => {
                 <div className="text-sm font-medium text-[color:var(--app-text)]">Kumaş Hikayesini göster</div>
                 <div className="mt-0.5 text-xs text-slate-500">Müşteri QR/link sayfasında Kumaş Hikayesi bölümü görünsün.</div>
               </div>
-              <input type="checkbox" checked={genelAyarlar.publicHikayeGoster !== false}
-                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicHikayeGoster: e.target.checked })} />
+              <ToggleSwitch
+                id="switch-public-hikaye"
+                checked={genelAyarlar.publicHikayeGoster !== false}
+                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicHikayeGoster: e.target.checked })}
+              />
             </label>
             <label className="flex items-center justify-between gap-4">
               <div>
                 <div className="text-sm font-medium text-[color:var(--app-text)]">Hammadde bilgisini göster</div>
                 <div className="mt-0.5 text-xs text-slate-500">Müşteri QR/link sayfasında iplik reçetesi görünsün.</div>
               </div>
-              <input type="checkbox" checked={genelAyarlar.publicHammaddeGoster !== false}
-                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicHammaddeGoster: e.target.checked })} />
+              <ToggleSwitch
+                id="switch-public-hammadde"
+                checked={genelAyarlar.publicHammaddeGoster !== false}
+                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicHammaddeGoster: e.target.checked })}
+              />
             </label>
             <label className="flex items-center justify-between gap-4">
               <div>
                 <div className="text-sm font-medium text-[color:var(--app-text)]">Proses bilgisini göster</div>
                 <div className="mt-0.5 text-xs text-slate-500">Müşteri QR/link sayfasında üretim prosesleri görünsün.</div>
               </div>
-              <input type="checkbox" checked={genelAyarlar.publicProsesGoster}
-                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicProsesGoster: e.target.checked })} />
+              <ToggleSwitch
+                id="switch-public-proses"
+                checked={genelAyarlar.publicProsesGoster}
+                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicProsesGoster: e.target.checked })}
+              />
             </label>
             <label className="flex items-center justify-between gap-4">
               <div>
                 <div className="text-sm font-medium text-[color:var(--app-text)]">1 kg satış fiyatını göster</div>
                 <div className="mt-0.5 text-xs text-slate-500">Müşteri QR/link sayfasında ve arama sonucunda satış fiyatı görünsün.</div>
               </div>
-              <input type="checkbox" checked={genelAyarlar.publicFiyatGoster}
-                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicFiyatGoster: e.target.checked })} />
+              <ToggleSwitch
+                id="switch-public-fiyat"
+                checked={genelAyarlar.publicFiyatGoster}
+                onChange={(e) => saveGenelAyarlar({ ...genelAyarlar, publicFiyatGoster: e.target.checked })}
+              />
             </label>
           </div>
           {genelAyarlarStatus ? <div className="app-soft-panel px-4 py-3 text-sm">{genelAyarlarStatus}</div> : null}
@@ -1091,6 +1123,7 @@ const SettingsPage = () => {
         <div className="mt-4 space-y-3">
           {[
             `Hikaye görünürlüğü: ${genelAyarlar.publicHikayeGoster !== false ? 'Açık' : 'Kapalı'}`,
+            `Hammadde görünürlüğü: ${genelAyarlar.publicHammaddeGoster !== false ? 'Açık' : 'Kapalı'}`,
             `Proses görünürlüğü: ${genelAyarlar.publicProsesGoster ? 'Açık' : 'Kapalı'}`,
             `Fiyat görünürlüğü: ${genelAyarlar.publicFiyatGoster ? 'Açık' : 'Kapalı'}`,
             `Kâr yüzdesi: %${genelAyarlar.karYuzdesi ?? 0}`
@@ -1174,7 +1207,7 @@ const SettingsPage = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.18, ease: iosEase }}
+          transition={{ duration: 0.18, ease: defaultEase }}
           onClick={(event) => {
             if (event.target === event.currentTarget) {
               setDrawerOpen(false);
@@ -1214,7 +1247,7 @@ const SettingsPage = () => {
                   initial={{ opacity: 0, x: 18 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 12 }}
-                  transition={{ duration: 0.2, delay: 0.04 + (index * 0.025), ease: iosEase }}
+                  transition={{ duration: 0.2, delay: 0.04 + (index * 0.025), ease: defaultEase }}
                   whileTap={tapMotion}
                 >
                   {tab.label}

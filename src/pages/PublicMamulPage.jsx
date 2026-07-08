@@ -4,9 +4,9 @@ import { motion, useScroll, useTransform, useSpring, useInView } from 'framer-mo
 import { resolveColorPalette, isDarkPalette } from '../utils/colorPalette';
 import { authHeaders } from '../utils/auth';
 import { useTheme } from '../theme/ThemeProvider';
+import { defaultEase } from '../utils/motion';
 
 const v = (val) => String(val || '').trim() || null;
-const EASE = [0.16, 1, 0.3, 1];
 
 /* â”€â”€â”€ Çeviriler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const T = {
@@ -116,7 +116,7 @@ const Reveal = ({ children, delay = 0, x = 0, y = 28 }) => {
     <motion.div ref={ref}
       initial={{ opacity: 0, y, x }}
       animate={inView ? { opacity: 1, y: 0, x: 0 } : {}}
-      transition={{ duration: 0.6, delay, ease: EASE }}
+      transition={{ duration: 0.6, delay, ease: defaultEase }}
     >{children}</motion.div>
   );
 };
@@ -385,7 +385,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
                         </div>
                         <div style={{ height: '5px', borderRadius: '999px', background: 'var(--app-soft)', overflow: 'hidden' }}>
                           <motion.div style={{ height: '100%', borderRadius: '999px', background: `linear-gradient(90deg,${P.accent},${P.accentDeep})` }}
-                            initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.7, delay: i * 0.08, ease: EASE }} />
+                            initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.7, delay: i * 0.08, ease: defaultEase }} />
                         </div>
                         {Number(item.birim_fiyat) > 0 && <div style={{ fontSize: '0.64rem', color: 'var(--app-text-muted)', marginTop: '0.12rem' }}>{Number(item.birim_fiyat).toFixed(2)} {pb} / kg</div>}
                       </div>
@@ -456,7 +456,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
           {/* Ust bar: geri / marka + dil toggle + paylas */}
           <motion.div
             initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: EASE }}
+            transition={{ duration: 0.5, ease: defaultEase }}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isInternal ? '1.25rem' : '2rem', gap: '0.5rem' }}
           >
             {isInternal ? (
@@ -535,7 +535,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
               <motion.div
                 initial={{ opacity: 0, scale: 0.72, rotate: -6 }}
                 animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                transition={{ duration: 0.8, ease: EASE }}
+                transition={{ duration: 0.8, ease: defaultEase }}
                 style={{
                   width: '5rem', height: '6.5rem', borderRadius: '1.15rem',
                   background: `linear-gradient(140deg, ${P.accent}, ${P.accentDeep})`,
@@ -573,7 +573,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
             <div style={{ paddingTop: '0.2rem' }}>
               <motion.div
                 initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.55, delay: 0.12, ease: EASE }}
+                transition={{ duration: 0.55, delay: 0.12, ease: defaultEase }}
                 style={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', color: P.textMuted, marginBottom: '0.45rem' }}
               >
                 <span style={{ opacity: 0.6, marginRight: '0.3rem' }}>ARTICLE NO</span>{v(mamul.article_code)}
@@ -581,7 +581,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
 
               <motion.h1
                 initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.65, delay: 0.18, ease: EASE }}
+                transition={{ duration: 0.65, delay: 0.18, ease: defaultEase }}
                 style={{ margin: 0, fontSize: 'clamp(1.55rem, 5.5vw, 2.3rem)', fontWeight: 900, lineHeight: 1.06, letterSpacing: '-0.018em', color: P.text }}
               >
                 {v(mamul.mamul_adi)}
@@ -602,7 +602,7 @@ const PublicMamulPage = ({ mode = 'public' }) => {
           {!isInternal && (
             <motion.button
               initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.42, duration: 0.55, ease: EASE }}
+              transition={{ delay: 0.42, duration: 0.55, ease: defaultEase }}
               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
               style={{
                 marginTop: '1.75rem', width: '100%',
@@ -821,7 +821,7 @@ const YarnRow = ({ item, index, P, dark }) => {
           style={{ height: '100%', borderRadius: '999px', background: `linear-gradient(90deg,${P.accent},${P.accentDeep})` }}
           initial={{ width: 0 }}
           animate={inView ? { width: `${pct}%` } : {}}
-          transition={{ duration: 0.85, delay: 0.08 + index * 0.07, ease: EASE }}
+          transition={{ duration: 0.85, delay: 0.08 + index * 0.07, ease: defaultEase }}
         />
       </div>
     </div>
@@ -835,7 +835,7 @@ const ProcessRow = ({ item, index, P, dark, total }) => {
     <motion.div ref={ref}
       initial={{ opacity: 0, x: -14 }}
       animate={inView ? { opacity: 1, x: 0 } : {}}
-      transition={{ duration: 0.5, delay: 0.05 + index * 0.06, ease: EASE }}
+      transition={{ duration: 0.5, delay: 0.05 + index * 0.06, ease: defaultEase }}
       style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem', paddingLeft: '0.2rem', paddingBottom: index < total - 1 ? '0.9rem' : 0 }}
     >
       <div style={{ flexShrink: 0, width: '1.35rem', height: '1.35rem', borderRadius: '50%', background: `linear-gradient(135deg,${P.accent},${P.accentDeep})`, color: 'white', fontSize: '0.58rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 3px 10px ${P.glow}`, zIndex: 1 }}>
@@ -860,7 +860,7 @@ const RelatedCard = ({ item, index, isInternal }) => {
     <motion.div ref={ref}
       initial={{ opacity: 0, y: 16 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay: 0.04 + index * 0.05, ease: EASE }}
+      transition={{ duration: 0.5, delay: 0.04 + index * 0.05, ease: defaultEase }}
       whileHover={{ y: -3 }}
     >
       <Link to={href} style={{ display: 'block', textDecoration: 'none' }}>
