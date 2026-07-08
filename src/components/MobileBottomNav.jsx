@@ -28,7 +28,10 @@ const MobileBottomNav = ({ items = [], location, searchOpen, onSearchClick, comp
   useLayoutEffect(() => {
     const updateIndicator = () => {
       const activeItem = itemRefs.current[activeIndex];
-      if (!activeItem) return;
+      if (!activeItem) {
+        setIndicator(null);
+        return;
+      }
 
       const inset = 4;
       setIndicator({

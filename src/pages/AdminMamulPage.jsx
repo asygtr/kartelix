@@ -48,6 +48,11 @@ const displayText = (value) => {
   return text && text !== '-' ? text : EMPTY_LABEL;
 };
 
+const formatArticleNumber = (articleNo, articleCode) => {
+  const value = String(articleNo || articleCode || '').trim();
+  return value || EMPTY_LABEL;
+};
+
 const formatProfitPercent = (cost, price) => {
   const costValue = Number(cost || 0);
   const priceValue = Number(price || 0);
@@ -816,7 +821,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                             transition={{ duration: 0.12 }}
                           >
                             <div className="app-mamul-desktop-name">{item.mamul_adi}</div>
-                            <div className="app-mamul-desktop-muted">{formatArticleLabel(item.article_code, item.article_no)}</div>
+                            <div className="app-mamul-desktop-muted">{formatArticleNumber(item.article_no, item.article_code)}</div>
                             <div className="app-mamul-desktop-muted">
                               {displayText(item.mamul_turu_adi)}{extractColorName(item.renk) ? ` · ${extractColorName(item.renk)}` : ''}
                               {resolveColorHex(item) ? <span className="app-color-chip-swatch app-color-chip-swatch-mini" style={{ background: resolveColorHex(item) }} /> : null}
@@ -850,7 +855,7 @@ const AdminMamulPage = ({ mode = 'admin' }) => {
                               <div className="app-mamul-detail-grid">
                                 <div>
                                   <div className="app-mamul-secondary-label">Kayıt No</div>
-                                  <div className="app-mamul-detail-value">{formatArticleLabel(item.article_code, item.article_no)}</div>
+                                  <div className="app-mamul-detail-value">{formatArticleNumber(item.article_no, item.article_code)}</div>
                                 </div>
                                 <div>
                                   <div className="app-mamul-secondary-label">Kompozisyon</div>

@@ -157,7 +157,7 @@ const AdminLandingPage = () => {
               <div key={item.id}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
                   <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--app-text)' }}>{item.mamul_adi}</span>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--app-primary)' }}>{item.okutulma}×</span>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--app-primary)' }}>{item.okutulma}</span>
                 </div>
                 <MiniBar value={item.okutulma} max={maxOkutulma} color="var(--app-primary)" />
               </div>

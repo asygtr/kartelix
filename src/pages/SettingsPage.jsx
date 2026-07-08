@@ -51,8 +51,10 @@ const ToggleSwitch = ({ checked, onChange, id, name }) => (
       checked={checked}
       onChange={onChange}
       className="app-toggle-switch-input"
+      role="switch"
+      aria-checked={checked}
     />
-    <span className="app-toggle-switch-track">
+    <span className="app-toggle-switch-track" aria-hidden="true">
       <span className="app-toggle-switch-thumb" />
     </span>
   </span>
