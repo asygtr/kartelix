@@ -26,17 +26,13 @@ function App() {
           <Route path="/" element={<LoginScreen />} />
           <Route path="/u/:slug" element={<PublicMamulPage />} />
 
-          <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+          <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
             <Route element={<AppLayout />}>
               <Route path="/admin" element={<AdminLandingPage />} />
               <Route path="/admin/mamuller" element={<AdminMamulPage />} />
               <Route path="/admin/orders" element={<StaffOrderPage mode="admin" />} />
               <Route path="/admin/reports" element={<ReportsPage />} />
               <Route path="/admin/settings" element={<SettingsPage />} />
-              <Route path="/staff/orders/new" element={<StaffOrderPage />} />
-              <Route path="/mamul" element={<Navigate to="/mamul/labels" replace />} />
-              <Route path="/mamul/labels" element={<MamulLabelPage />} />
-              <Route path="/mamul/preview/:slug" element={<PublicMamulPage mode="internal" />} />
             </Route>
           </Route>
 

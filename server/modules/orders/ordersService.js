@@ -240,6 +240,8 @@ const buildOrderEmailContent = (order, items = []) => {
   return { subject: `${title} - ${order.firma_adi || order.musteri_adi || '-'}`, text, html };
 };
 
+const { exportOrderToTxt } = require('./orderExport');
+
 const createOrdersService = ({ db, nodemailer }) => {
   const loadOrderEmailSettings = async (includeSecrets = false) => {
     const row = await dbGetAsync(db, `SELECT deger FROM ui_ayarlari WHERE anahtar = 'order_email_settings'`, []);
@@ -495,6 +497,15 @@ const createOrdersService = ({ db, nodemailer }) => {
       if (!order) throw createHttpError(404, { success: false, error: 'Siparis bulunamadi' });
 
       await dbRunAsync(db, `UPDATE kartelix_orders SET durum = 'tamamlandi', tamamlandi_at = CURRENT_TIMESTAMP WHERE id = ?`, [siparisId]);
+
+      const items = await dbAllAsync(db, `SELECT * FROM kartelix_order_items WHERE siparis_id = ? ORDER BY id ASC`, [siparisId]);
+      let exportPath = null;
+      try {
+        exportPath = exportOrderToTxt(order, items.map(mapSiparisKalemi));
+      } catch (exportErr) {
+        console.error('Siparis TXT export hatasi:', exportErr?.message || exportErr);
+      }
+
       const settings = await loadOrderEmailSettings(true);
       const approvalRecipients = parseEmailList(settings.approvalEmails);
       const emailStatus = { skipped: true, message: 'Sipariş onay e-posta adresi tanımlı değil' };
@@ -512,7 +523,7 @@ const createOrdersService = ({ db, nodemailer }) => {
         }
       });
 
-      return { siparisId: Number(siparisId), emailStatus };
+      return { siparisId: Number(siparisId), emailStatus, exportPath };
     },
     async listOrders() {
       const rows = await dbAllAsync(db, `
