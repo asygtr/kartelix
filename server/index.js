@@ -33,6 +33,7 @@ const BCRYPT_ROUNDS = 12;
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || DEFAULT_ALLOWED_ORIGIN;
 
 const app = express();
+app.set('trust proxy', 1); // Nginx reverse proxy arkasında çalışıyor
 app.disable('x-powered-by');
 app.use(helmet());
 app.use(cors({ origin: ALLOWED_ORIGIN, credentials: true }));
