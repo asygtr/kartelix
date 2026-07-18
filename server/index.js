@@ -1,5 +1,11 @@
 require('dotenv').config();
 
+// JWT_SECRET zorunlu — production'da boş bırakılamaz
+if (!process.env.JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is not set. Exiting.');
+  process.exit(1);
+}
+
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
@@ -22,7 +28,7 @@ const { createCatalogRouter } = require('./routes/catalog');
 const { createAdminRouter } = require('./routes/admin');
 
 const DEFAULT_ALLOWED_ORIGIN = 'http://localhost:3000';
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-only-change-me';
+const JWT_SECRET = process.env.JWT_SECRET;
 const BCRYPT_ROUNDS = 12;
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || DEFAULT_ALLOWED_ORIGIN;
 
@@ -30,7 +36,7 @@ const app = express();
 app.disable('x-powered-by');
 app.use(helmet());
 app.use(cors({ origin: ALLOWED_ORIGIN, credentials: true }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Veritabanı bağlantısı
 const databaseDir = path.join(__dirname, '..', 'database');
@@ -66,6 +72,13 @@ const db = new sqlite3.Database(
     }
   }
 );
+
+// WAL mode: eş zamanlı okuma/yazma, busy_timeout: SQLITE_BUSY yerine bekle
+db.serialize(() => {
+  db.run('PRAGMA journal_mode=WAL');
+  db.run('PRAGMA busy_timeout=5000');
+  db.run('PRAGMA synchronous=NORMAL');
+});
 
 const excelInboxDir = process.env.EXCEL_INBOX_DIR || path.join(__dirname, '..', 'xls');
 const excelPollMs = Number(process.env.EXCEL_POLL_MS || 60_000);
@@ -393,7 +406,7 @@ db.run(`CREATE TABLE IF NOT EXISTS ui_ayarlari (
     db.run(`DELETE FROM kullanicilar WHERE username NOT IN ('yonetici', 'satici', 'mamul')`);
     db.run(`DELETE FROM kullanicilar WHERE yetki NOT IN ('admin', 'staff', 'mamul')`);
 
-    // Varsayılan kullanıcıları sadece yoksa oluştur (şifrelerini ASLA sıfırlama)
+    // Varsayılan kullanıcıları sadece yoksa oluştur — mevcut şifrelere dokunma
     const defaultUsers = [
       { username: 'yonetici', password: '2030', yetki: 'admin' },
       { username: 'satici',   password: '1234', yetki: 'staff' },
@@ -401,22 +414,26 @@ db.run(`CREATE TABLE IF NOT EXISTS ui_ayarlari (
     ];
 
     defaultUsers.forEach(({ username, password, yetki }) => {
-      db.get(`SELECT id, password FROM kullanicilar WHERE username = ?`, [username], async (err, row) => {
+      db.get(`SELECT id, password FROM kullanicilar WHERE username = ?`, [username], (err, row) => {
         if (err) return;
-        const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-        if (!row) {
-          // Kullanici yok — olustur
-          db.run(
-            `INSERT OR IGNORE INTO kullanicilar (username, password, yetki, password_length) VALUES (?, ?, ?, ?)`,
-            [username, hash, yetki, password.length]
-          );
-        } else if (username === 'yonetici' || !row.password.startsWith('$2')) {
-          // Yönetici şifresini güncelle veya düz metni hash'le
-          db.run(
-            `UPDATE kullanicilar SET password = ?, password_length = ? WHERE username = ?`,
-            [hash, password.length, username]
-          );
-        }
+        // Kullanıcı zaten varsa ve şifresi hash'liyse dokunma
+        if (row && row.password && row.password.startsWith('$2')) return;
+        // Kullanıcı yok veya şifresi düz metin — async olarak hash'le ve kaydet
+        bcrypt.hash(password, BCRYPT_ROUNDS).then((hash) => {
+          if (!row) {
+            db.run(
+              `INSERT OR IGNORE INTO kullanicilar (username, password, yetki, password_length) VALUES (?, ?, ?, ?)`,
+              [username, hash, yetki, password.length]
+            );
+          } else {
+            db.run(
+              `UPDATE kullanicilar SET password = ?, password_length = ? WHERE username = ?`,
+              [hash, password.length, username]
+            );
+          }
+        }).catch((hashErr) => {
+          console.error('bcrypt hash error for', username, hashErr);
+        });
       });
     });
 
@@ -2534,9 +2551,10 @@ app.listen(PORT, () => {
   console.log(`✅ Excel sync: ${excelInboxDir} (poll: ${excelPollMs}ms)`);
 });
 
-// Graceful shutdown
-process.on('SIGINT', () => {
-  console.log('\n🛑 Sunucu kapatılıyor...');
+// Graceful shutdown — hem SIGTERM (Docker stop) hem SIGINT (Ctrl+C)
+const shutdown = (signal) => {
+  console.log(`\n🛑 ${signal} alındı, sunucu kapatılıyor...`);
+  excelSync.stop();
   db.close((err) => {
     if (err) {
       console.error('Database kapatma hatası:', err);
@@ -2545,4 +2563,16 @@ process.on('SIGINT', () => {
     console.log('✅ Database bağlantısı kapatıldı');
     process.exit(0);
   });
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+// Yakalanmamış hataları logla — process'i çökertme, sadece kaydet
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION — process devam ediyor:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('UNHANDLED REJECTION — process devam ediyor:', reason);
 });

@@ -78,6 +78,18 @@ const normalizeHeader = (value) =>
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');
 
+// XLSX.readFile senkron — setImmediate ile event loop'u bloklamadan çalıştır
+const readWorkbookAsync = (filePath, options = {}) =>
+  new Promise((resolve, reject) => {
+    setImmediate(() => {
+      try {
+        resolve(XLSX.readFile(filePath, options));
+      } catch (err) {
+        reject(err);
+      }
+    });
+  });
+
 const getRowValue = (row, keys, fallback = '') => {
   for (const key of keys) {
     const normalizedKey = normalizeHeader(key);
@@ -155,18 +167,14 @@ const getCellValueByHeader = (sheet, rowNumber, candidates, fallback = '') => {
   return cellValue(sheet, `${column}${rowNumber + 1}`, fallback);
 };
 
-const getFileFingerprint = async (filePath) => {
-  const stat = await fs.promises.stat(filePath).catch(() => null);
-  if (!stat) return null;
-
-  const buffer = await fs.promises.readFile(filePath);
+const getFileFingerprint = (filePath) => new Promise((resolve, reject) => {
+  const stat = fs.statSync(filePath);
   const hash = crypto.createHash('sha256');
-  hash.update(buffer);
-  return {
-    size: stat.size,
-    sha256: hash.digest('hex')
-  };
-};
+  const stream = fs.createReadStream(filePath);
+  stream.on('data', (chunk) => hash.update(chunk));
+  stream.on('end', () => resolve({ size: stat.size, sha256: hash.digest('hex') }));
+  stream.on('error', reject);
+});
 
 const hasFileChanged = async (filePath, previousFingerprint) => {
   if (!previousFingerprint) return true;
@@ -1097,6 +1105,13 @@ const insertSnapshot = async (db, payload) => {
       safeJson(payload.preview)
     ]
   );
+  // Eski snapshot'ları temizle — son 50 kayıt dışındakileri sil
+  await dbRun(
+    db,
+    `DELETE FROM excel_snapshots WHERE id NOT IN (
+      SELECT id FROM excel_snapshots ORDER BY id DESC LIMIT 50
+    )`
+  );
 };
 
 const startExcelSync = ({
@@ -1143,7 +1158,7 @@ const startExcelSync = ({
         continue;
       }
 
-      const workbook = XLSX.readFile(configuredFile.filePath, { cellDates: true, cellFormula: true });
+      const workbook = await readWorkbookAsync(configuredFile.filePath, { cellDates: true, cellFormula: true });
       const targetSheet = source.sheetName && workbook.SheetNames.includes(source.sheetName)
         ? source.sheetName
         : workbook.SheetNames[0];
@@ -1216,7 +1231,7 @@ const startExcelSync = ({
   };
 
   const processUrgeDirectory = async () => {
-    const entries = fs.readdirSync(directory)
+    const entries = (await fs.promises.readdir(directory))
       .filter((fileName) => isExcelFile(fileName))
       .sort((left, right) => left.localeCompare(right, 'tr'));
 
@@ -1237,7 +1252,7 @@ const startExcelSync = ({
         continue;
       }
 
-      const workbook = XLSX.readFile(filePath, { cellDates: true, cellFormula: true });
+      const workbook = await readWorkbookAsync(filePath, { cellDates: true, cellFormula: true });
       const targetSheet = workbook.SheetNames.includes('SIRA LİSTESİ')
         ? 'SIRA LİSTESİ'
         : workbook.SheetNames[0];
@@ -1422,7 +1437,7 @@ const startExcelSync = ({
       const configuredFile = findConfiguredFile(directory, source.fileName, source.extension);
       if (!configuredFile) return null;
 
-      const workbook = XLSX.readFile(configuredFile.filePath, { cellDates: true });
+      const workbook = await readWorkbookAsync(configuredFile.filePath, { cellDates: true });
       const targetSheet = source.sheetName && workbook.SheetNames.includes(source.sheetName)
         ? source.sheetName
         : workbook.SheetNames[0];
